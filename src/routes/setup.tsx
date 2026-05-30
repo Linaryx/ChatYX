@@ -109,6 +109,8 @@ async function loadBotProfiles(logins: string[]): Promise<BotProfile[]> {
 
     return users
       .map((user) => {
+        if (!user || typeof user !== "object") return null;
+
         const entry = user as {
           login?: unknown;
           displayName?: unknown;
@@ -540,8 +542,8 @@ export default function ChatSetup() {
       minHeight: "34px",
       padding: "3px 6px 3px 4px",
       color: "#ffffff",
-      background: "#1f2937",
-      border: "1px solid rgba(255,255,255,0.12)",
+      background: "#050505",
+      border: "1px solid rgba(255,255,255,0.84)",
       "border-radius": "999px",
       "box-sizing": "border-box",
     },
@@ -550,7 +552,9 @@ export default function ChatSetup() {
       height: "28px",
       "border-radius": "999px",
       "object-fit": "cover",
-      background: "#111827",
+      background: "#000000",
+      border: "1px solid rgba(255,255,255,0.5)",
+      "box-sizing": "border-box",
       flex: "0 0 auto",
     },
     botAvatarFallback: {
@@ -560,10 +564,12 @@ export default function ChatSetup() {
       display: "inline-flex",
       "align-items": "center",
       "justify-content": "center",
-      background: "#374151",
+      background: "#000000",
+      border: "1px solid rgba(255,255,255,0.5)",
       color: "#ffffff",
       "font-size": "12px",
       "font-weight": 700,
+      "box-sizing": "border-box",
       flex: "0 0 auto",
     },
     botText: {
@@ -595,7 +601,7 @@ export default function ChatSetup() {
       height: "22px",
       border: "0",
       "border-radius": "999px",
-      background: "rgba(255,255,255,0.08)",
+      background: "rgba(255,255,255,0.14)",
       color: "#ffffff",
       cursor: "pointer",
       display: "inline-flex",
