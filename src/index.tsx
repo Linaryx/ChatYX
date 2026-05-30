@@ -3,11 +3,12 @@ import { render } from "solid-js/web";
 import { Router, Route } from "@solidjs/router";
 import { MetaProvider, Meta } from "@solidjs/meta";
 import { Suspense, lazy } from "solid-js";
+import { getAppBasePath } from "~/utils/appBase";
 import "./root.css";
 import "./styles/fonts.css";
 
 const root = document.getElementById("root");
-const routerBase = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
+const routerBase = getAppBasePath();
 
 render(
   () => (

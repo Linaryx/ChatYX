@@ -1,4 +1,5 @@
 import { Show, createEffect, createSignal, onCleanup } from "solid-js";
+import { getPublicAssetUrl } from "~/utils/appBase";
 
 interface LoadingScreenProps {
   progress: number;
@@ -6,7 +7,7 @@ interface LoadingScreenProps {
   onComplete?: () => void;
 }
 
-const loadingImageSrc = `${import.meta.env.BASE_URL}img/Peepo.png`;
+const loadingImageSrc = getPublicAssetUrl("img/Peepo.png");
 
 export function LoadingScreen(props: LoadingScreenProps) {
   const [showFinalScreen, setShowFinalScreen] = createSignal(false);

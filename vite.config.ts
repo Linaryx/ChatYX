@@ -6,6 +6,7 @@ const srcDir = fileURLToPath(new URL("./src", import.meta.url));
 
 function normalizeBase(base: string): string {
   if (!base || base === "/") return "/";
+  if (base === "." || base === "./") return "./";
   return `/${base.replace(/^\/+|\/+$/g, "")}/`;
 }
 
@@ -14,12 +15,7 @@ function getPagesBase(): string {
     return normalizeBase(process.env.VITE_BASE_PATH);
   }
 
-  if (!process.env.GITHUB_ACTIONS) return "/";
-
-  const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "";
-  if (!repoName || repoName.endsWith(".github.io")) return "/";
-
-  return normalizeBase(repoName);
+  return process.env.GITHUB_ACTIONS ? "./" : "/";
 }
 
 export default defineConfig({

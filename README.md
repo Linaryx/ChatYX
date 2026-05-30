@@ -47,7 +47,7 @@ The project includes `.github/workflows/deploy-pages.yml` for GitHub Pages.
 
 In repository settings, open **Pages** and set **Source** to **GitHub Actions**. Pushing to `main` or `master` runs checks, builds the app, adds the SPA `404.html` fallback, and deploys `dist`.
 
-The custom domain is configured via `public/CNAME` as `chat.ruina.team`, so the workflow builds with `VITE_BASE_PATH=/`. For project pages without a custom domain, remove `CNAME` and omit `VITE_BASE_PATH` so the repository path, e.g. `/ChatYX/`, is inferred automatically.
+The custom domain is configured via `public/CNAME` as `chat.ruina.team`. The workflow builds with relative asset paths (`VITE_BASE_PATH=./`), so the same artifact works on both `https://chat.ruina.team/` and the GitHub project URL.
 
 ## Configuration
 

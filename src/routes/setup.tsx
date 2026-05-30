@@ -21,6 +21,7 @@ import {
   normalizeBotNames,
   type ChatConfig,
 } from "~/config/chatUrlParams";
+import { getAppBaseUrl } from "~/utils/appBase";
 
 type ControlRow = {
   label: string;
@@ -65,12 +66,6 @@ function renderControlRows(rows: ControlRow[], styles: Record<string, JSX.CSSPro
       )}
     </For>
   );
-}
-
-function appBaseUrl(): string {
-  const basePath = import.meta.env.BASE_URL;
-  const baseUrl = new URL(basePath, window.location.origin);
-  return baseUrl.toString().replace(/\/$/, "");
 }
 
 export default function ChatSetup() {
@@ -525,7 +520,7 @@ export default function ChatSetup() {
       Object.entries(extraParams).forEach(([key, value]) => params.set(key, value));
     }
     const query = params.toString();
-    return `${appBaseUrl()}/chat${query ? `?${query}` : ""}`;
+    return `${getAppBaseUrl()}/chat${query ? `?${query}` : ""}`;
   };
 
   const previewChannel = createMemo(() => channel().trim() || "chatyxpreview");

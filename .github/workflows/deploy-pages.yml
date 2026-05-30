@@ -41,7 +41,7 @@ jobs:
       - name: Build GitHub Pages
         run: bun run build:pages
         env:
-          VITE_BASE_PATH: /
+          VITE_BASE_PATH: ./
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
