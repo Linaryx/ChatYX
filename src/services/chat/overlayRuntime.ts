@@ -79,6 +79,10 @@ function setTrackedTimeout(
   return id;
 }
 
+function isTwitchUserId(value: string): boolean {
+  return /^\d+$/.test(value) && value !== "0";
+}
+
 export class OverlayRuntime {
   private readonly twitchService = new TwitchService();
   private readonly messageQueue: TwitchMessage[] = [];
@@ -184,40 +188,47 @@ export class OverlayRuntime {
     const channelResolution = await this.resolveChannelIdentity();
     this.hooks.onChannelResolved(channelResolution);
 
-    const channelIdOrName = channelResolution.channelId || this.channel;
-    this.activeChannelId = channelResolution.channelId;
+    const hasChannelId = isTwitchUserId(channelResolution.channelId);
+    const channelId = hasChannelId ? channelResolution.channelId : "";
+    this.activeChannelId = channelId;
     log.info(
       LOG_CATEGORIES.CHAT,
-      `Using identifier: ${channelIdOrName} (${channelResolution.channelId ? "ID" : "name"})`,
+      `Using identifier: ${channelId || this.channel} (${channelId ? "ID" : "name"})`,
     );
 
     this.setLoading("Загрузка баджей и эмоутов...", 55);
-    await service.initialize(this.channel, channelIdOrName);
+    await service.initialize(this.channel, channelId);
 
-    this.setLoading("Подключение 7TV EventAPI...", 70);
-    await v3Integration.initialize(channelIdOrName).catch((error) => {
-      log.error(LOG_CATEGORIES.INTEGRATION, "Failed to initialize V3 Integration", error);
-      log.error(
-        LOG_CATEGORIES.INTEGRATION,
-        "Failed to initialize V3 Integration:",
-        error,
-      );
-    });
+    if (channelId) {
+      this.setLoading("Подключение 7TV EventAPI...", 70);
+      await v3Integration.initialize(channelId).catch((error) => {
+        log.error(LOG_CATEGORIES.INTEGRATION, "Failed to initialize V3 Integration", error);
+        log.error(
+          LOG_CATEGORIES.INTEGRATION,
+          "Failed to initialize V3 Integration:",
+          error,
+        );
+      });
+    }
 
     this.initializeLayout(service);
 
     this.setLoading("Фоновая загрузка данных...", 85);
     void Promise.all([
-      badgeService
-        .loadBadges(this.channel, channelIdOrName)
-        .catch((error) => log.error(LOG_CATEGORIES.BADGE, "Failed to load badges", error)),
-      colorService
-        .loadCosmetics(channelIdOrName)
-        .catch((error) =>
-          log.error(LOG_CATEGORIES.PAINTS, "Failed to load cosmetics", error),
-        ),
+      channelId
+        ? badgeService
+            .loadBadges(this.channel, channelId)
+            .catch((error) => log.error(LOG_CATEGORIES.BADGE, "Failed to load badges", error))
+        : undefined,
+      channelId
+        ? colorService
+            .loadCosmetics(channelId)
+            .catch((error) =>
+              log.error(LOG_CATEGORIES.PAINTS, "Failed to load cosmetics", error),
+            )
+        : undefined,
       emoteService
-        .loadEmotes(channelIdOrName, this.channel, {
+        .loadEmotes(channelId, this.channel, {
           show7tvUnlisted: chatConfig.show7tvUnlisted,
         })
         .catch((error) => log.error(LOG_CATEGORIES.EMOTES, "Failed to load emotes", error)),

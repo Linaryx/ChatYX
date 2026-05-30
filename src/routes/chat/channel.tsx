@@ -59,6 +59,10 @@ function withTimeout<T>(
   });
 }
 
+function isTwitchUserId(value: string): boolean {
+  return /^\d+$/.test(value) && value !== "0";
+}
+
 export default function ChatOverlay() {
   const urlParams =
     typeof window !== "undefined"
@@ -212,7 +216,7 @@ export default function ChatOverlay() {
         setLoadingStatus("Loading preview data...");
         setLoadingProgress(55);
 
-        const channelIdOrName = previewChannelId !== "0" ? previewChannelId : channel;
+        const hasResolvedChannelId = isTwitchUserId(previewChannelId);
         const bgLoading = Promise.allSettled([
           withTimeout(
             emoteService.loadEmotes(previewChannelId, channel, {
@@ -221,15 +225,15 @@ export default function ChatOverlay() {
             5000,
             undefined,
           ),
-          ...(isRealChannel
+          ...(isRealChannel && hasResolvedChannelId
             ? [
                 withTimeout(
-                  badgeService.loadBadges(channel, channelIdOrName),
+                  badgeService.loadBadges(channel, previewChannelId),
                   4500,
                   undefined,
                 ),
                 withTimeout(
-                  colorService.loadCosmetics(channelIdOrName),
+                  colorService.loadCosmetics(previewChannelId),
                   4500,
                   undefined,
                 ),
@@ -239,7 +243,7 @@ export default function ChatOverlay() {
 
         if (isRealChannel) {
           await withTimeout(
-            fetchChannelUsers(channel, channelIdOrName),
+            fetchChannelUsers(channel, hasResolvedChannelId ? previewChannelId : "0"),
             4500,
             undefined,
           );

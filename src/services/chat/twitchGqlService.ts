@@ -45,12 +45,16 @@ function normalizeBadgeUrl(badge: TwitchGqlBadge): string {
   return badge.image4x || badge.image2x || badge.image1x || "";
 }
 
+function isTwitchUserId(value: string): boolean {
+  return /^\d+$/.test(value) && value !== "0";
+}
+
 class TwitchGqlService {
   private senderCache = new Map<string, Promise<TwitchGqlSender | null>>();
   private badgeSetCache = new Map<string, Promise<TwitchGqlBadge[]>>();
 
   async loadBadgeSets(channelId: string): Promise<TwitchGqlBadge[]> {
-    if (!/^\d+$/.test(channelId)) return [];
+    if (!isTwitchUserId(channelId)) return [];
 
     const cached = this.badgeSetCache.get(channelId);
     if (cached) return cached;
@@ -77,7 +81,7 @@ class TwitchGqlService {
     channelId: string,
     senderId: string,
   ): Promise<TwitchGqlSender | null> {
-    if (!/^\d+$/.test(channelId) || !/^\d+$/.test(senderId)) return null;
+    if (!isTwitchUserId(channelId) || !isTwitchUserId(senderId)) return null;
 
     const cacheKey = `${channelId}:${senderId}`;
     const cached = this.senderCache.get(cacheKey);

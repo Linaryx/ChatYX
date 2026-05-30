@@ -24,6 +24,10 @@ export type LoadEmoteOptions = {
   show7tvUnlisted?: boolean;
 };
 
+function isTwitchUserId(value: string): boolean {
+  return /^\d+$/.test(value) && value !== "0";
+}
+
 class EmoteService {
   private emoteData: EmoteData = {
     emotes: {},
@@ -44,7 +48,8 @@ class EmoteService {
     channelName: string,
     options: LoadEmoteOptions = {},
   ): Promise<void> {
-    this.currentChannelId = channelId;
+    const hasChannelId = isTwitchUserId(channelId);
+    this.currentChannelId = hasChannelId ? channelId : "";
     this.currentChannelName = channelName;
     const nextShow7tvUnlisted = options.show7tvUnlisted ?? true;
     if (
@@ -65,20 +70,24 @@ class EmoteService {
         });
       }
 
-      const channelKey = channelId;
-      if (!this.channelLoadPromises.has(channelKey)) {
-        this.channelLoadPromises.set(
-          channelKey,
-          this.loadChannelEmotes(channelId).catch((error) => {
-            log.error(LOG_CATEGORIES.EMOTES, "Failed to load emotes", error);
-          }),
-        );
+      let channelLoadPromise: Promise<void> | undefined;
+      if (hasChannelId) {
+        const channelKey = channelId;
+        if (!this.channelLoadPromises.has(channelKey)) {
+          this.channelLoadPromises.set(
+            channelKey,
+            this.loadChannelEmotes(channelId).catch((error) => {
+              log.error(LOG_CATEGORIES.EMOTES, "Failed to load emotes", error);
+            }),
+          );
+        }
+        channelLoadPromise = this.channelLoadPromises.get(channelKey);
       }
 
       await Promise.all([
         this.globalEmotesPromise,
-        this.channelLoadPromises.get(channelKey),
-        this.loadCheerEmotes(channelId),
+        channelLoadPromise,
+        hasChannelId ? this.loadCheerEmotes(channelId) : undefined,
       ]);
     } catch (error) {
       log.error(LOG_CATEGORIES.EMOTES, "Failed to load emotes", error);

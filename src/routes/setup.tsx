@@ -520,7 +520,7 @@ export default function ChatSetup() {
       Object.entries(extraParams).forEach(([key, value]) => params.set(key, value));
     }
     const query = params.toString();
-    return `${getAppBaseUrl()}/chat${query ? `?${query}` : ""}`;
+    return `${getAppBaseUrl()}/chat/${query ? `?${query}` : ""}`;
   };
 
   const previewChannel = createMemo(() => channel().trim() || "chatyxpreview");

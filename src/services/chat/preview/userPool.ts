@@ -1,5 +1,4 @@
 import { badgeService } from "~/services/badges";
-import { fetchWithFallback, FALLBACK_APIS, TWITCH_CONFIG } from "~/config/twitch";
 import { twitchGqlService, type TwitchGqlBadge } from "~/services/chat/twitchGqlService";
 
 export type PreviewRealUser = {
@@ -41,17 +40,15 @@ function fetchWithTimeout(
 
 export async function resolveChannelId(channel: string): Promise<string> {
   try {
-    const resp = await fetchWithFallback(
-      `${TWITCH_CONFIG.API_BASE_URL}/users?login=${encodeURIComponent(channel)}`,
-      FALLBACK_APIS.user_info(channel),
+    const resp = await fetchWithTimeout(
+      `https://api.ivr.fi/v2/twitch/user?login=${encodeURIComponent(channel)}`,
+      undefined,
+      2500,
     );
     if (resp.ok) {
       const data = await resp.json();
-      const resolved: string =
-        data.data?.[0]?.id ??
-        (Array.isArray(data) ? data[0]?.id : undefined) ??
-        "";
-      if (resolved) return resolved;
+      const resolved = String(Array.isArray(data) ? data[0]?.id ?? "" : "");
+      if (/^\d+$/.test(resolved)) return resolved;
     }
   } catch { /* fallback */ }
   return "0";
