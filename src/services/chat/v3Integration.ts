@@ -27,6 +27,24 @@ import { emojifyText } from "../../utils/chat/emojiRenderer";
 import { parseMarkdown } from "../../utils/chat/markdownParser";
 import { layoutManager } from "../../utils/ui/layoutManager";
 
+const SEVENTV_RETRY_DELAY_MS = 5 * 60 * 1000;
+
+function shouldRetrySevenTvError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return true;
+  }
+
+  if (!(error instanceof Error)) {
+    return true;
+  }
+
+  const status = error.message.match(/HTTP (\d{3})/)?.[1];
+  if (!status) return true;
+
+  const code = Number(status);
+  return code === 408 || code === 429 || code >= 500;
+}
+
 export interface V3IntegrationOptions {
   // Badge options
   showFFZAPBadges: boolean;
@@ -59,6 +77,7 @@ export interface V3IntegrationOptions {
 export class V3IntegrationService {
   private options: V3IntegrationOptions;
   private initialized: boolean = false;
+  private sevenTvRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: Partial<V3IntegrationOptions> = {}) {
     // Default options
@@ -130,7 +149,7 @@ export class V3IntegrationService {
 
       // Connect 7TV EventAPI
       if (this.options.enable7TVEventAPI) {
-        await this.connect7TVEventAPI(channelId);
+        await this.connect7TVEventAPI(channelId, { scheduleRetry: true });
       }
 
       // Apply layout options
@@ -199,7 +218,10 @@ export class V3IntegrationService {
    * Connect to 7TV EventAPI
    * NOTE: 7TV EventAPI requires numeric Twitch channel ID, not username
    */
-  private async connect7TVEventAPI(channelId: string): Promise<void> {
+  private async connect7TVEventAPI(
+    channelId: string,
+    options: { scheduleRetry: boolean },
+  ): Promise<void> {
     // Проверяем что channelId - это число, а не username
     if (!/^\d+$/.test(channelId)) {
       log.warn(
@@ -211,6 +233,7 @@ export class V3IntegrationService {
     }
 
     try {
+      this.clearSevenTvRetryTimer();
       await sevenTVEventApi.connect(channelId, (event) => {
         log.debug(LOG_CATEGORIES.SEVENTV_API, `EventAPI event: ${event.type}`);
 
@@ -230,7 +253,32 @@ export class V3IntegrationService {
         "Failed to connect 7TV EventAPI:",
         error,
       );
+
+      if (options.scheduleRetry && shouldRetrySevenTvError(error)) {
+        this.scheduleSevenTvRetry(channelId);
+      }
     }
+  }
+
+  private scheduleSevenTvRetry(channelId: string): void {
+    if (this.sevenTvRetryTimer || !this.options.enable7TVEventAPI) return;
+
+    log.warn(
+      LOG_CATEGORIES.INTEGRATION,
+      "7TV EventAPI unavailable, retrying in 5 minutes",
+    );
+
+    this.sevenTvRetryTimer = setTimeout(() => {
+      this.sevenTvRetryTimer = null;
+      void this.connect7TVEventAPI(channelId, { scheduleRetry: true });
+    }, SEVENTV_RETRY_DELAY_MS);
+  }
+
+  private clearSevenTvRetryTimer(): void {
+    if (!this.sevenTvRetryTimer) return;
+
+    clearTimeout(this.sevenTvRetryTimer);
+    this.sevenTvRetryTimer = null;
   }
 
   /**
@@ -414,6 +462,7 @@ export class V3IntegrationService {
    * Cleanup
    */
   destroy(): void {
+    this.clearSevenTvRetryTimer();
     sevenTVEventApi.disconnect();
     messageManager.clearCallbacks();
     messageManager.clear();

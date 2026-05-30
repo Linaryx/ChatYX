@@ -66,6 +66,8 @@ export interface SevenTVEventDispatch {
 
 type EventCallback = (event: SevenTVEventDispatch) => void;
 
+const CHANNEL_DATA_TIMEOUT_MS = 60_000;
+
 // Opcodes for 7TV EventAPI
 const OPS = {
   DISPATCH: 0,
@@ -117,10 +119,21 @@ export class SevenTVEventApiService {
     this.onEventCallback = onEvent;
 
     // Fetch channel emote set ID and user ID
+    const controller = new AbortController();
+    const timeout = window.setTimeout(
+      () => controller.abort(),
+      CHANNEL_DATA_TIMEOUT_MS,
+    );
+
     try {
       const response = await fetch(
         `https://7tv.io/v3/users/twitch/${channelId}`,
+        { signal: controller.signal },
       );
+      if (!response.ok) {
+        throw new Error(`7TV channel data HTTP ${response.status}`);
+      }
+
       const data = await response.json();
       // data.user.id is the 7TV user ID, data.id might be connection ID
       this.channelUserId = data.user?.id || data.id || "";
@@ -132,6 +145,9 @@ export class SevenTVEventApiService {
       }
     } catch (error) {
       log.error(LOG_CATEGORIES.SEVENTV_API, "Failed to fetch channel data", error);
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
     }
 
     this.connectWs();
