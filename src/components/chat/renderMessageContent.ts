@@ -258,17 +258,6 @@ export function renderMessageWithEmotes(
     });
   }
 
-  if (config.lastEmoteBackground) {
-    let lastIndex = segments.length - 1;
-    while (lastIndex >= 0 && segments[lastIndex].kind === "ws") lastIndex -= 1;
-    if (lastIndex >= 0 && segments[lastIndex].kind === "target") {
-      segments[lastIndex].html = segments[lastIndex].html.replace(
-        'class="emote-container',
-        'class="emote-container last-emote-bg',
-      );
-    }
-  }
-
   const joinedText = segments.map((segment) => segment.html).join("");
   const element = document.createElement("span");
   element.innerHTML = joinedText;

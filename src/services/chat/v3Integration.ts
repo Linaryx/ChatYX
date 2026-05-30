@@ -64,7 +64,6 @@ export interface V3IntegrationOptions {
   // Layout options
   reverseLineOrder: boolean;
   singleChatter?: string;
-  lastEmoteBackground: boolean;
 
   // 7TV EventAPI
   enable7TVEventAPI: boolean;
@@ -94,7 +93,6 @@ export class V3IntegrationService {
       enableEmojis: true,
       enableMarkdown: false,
       reverseLineOrder: false,
-      lastEmoteBackground: false,
       enable7TVEventAPI: true,
       ...options,
     };
@@ -156,7 +154,6 @@ export class V3IntegrationService {
       layoutManager.setOptions({
         reverseLineOrder: this.options.reverseLineOrder,
         singleChatter: this.options.singleChatter,
-        lastEmoteBackground: this.options.lastEmoteBackground,
       });
 
       this.initialized = true;
@@ -447,7 +444,6 @@ export class V3IntegrationService {
     layoutManager.setOptions({
       reverseLineOrder: this.options.reverseLineOrder,
       singleChatter: this.options.singleChatter,
-      lastEmoteBackground: this.options.lastEmoteBackground,
     });
   }
 

@@ -20,7 +20,6 @@ export interface ChatConfig {
   nlAfterName: boolean;
   hideNames: boolean;
   botNames: string;
-  lastEmoteBackground: boolean;
   reverseLineOrder: boolean;
   horizontal: boolean;
   singleChatter: string;
@@ -56,7 +55,6 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   smallCaps: false,
   nlAfterName: false,
   hideNames: false,
-  lastEmoteBackground: false,
   reverseLineOrder: false,
   horizontal: false,
   ffzBotMix: 1,
@@ -139,11 +137,6 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
   smallCaps: { query: "sc", kind: "bool", aliases: ["small_caps"] },
   nlAfterName: { query: "nl", kind: "bool", aliases: ["nl_after_name"] },
   hideNames: { query: "hn", kind: "bool", aliases: ["hide_names"] },
-  lastEmoteBackground: {
-    query: "leb",
-    kind: "bool",
-    aliases: ["last_emote_background"],
-  },
   reverseLineOrder: {
     query: "rl",
     kind: "bool",

@@ -94,6 +94,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
         paintAttributes={paintAttributes}
         colonColor={has7tvPaint ? "#fff" : userColor}
         isAction={isAction}
+        uppercase={config.smallCaps}
       />
       <ChatText
         message={{ ...message, message: processedMessage }}

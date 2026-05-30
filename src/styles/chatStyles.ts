@@ -170,14 +170,6 @@ export const generateVariantStyles = (config: ChatConfig) => {
 `;
   }
 
-  if (config.smallCaps) {
-    styles += `
-#chat_container {
-    font-variant: small-caps;
-}
-`;
-  }
-
   if (emoteScale !== 1) {
     styles += `
 .emote {
@@ -188,16 +180,6 @@ export const generateVariantStyles = (config: ChatConfig) => {
 .emoji {
     width: ${size.emojiHeight * emoteScale}px !important;
     height: ${size.emojiHeight * emoteScale}px !important;
-}
-`;
-  }
-
-  if (config.lastEmoteBackground) {
-    styles += `
-.emote-container.last-emote-bg {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 0.2em;
-    box-shadow: 0 0 0.2em rgba(0, 0, 0, 0.18);
 }
 `;
   }

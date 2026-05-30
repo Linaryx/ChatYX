@@ -8,6 +8,7 @@ type ChatNickProps = {
   paintAttributes: Record<string, string>;
   colonColor: string;
   isAction: boolean;
+  uppercase: boolean;
 };
 
 export const ChatNick = (props: ChatNickProps): JSX.Element => {
@@ -18,7 +19,9 @@ export const ChatNick = (props: ChatNickProps): JSX.Element => {
     paintAttributes,
     colonColor,
     isAction,
+    uppercase,
   } = props;
+  const displayName = message.displayName || message.username;
 
   return (
     <span class="user_info">
@@ -27,7 +30,7 @@ export const ChatNick = (props: ChatNickProps): JSX.Element => {
         style={nickStyle}
         {...paintAttributes}
       >
-        {message.displayName || message.username}
+        {uppercase ? displayName.toUpperCase() : displayName}
       </span>
       {isAction ? (
         <span>&nbsp;</span>

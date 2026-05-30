@@ -7,7 +7,13 @@ export interface LayoutOptions {
     reverseLineOrder?: boolean;
     horizontal?: boolean;
     singleChatter?: string;
-    lastEmoteBackground?: boolean;
+}
+
+function parseAllowedChatters(raw: string): string[] {
+    return raw
+        .split(/[\s,]+/)
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean);
 }
 
 export class LayoutManager {
@@ -62,38 +68,12 @@ export class LayoutManager {
             return true;
         }
 
-        return username.toLowerCase() === this.options.singleChatter.toLowerCase();
-    }
-
-    /**
-     * Apply last emote background effect
-     */
-    applyLastEmoteBackground(messageElement: HTMLElement): void {
-        if (!this.options.lastEmoteBackground) {
-            return;
+        const allowedChatters = parseAllowedChatters(this.options.singleChatter);
+        if (allowedChatters.length === 0) {
+            return true;
         }
 
-        // Find all emotes in message
-        const emotes = messageElement.querySelectorAll('.emote');
-        if (emotes.length === 0) {
-            return;
-        }
-
-        const lastEmote = emotes[emotes.length - 1] as HTMLElement;
-        
-        // Check if message ends with this emote
-        const messageText = messageElement.textContent || '';
-        const trimmed = messageText.trim();
-        
-        // Get emote alt text from img element if it exists
-        const emoteImg = lastEmote.querySelector('img');
-        const emoteAlt = emoteImg ? emoteImg.getAttribute('alt') || '' : '';
-        
-        if (trimmed.endsWith(emoteAlt)) {
-            lastEmote.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            lastEmote.style.borderRadius = '4px';
-            lastEmote.style.padding = '2px';
-        }
+        return allowedChatters.includes(username.toLowerCase());
     }
 
     /**
@@ -140,16 +120,6 @@ export class LayoutManager {
                 #chat_container.horizontal .chat_line {
                     margin-right: 15px;
                     margin-bottom: 5px;
-                }
-            `;
-        }
-
-        if (this.options.lastEmoteBackground) {
-            css += `
-                .emote.last-emote-bg {
-                    background-color: rgba(255, 255, 255, 0.1);
-                    border-radius: 4px;
-                    padding: 2px;
                 }
             `;
         }

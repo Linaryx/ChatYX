@@ -238,10 +238,11 @@ export class ChatISIntegrationService {
    * Check if message should be displayed
    */
   shouldDisplayMessage(username: string, message: string): boolean {
-    const singleChatter = this.config.botFilter.singleChatter
-      .trim()
-      .toLowerCase();
-    if (singleChatter && username.toLowerCase() !== singleChatter) {
+    const allowedChatters = parseBotNames(this.config.botFilter.singleChatter);
+    if (
+      allowedChatters.length > 0 &&
+      !allowedChatters.includes(username.toLowerCase())
+    ) {
       return false;
     }
 

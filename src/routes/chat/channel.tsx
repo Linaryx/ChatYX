@@ -203,6 +203,10 @@ export default function ChatOverlay() {
       setAnimationDurationMs(previewConfig.animate ? 200 : 0);
       setChannelDisplayName(channel);
       setIsConnected(true);
+      const previewContainer = document.getElementById("chat_container");
+      if (previewContainer) {
+        previewService.initializeLayout(previewContainer);
+      }
 
       void (async () => {
         const isRealChannel = Boolean(channel && channel !== "chatyxpreview");

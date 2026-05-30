@@ -18,7 +18,7 @@ import {
   normalizeBotNames,
   type ChatConfig,
 } from "~/config/chatUrlParams";
-import { getAppBaseUrl } from "~/utils/appBase";
+import { getAppBaseUrl, getPublicAssetUrl } from "~/utils/appBase";
 
 type ControlRow = {
   label: string;
@@ -131,6 +131,22 @@ async function loadBotProfiles(logins: string[]): Promise<BotProfile[]> {
   }
 }
 
+function mergeUniqueLogins(current: string[], raw: string): string[] {
+  const nextLogins = splitBotLogins(raw);
+  if (nextLogins.length === 0) return current;
+
+  const seen = new Set(current);
+  const merged = [...current];
+
+  for (const login of nextLogins) {
+    if (seen.has(login)) continue;
+    seen.add(login);
+    merged.push(login);
+  }
+
+  return merged;
+}
+
 function renderToggleRows(
   rows: ToggleRow[],
   styles: Record<string, JSX.CSSProperties>,
@@ -204,7 +220,8 @@ export default function ChatSetup() {
   const [botProfiles, setBotProfiles] = createSignal<Record<string, BotProfile>>(
     {},
   );
-  const [singleChatter, setSingleChatter] = createSignal("");
+  const [allowedChatters, setAllowedChatters] = createSignal<string[]>([]);
+  const [allowedChatterInput, setAllowedChatterInput] = createSignal("");
   const [show7tvUnlisted, setShow7tvUnlisted] = createSignal(
     DEFAULT_CHAT_CONFIG.show7tvUnlisted,
   );
@@ -213,9 +230,6 @@ export default function ChatSetup() {
     DEFAULT_CHAT_CONFIG.nlAfterName,
   );
   const [hideNames, setHideNames] = createSignal(DEFAULT_CHAT_CONFIG.hideNames);
-  const [lastEmoteBackground, setLastEmoteBackground] = createSignal(
-    DEFAULT_CHAT_CONFIG.lastEmoteBackground,
-  );
   const [reverseLineOrder, setReverseLineOrder] = createSignal(
     DEFAULT_CHAT_CONFIG.reverseLineOrder,
   );
@@ -543,7 +557,7 @@ export default function ChatSetup() {
       padding: "3px 6px 3px 4px",
       color: "#ffffff",
       background: "#050505",
-      border: "1px solid rgba(255,255,255,0.84)",
+      border: "1px solid rgba(255,255,255,0.52)",
       "border-radius": "999px",
       "box-sizing": "border-box",
     },
@@ -553,7 +567,7 @@ export default function ChatSetup() {
       "border-radius": "999px",
       "object-fit": "cover",
       background: "#000000",
-      border: "1px solid rgba(255,255,255,0.5)",
+      border: "1px solid rgba(255,255,255,0.36)",
       "box-sizing": "border-box",
       flex: "0 0 auto",
     },
@@ -565,7 +579,7 @@ export default function ChatSetup() {
       "align-items": "center",
       "justify-content": "center",
       background: "#000000",
-      border: "1px solid rgba(255,255,255,0.5)",
+      border: "1px solid rgba(255,255,255,0.36)",
       color: "#ffffff",
       "font-size": "12px",
       "font-weight": 700,
@@ -601,7 +615,7 @@ export default function ChatSetup() {
       height: "22px",
       border: "0",
       "border-radius": "999px",
-      background: "rgba(255,255,255,0.14)",
+      background: "transparent",
       color: "#ffffff",
       cursor: "pointer",
       display: "inline-flex",
@@ -623,6 +637,94 @@ export default function ChatSetup() {
       "font-size": "13px",
       padding: "0 4px",
       "box-sizing": "border-box",
+    },
+    roleMergeCard: {
+      display: "grid",
+      "grid-template-columns": "minmax(0, 0.9fr) minmax(300px, 1.4fr)",
+      gap: "12px",
+      "align-items": "stretch",
+      padding: "14px",
+      border: "1px solid rgba(255,255,255,0.18)",
+      "border-radius": "10px",
+      background: "#020202",
+    },
+    roleMergeHeader: {
+      display: "flex",
+      "flex-direction": "column",
+      gap: "5px",
+      "min-width": "0",
+    },
+    roleMergeTitle: {
+      color: C.text,
+      "font-size": "13px",
+      "font-weight": 700,
+    },
+    roleMergeHint: {
+      color: C.muted,
+      "font-size": "11px",
+      "line-height": 1.45,
+    },
+    rolePillGroup: {
+      display: "grid",
+      "grid-template-columns": "repeat(3, minmax(0, 1fr))",
+      gap: "8px",
+    },
+    rolePill: {
+      minHeight: "74px",
+      display: "flex",
+      "flex-direction": "column",
+      "align-items": "center",
+      "justify-content": "center",
+      gap: "9px",
+      padding: "10px",
+      border: "1px solid rgba(255,255,255,0.18)",
+      "border-radius": "10px",
+      background: "#000000",
+      color: "rgba(255,255,255,0.68)",
+      cursor: "pointer",
+      "font-family": "inherit",
+      "font-size": "12px",
+      "font-weight": 700,
+      "box-sizing": "border-box",
+    },
+    rolePillActive: {
+      border: "1px solid rgba(255,255,255,0.72)",
+      color: "#ffffff",
+      background:
+        "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.01))",
+      "box-shadow": "inset 0 0 0 1px rgba(255,255,255,0.05)",
+    },
+    roleBadgePreview: {
+      display: "inline-flex",
+      "align-items": "center",
+      padding: "3px",
+      border: "1px solid rgba(255,255,255,0.16)",
+      "border-radius": "7px",
+      background: "#070707",
+    },
+    roleBadgeIcon: {
+      width: "23px",
+      height: "23px",
+      display: "inline-flex",
+      "align-items": "center",
+      "justify-content": "center",
+      "border-radius": "5px",
+      color: "#ffffff",
+      "font-size": "8px",
+      "font-weight": 900,
+      "letter-spacing": "0.02em",
+      "box-sizing": "border-box",
+      border: "1px solid rgba(255,255,255,0.2)",
+    },
+    roleBadgeImage: {
+      width: "100%",
+      height: "100%",
+      display: "block",
+      "object-fit": "contain",
+    },
+    rolePillLabel: {
+      "line-height": 1.1,
+      "text-align": "center",
     },
     resultCard: {
       background: C.card,
@@ -692,12 +794,11 @@ export default function ChatSetup() {
     hideSpecialBadges: hideSpecialBadges(),
     emoteScale: toFloat(emoteScale(), DEFAULT_CHAT_CONFIG.emoteScale),
     botNames: normalizeBotNames(botNames().join(",")),
-    singleChatter: singleChatter(),
+    singleChatter: normalizeBotNames(allowedChatters().join(",")),
     show7tvUnlisted: show7tvUnlisted(),
     smallCaps: smallCaps(),
     nlAfterName: nlAfterName(),
     hideNames: hideNames(),
-    lastEmoteBackground: lastEmoteBackground(),
     reverseLineOrder: reverseLineOrder(),
     horizontal: horizontal(),
     ffzBotMixCustom: true,
@@ -738,28 +839,23 @@ export default function ChatSetup() {
 
   const previewChannel = createMemo(() => channel().trim() || "chatyxpreview");
   const previewConfig = createMemo(() => buildConfig(previewChannel()));
+  const ffzBotBadgePreviewUrl = getPublicAssetUrl("img/ffz-bot-badge.png");
   const requestedBotProfiles = new Set<string>();
 
   const addBotNames = (raw: string) => {
-    const nextLogins = splitBotLogins(raw);
-    if (nextLogins.length === 0) return;
+    setBotNames((current) => mergeUniqueLogins(current, raw));
+  };
 
-    setBotNames((current) => {
-      const seen = new Set(current);
-      const merged = [...current];
-
-      for (const login of nextLogins) {
-        if (seen.has(login)) continue;
-        seen.add(login);
-        merged.push(login);
-      }
-
-      return merged;
-    });
+  const addAllowedChatters = (raw: string) => {
+    setAllowedChatters((current) => mergeUniqueLogins(current, raw));
   };
 
   const removeBotName = (login: string) => {
     setBotNames((current) => current.filter((entry) => entry !== login));
+  };
+
+  const removeAllowedChatter = (login: string) => {
+    setAllowedChatters((current) => current.filter((entry) => entry !== login));
   };
 
   const handleBotInputKeyDown = (event: KeyboardEvent) => {
@@ -775,10 +871,24 @@ export default function ChatSetup() {
     }
   };
 
+  const handleAllowedChatterInputKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addAllowedChatters(allowedChatterInput());
+      setAllowedChatterInput("");
+      return;
+    }
+
+    if (event.key === "Backspace" && allowedChatterInput().trim() === "") {
+      setAllowedChatters((current) => current.slice(0, -1));
+    }
+  };
+
   createEffect(() => {
-    const missing = botNames().filter(
-      (login) => !botProfiles()[login] && !requestedBotProfiles.has(login),
-    );
+    const missing = Array.from(new Set([...botNames(), ...allowedChatters()]))
+      .filter(
+        (login) => !botProfiles()[login] && !requestedBotProfiles.has(login),
+      );
     if (missing.length === 0) return;
 
     for (const login of missing) {
@@ -1012,17 +1122,12 @@ export default function ChatSetup() {
     },
     { label: "Не показывать ники", checked: hideNames, onChange: setHideNames },
     {
-      label: "Подсвечивать последний эмот",
-      checked: lastEmoteBackground,
-      onChange: setLastEmoteBackground,
-    },
-    {
       label: "Обратный порядок сообщений",
       checked: reverseLineOrder,
       onChange: setReverseLineOrder,
     },
     {
-      label: "Показывать чат строкой",
+      label: "Чат одной строкой (горизонтальный режим)",
       checked: horizontal,
       onChange: setHorizontal,
     },
@@ -1040,7 +1145,7 @@ export default function ChatSetup() {
       onChange: setShow7tvUnlisted,
     },
     {
-      label: "Скрыть служебные бейджи",
+      label: "Скрыть сторонние бейджи",
       checked: hideSpecialBadges,
       onChange: setHideSpecialBadges,
     },
@@ -1051,19 +1156,74 @@ export default function ChatSetup() {
     },
   ];
 
-  const ffzToggles: ToggleRow[] = [
+  const roleBadgeMergeOptions = [
     {
       label: "Стример",
+      badgeColor: "#e91916",
       checked: ffzBotMixBroadcaster,
       onChange: setFfzBotMixBroadcaster,
     },
     {
       label: "Модератор",
+      badgeColor: "#00ad03",
       checked: ffzBotMixModerator,
       onChange: setFfzBotMixModerator,
     },
-    { label: "VIP-зритель", checked: ffzBotMixVip, onChange: setFfzBotMixVip },
+    {
+      label: "VIP-зритель",
+      badgeColor: "#e005b9",
+      checked: ffzBotMixVip,
+      onChange: setFfzBotMixVip,
+    },
   ];
+
+  const renderUserChip = (
+    login: string,
+    remove: (login: string) => void,
+    ariaLabel: string,
+  ) => {
+    const profile = () => botProfiles()[login];
+    const displayName = () => profile()?.displayName || login;
+    const avatarUrl = () => profile()?.avatarUrl || "";
+
+    return (
+      <div
+        style={styles.botChip}
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Backspace" || event.key === "Delete") {
+            event.preventDefault();
+            remove(login);
+          }
+        }}
+      >
+        {avatarUrl() ? (
+          <img
+            src={avatarUrl()}
+            alt=""
+            style={styles.botAvatar}
+            loading="lazy"
+          />
+        ) : (
+          <span style={styles.botAvatarFallback}>{botFallbackName(login)}</span>
+        )}
+        <span style={styles.botText}>
+          <span style={styles.botDisplayName}>{displayName()}</span>
+          {displayName().toLowerCase() !== login && (
+            <span style={styles.botLogin}>@{login}</span>
+          )}
+        </span>
+        <button
+          type="button"
+          style={styles.botRemoveButton}
+          onClick={() => remove(login)}
+          aria-label={`${ariaLabel}: ${displayName()}`}
+        >
+          ×
+        </button>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -1087,12 +1247,17 @@ export default function ChatSetup() {
 
           @media (max-width: 720px) {
             .setup-control-row,
-            .setup-bot-row {
+            .setup-bot-row,
+            .setup-role-merge {
               grid-template-columns: 1fr !important;
             }
 
             .setup-toggle-row {
               grid-template-columns: 1fr auto !important;
+            }
+
+            .setup-role-pills {
+              grid-template-columns: 1fr !important;
             }
           }
 
@@ -1203,13 +1368,63 @@ export default function ChatSetup() {
                   settingLabel: styles.settingLabel,
                   settingHint: styles.settingHint,
                 })}
+
+                <div class="setup-role-merge" style={styles.roleMergeCard}>
+                  <div style={styles.roleMergeHeader}>
+                    <div style={styles.roleMergeTitle}>
+                      Объединять bot badge с role badge
+                    </div>
+                    <div style={styles.roleMergeHint}>
+                      Выбери роли, у которых FFZ-бот-бейдж будет показываться
+                      рядом с Twitch-бейджем роли.
+                    </div>
+                  </div>
+                  <div class="setup-role-pills" style={styles.rolePillGroup}>
+                    <For each={roleBadgeMergeOptions}>
+                      {(option) => {
+                        const active = () => option.checked();
+
+                        return (
+                          <button
+                            type="button"
+                            style={{
+                              ...styles.rolePill,
+                              ...(active() ? styles.rolePillActive : {}),
+                            }}
+                            onClick={() => option.onChange(!active())}
+                            aria-pressed={active()}
+                          >
+                            <span style={styles.roleBadgePreview}>
+                              <span
+                                style={{
+                                  ...styles.roleBadgeIcon,
+                                  background: option.badgeColor,
+                                }}
+                              >
+                                <img
+                                  src={ffzBotBadgePreviewUrl}
+                                  alt=""
+                                  style={styles.roleBadgeImage}
+                                  loading="lazy"
+                                />
+                              </span>
+                            </span>
+                            <span style={styles.rolePillLabel}>
+                              {option.label}
+                            </span>
+                          </button>
+                        );
+                      }}
+                    </For>
+                  </div>
+                </div>
               </section>
 
               <section style={styles.sectionCard}>
                 <h3 style={styles.sectionTitle}>Боты и фильтры</h3>
                 <div style={styles.sectionHint}>
-                  Спрячь ботов, команды или оставь сообщения только одного
-                  пользователя.
+                  Спрячь ботов, команды или оставь сообщения только выбранных
+                  пользователей.
                 </div>
 
                 <div class="setup-bot-row" style={styles.botHeader}>
@@ -1223,57 +1438,13 @@ export default function ChatSetup() {
                   <div style={styles.botChipField}>
                     <div style={styles.botChipList}>
                       <For each={botNames()}>
-                        {(login) => {
-                          const profile = () => botProfiles()[login];
-                          const displayName = () =>
-                            profile()?.displayName || login;
-                          const avatarUrl = () => profile()?.avatarUrl || "";
-
-                          return (
-                            <div
-                              style={styles.botChip}
-                              tabIndex={0}
-                              onKeyDown={(event) => {
-                                if (
-                                  event.key === "Backspace" ||
-                                  event.key === "Delete"
-                                ) {
-                                  event.preventDefault();
-                                  removeBotName(login);
-                                }
-                              }}
-                            >
-                              {avatarUrl() ? (
-                                <img
-                                  src={avatarUrl()}
-                                  alt=""
-                                  style={styles.botAvatar}
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <span style={styles.botAvatarFallback}>
-                                  {botFallbackName(login)}
-                                </span>
-                              )}
-                              <span style={styles.botText}>
-                                <span style={styles.botDisplayName}>
-                                  {displayName()}
-                                </span>
-                                {displayName().toLowerCase() !== login && (
-                                  <span style={styles.botLogin}>@{login}</span>
-                                )}
-                              </span>
-                              <button
-                                type="button"
-                                style={styles.botRemoveButton}
-                                onClick={() => removeBotName(login)}
-                                aria-label={`Убрать ${displayName()} из списка ботов`}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          );
-                        }}
+                        {(login) =>
+                          renderUserChip(
+                            login,
+                            removeBotName,
+                            "Убрать из списка ботов",
+                          )
+                        }
                       </For>
 
                       <input
@@ -1285,7 +1456,7 @@ export default function ChatSetup() {
                           addBotNames(botInput());
                           setBotInput("");
                         }}
-                        placeholder="Добавить бота и нажать Enter"
+                        placeholder="Введите никнейм и нажмите Enter"
                         style={styles.botInput}
                       />
                     </div>
@@ -1295,32 +1466,44 @@ export default function ChatSetup() {
                 <div class="setup-control-row" style={styles.controlRow}>
                   <div style={styles.controlLabelWrap}>
                     <div style={styles.settingLabel}>
-                      Показывать только одного зрителя
+                      Показывать только этих зрителей
                     </div>
                     <div style={styles.settingHint}>
-                      Если заполнить поле, остальные сообщения будут скрыты.
+                      Если список не пустой, остальные сообщения будут скрыты.
                     </div>
                   </div>
                   <div style={styles.controlSlot}>
-                    <input
-                      type="text"
-                      value={singleChatter()}
-                      onInput={(e) => setSingleChatter(e.currentTarget.value)}
-                      placeholder="ник зрителя"
-                      style={styles.input}
-                    />
+                    <div style={styles.botChipField}>
+                      <div style={styles.botChipList}>
+                        <For each={allowedChatters()}>
+                          {(login) =>
+                            renderUserChip(
+                              login,
+                              removeAllowedChatter,
+                              "Убрать из списка зрителей",
+                            )
+                          }
+                        </For>
+
+                        <input
+                          type="text"
+                          value={allowedChatterInput()}
+                          onInput={(event) =>
+                            setAllowedChatterInput(event.currentTarget.value)
+                          }
+                          onKeyDown={handleAllowedChatterInputKeyDown}
+                          onBlur={() => {
+                            addAllowedChatters(allowedChatterInput());
+                            setAllowedChatterInput("");
+                          }}
+                          placeholder="Введите никнейм и нажмите Enter"
+                          style={styles.botInput}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div style={styles.sectionHint}>
-                  Кому показывать FFZ-бот-бейдж вместе с Twitch-бейджем роли.
-                </div>
-                {renderToggleRows(ffzToggles, {
-                  toggleRow: { ...styles.toggleRow },
-                  toggleLabelWrap: styles.toggleLabelWrap,
-                  settingLabel: styles.settingLabel,
-                  settingHint: styles.settingHint,
-                })}
               </section>
             </div>
 

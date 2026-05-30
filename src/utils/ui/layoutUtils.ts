@@ -25,13 +25,12 @@ export function getLayoutStyles(options: LayoutOptions): string {
         display: flex;
         flex-direction: row;
         align-items: flex-end;
+        gap: 1rem;
         overflow-x: auto;
         overflow-y: hidden;
       }
       #chat_container .chat_line {
         flex-shrink: 0;
-        margin-right: 1rem;
-        margin-bottom: 0;
       }
     `;
   } else {
@@ -50,10 +49,6 @@ export function getLayoutStyles(options: LayoutOptions): string {
       styles += `
         #chat_container {
           flex-direction: row-reverse;
-        }
-        #chat_container .chat_line {
-          margin-right: 0;
-          margin-left: 1rem;
         }
       `;
     } else {
