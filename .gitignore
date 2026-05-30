@@ -1,0 +1,61 @@
+# Build outputs
+dist
+.output
+.solid
+.vinxi
+.vercel
+.netlify
+netlify
+
+# Cloudflare Pages
+functions
+
+# Dependencies
+node_modules
+bun.lock
+
+# Codesnippets
+codesnippets
+
+# IDEs and editors
+.idea
+.vscode
+.zed
+.project
+.classpath
+*.launch
+.settings/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude
+
+# System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Temp files
+*.tmp
+*.temp
+.cache
+todo.md

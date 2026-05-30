@@ -1,0 +1,126 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+@font-face {
+  font-family: Alsina;
+  src: url(/v3/font/Alsina_Ultrajada.ttf);
+}
+
+/* Minimalist grayscale theme with white text */
+:root {
+  --bg: #1a1a1a;
+  --panel: #2a2a2a;
+  --text: #ffffff;
+  --text-secondary: #b3b3b3;
+  --border: #3a3a3a;
+  --input-bg: #0f0f0f;
+  --button-bg: #ffffff;
+  --button-text: #000000;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  color: var(--text);
+  font-family:
+    "Inter",
+    "Segoe UI",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+}
+
+body {
+  background: transparent;
+}
+
+html {
+  scrollbar-color: #4b5563 #111111;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 999px;
+  border: 2px solid #111111;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+::-webkit-scrollbar-corner {
+  background: #111111;
+}
+
+* {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.setup-switch {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 50px;
+  height: 25px;
+  background: #2f2f2f;
+  border-radius: 20px;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid #444;
+  transition:
+    background-color 0.2s ease-in-out,
+    border-color 0.2s ease-in-out;
+  flex-shrink: 0;
+}
+
+.setup-switch:checked {
+  background: #6b7280;
+  border-color: #6b7280;
+}
+
+.setup-switch::after {
+  position: absolute;
+  content: "";
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: left 0.2s ease-in-out;
+}
+
+.setup-switch:checked::after {
+  left: calc(100% - 23px);
+}
+
+/* Utility classes */
+.bg-panel {
+  background: var(--panel);
+}
+.text-secondary {
+  color: var(--text-secondary);
+}

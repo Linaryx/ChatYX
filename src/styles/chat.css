@@ -1,0 +1,198 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  height: 100vh;
+  position: relative;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+#chat_container {
+  width: 100%;
+  padding: 0;
+  position: absolute;
+  bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: transparent;
+  color: white;
+  font-weight: 800;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.chat_line {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.user_info {
+  display: inline-block;
+}
+
+.badge {
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 10%;
+}
+
+img.badge {
+  display: inline-block;
+}
+
+.badge:last-of-type {
+  margin-right: 3px;
+}
+
+.badge.ffz-bot-mix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge.ffz-bot-mix img {
+  width: 100%;
+  height: 100%;
+}
+
+.badge.ffz-bot {
+  background-color: #5f5f5f;
+  padding: 0;
+}
+
+.nick {
+  font-weight: 800;
+}
+
+.colon {
+  margin-right: 8px;
+}
+
+.cheer_bits {
+  font-weight: 700;
+  margin-left: 2px;
+  margin-right: 4px;
+  -webkit-text-stroke: 1px black;
+}
+
+.cheer_emote {
+  vertical-align: middle;
+}
+
+.emote {
+  vertical-align: middle;
+}
+
+.emote-container {
+  display: inline-block;
+  position: relative;
+}
+
+.emote-container[data-zw-group] {
+  display: inline-grid;
+  vertical-align: middle;
+}
+
+.emote-container[data-zw-group] > img {
+  grid-area: 1 / 1;
+  place-self: center;
+}
+
+.emoji {
+  vertical-align: middle;
+}
+
+.mention {
+  font-weight: inherit;
+}
+
+.mention.chatis-seventv-paint[data-seventv-paint-id] {
+  line-height: inherit !important;
+}
+
+.zerowidth {
+  pointer-events: none;
+}
+
+.hidden {
+  display: none;
+}
+
+.upscale {
+  /* Emotes that need upscaling */
+}
+
+/* 7TV Paint стили */
+.chatis-seventv-paint[data-seventv-paint-id] {
+  -webkit-text-stroke-width: 0px !important;
+  -webkit-text-stroke-color: transparent !important;
+  text-shadow: none !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.nick[data-seventv-paint-id] {
+  -webkit-text-stroke-width: 0px !important;
+  -webkit-text-stroke-color: transparent !important;
+  text-shadow: none !important;
+}
+
+/* Action messages (/me) */
+.chat-message-action {
+  font-style: italic;
+}
+
+.chat-message-action .nick,
+.chat-message-action .message-text {
+  font-style: italic;
+}
+
+/* Reply header */
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 0.9em;
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.reply-header:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Chat badges */
+.chat-badge {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.chat-badge-chatis,
+.chat-badge-ffzap,
+.chat-badge-bttv,
+.chat-badge-chatterino {
+  height: 18px;
+  width: 18px;
+}
+
+/* Fade animation */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.fade-out {
+  animation: fadeOut 0.5s ease-out forwards;
+}

@@ -1,0 +1,42 @@
+/* Google Fonts для ChatYX */
+
+/* Baloo Tammudu 2 */
+@import url("https://fonts.googleapis.com/css2?family=Baloo+Tammudu+2:wght@400;500;600;700;800&display=swap");
+
+/* Segoe UI (системный шрифт) */
+/* Используется системный Segoe UI */
+
+/* Roboto */
+@import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
+
+/* Lato */
+@import url("https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap");
+
+/* Noto Sans JP */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500;700;900&display=swap");
+
+/* Source Code Pro */
+@import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,900&display=swap");
+
+/* Impact (системный шрифт) */
+/* Используется системный Impact */
+
+/* Comfortaa */
+@import url("https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&display=swap");
+
+/* Dancing Script */
+@import url("https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap");
+
+/* Indie Flower */
+@import url("https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap");
+
+/* Open Sans */
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap");
+
+/* Alsina (Vsauce) - специальный шрифт */
+@font-face {
+  font-family: "AlsinaUltrajada";
+  src: url("https://fonts.cdnfonts.com/css/alsina-ultrajada") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}

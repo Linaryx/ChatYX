@@ -1,0 +1,32 @@
+{
+  "name": "chatyx",
+  "version": "3.0.0",
+  "description": "Modern Twitch chat overlay with multi-platform emote support",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "build:pages": "vite build && bun scripts/prepare-github-pages.ts",
+    "start": "vite preview --host",
+    "lint": "oxlint -c ./.oxlintrc.json --tsconfig ./tsconfig.app.json src",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "oxlint": "^1.58.0",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.7",
+    "vite-plugin-solid": "^2.11.12"
+  },
+  "dependencies": {
+    "@kobalte/core": "^0.13.11",
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "^0.16.1",
+    "lucid-color-picker": "^0.1.0",
+    "solid-js": "^1.9.12"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
