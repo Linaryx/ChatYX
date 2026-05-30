@@ -20,7 +20,11 @@ import {
   generateVariantStyles,
 } from "~/styles/chatStyles";
 import { extractEmojis } from "~/utils/chat/emojiUtils";
-import { updateAnimationStyles } from "~/utils/ui/animationUtils";
+import {
+  DEFAULT_ANIMATION_OPTIONS,
+  messageSpeedToIntervalMs,
+  updateAnimationStyles,
+} from "~/utils/ui/animationUtils";
 import { log, LOG_CATEGORIES } from "~/utils/logger";
 import type { ChatConfig } from "~/utils/chat";
 
@@ -306,8 +310,12 @@ export class OverlayRuntime {
     }
 
     if (config.animate) {
-      const baseDuration = this.chatService?.getConfig().animation.duration ?? 380;
-      updateAnimationStyles({ enabled: true, duration: baseDuration, easing: "ease-out", type: "fade" });
+      updateAnimationStyles({
+        enabled: true,
+        duration: DEFAULT_ANIMATION_OPTIONS.duration,
+        easing: "ease-out",
+        type: "fade",
+      });
     }
   }
 
@@ -326,6 +334,12 @@ export class OverlayRuntime {
   }
 
   private startBatchProcessing() {
+    const batchIntervalMs = this.activeConfig
+      ? messageSpeedToIntervalMs(this.activeConfig.messageSpeed)
+      : DEFAULT_ANIMATION_OPTIONS.duration;
+
+    if (batchIntervalMs === null) return;
+
     this.batchInterval = window.setInterval(() => {
       if (this.messageQueue.length === 0) return;
 
@@ -377,7 +391,7 @@ export class OverlayRuntime {
       }, 100);
 
       this.chatService.scrollToLatest(this.activeConfig.animate);
-    }, 200);
+    }, batchIntervalMs);
   }
 
   private setupEventListeners() {
@@ -450,6 +464,9 @@ export class OverlayRuntime {
       this.channel,
       async (message) => {
         if (!this.activeConfig || !this.chatService) return;
+        if (messageSpeedToIntervalMs(this.activeConfig.messageSpeed) === null) {
+          return;
+        }
 
         if (
           !this.chatService.shouldDisplayMessage(message.username, message.message)

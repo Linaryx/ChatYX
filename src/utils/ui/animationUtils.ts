@@ -7,12 +7,36 @@ export interface AnimationOptions {
   type: "fade" | "scale";
 }
 
+export const MIN_MESSAGE_SPEED = 0;
+export const MAX_MESSAGE_SPEED = 100;
+export const DEFAULT_MESSAGE_SPEED = 25;
+export const MIN_MESSAGE_INTERVAL_MS = 80;
+export const MAX_MESSAGE_INTERVAL_MS = 3000;
+
 export const DEFAULT_ANIMATION_OPTIONS: AnimationOptions = {
   enabled: true,
   duration: 200,
   easing: "ease-in-out",
   type: "fade",
 };
+
+export function clampMessageSpeed(speed: number): number {
+  if (!Number.isFinite(speed)) return DEFAULT_MESSAGE_SPEED;
+  return Math.min(
+    Math.max(Math.round(speed), MIN_MESSAGE_SPEED),
+    MAX_MESSAGE_SPEED,
+  );
+}
+
+export function messageSpeedToIntervalMs(speed: number): number | null {
+  const clamped = clampMessageSpeed(speed);
+  if (clamped <= MIN_MESSAGE_SPEED) return null;
+
+  const normalized = (clamped - 1) / (MAX_MESSAGE_SPEED - 1);
+  const ratio = MIN_MESSAGE_INTERVAL_MS / MAX_MESSAGE_INTERVAL_MS;
+
+  return Math.round(MAX_MESSAGE_INTERVAL_MS * ratio ** normalized);
+}
 
 /**
  * Generate CSS animation classes based on options

@@ -31,6 +31,10 @@ import {
   injectPreviewStyles,
   cleanupPreviewStyles,
 } from "~/services/chat/preview";
+import {
+  DEFAULT_ANIMATION_OPTIONS,
+  messageSpeedToIntervalMs,
+} from "~/utils/ui/animationUtils";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -80,7 +84,9 @@ export default function ChatOverlay() {
   const [isConnected, setIsConnected] = createSignal(false);
   const [chatService, setChatService] = createSignal<ChatISIntegrationService | null>(null);
   const [animatedIds, setAnimatedIds] = createSignal<Set<string>>(new Set());
-  const [animationDurationMs, setAnimationDurationMs] = createSignal(380);
+  const [animationDurationMs, setAnimationDurationMs] = createSignal(
+    DEFAULT_ANIMATION_OPTIONS.duration,
+  );
   const [loadingProgress, setLoadingProgress] = createSignal(0);
   const [loadingStatus, setLoadingStatus] = createSignal("Initializing...");
   const [isLoading, setIsLoading] = createSignal(true);
@@ -199,8 +205,15 @@ export default function ChatOverlay() {
       previewService.updateConfig({ userId: "0" });
 
       setConfig(previewConfig);
+      const previewAnimationDuration = previewConfig.animate
+        ? previewService.getConfig().animation.duration
+        : 0;
+      const previewIntervalMs = messageSpeedToIntervalMs(
+        previewConfig.messageSpeed,
+      );
+
       setChatService(previewService);
-      setAnimationDurationMs(previewConfig.animate ? 200 : 0);
+      setAnimationDurationMs(previewAnimationDuration);
       setChannelDisplayName(channel);
       setIsConnected(true);
       const previewContainer = document.getElementById("chat_container");
@@ -269,6 +282,8 @@ export default function ChatOverlay() {
           setLoadingStatus("Preview ready");
           setIsLoading(false);
 
+          if (previewIntervalMs === null) return;
+
           previewInterval = window.setInterval(() => {
             const nextMsg = nextPreviewMessage(channel, previewService, previewChannelId);
             mentionStyleService.registerMessageAuthor(nextMsg);
@@ -286,9 +301,9 @@ export default function ChatOverlay() {
                   next.delete(nextMsg.id);
                   return next;
                 });
-              }, 240);
+              }, previewAnimationDuration + 40);
             }
-          }, 2400);
+          }, previewIntervalMs);
         }, 700);
       })().catch((error) => {
         console.error("[Preview] Initialization failed:", error);

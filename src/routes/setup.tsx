@@ -19,6 +19,11 @@ import {
   type ChatConfig,
 } from "~/config/chatUrlParams";
 import { getAppBaseUrl, getPublicAssetUrl } from "~/utils/appBase";
+import {
+  MAX_MESSAGE_SPEED,
+  MIN_MESSAGE_SPEED,
+  messageSpeedToIntervalMs,
+} from "~/utils/ui/animationUtils";
 
 type ControlRow = {
   label: string;
@@ -204,6 +209,9 @@ export default function ChatSetup() {
     DEFAULT_CHAT_CONFIG.fade === false ? "0" : String(DEFAULT_CHAT_CONFIG.fade),
   );
   const [animate, setAnimate] = createSignal(DEFAULT_CHAT_CONFIG.animate);
+  const [messageSpeed, setMessageSpeed] = createSignal(
+    String(DEFAULT_CHAT_CONFIG.messageSpeed),
+  );
   const [showHomies, setShowHomies] = createSignal(
     DEFAULT_CHAT_CONFIG.showHomies,
   );
@@ -471,6 +479,37 @@ export default function ChatSetup() {
       color: C.muted,
       "text-transform": "uppercase",
       "letter-spacing": "0.08em",
+    },
+    speedCard: {
+      padding: "12px",
+      border: `1px solid ${C.border}`,
+      "border-radius": "8px",
+      background: C.card,
+      display: "flex",
+      "flex-direction": "column",
+      gap: "10px",
+    },
+    speedHeader: {
+      display: "flex",
+      "align-items": "baseline",
+      "justify-content": "space-between",
+      gap: "12px",
+    },
+    speedValue: {
+      color: C.subtle,
+      "font-size": "11px",
+      "font-weight": 600,
+      "white-space": "nowrap",
+    },
+    speedSlider: {
+      width: "100%",
+      accentColor: "#ffffff",
+    },
+    speedScale: {
+      display: "flex",
+      "justify-content": "space-between",
+      color: C.muted,
+      "font-size": "11px",
     },
     previewScreen: {
       position: "relative",
@@ -773,6 +812,17 @@ export default function ChatSetup() {
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const toClampedInt = (
+    raw: string,
+    fallback: number,
+    min: number,
+    max: number,
+  ): number => {
+    const n = Number.parseInt(raw, 10);
+    const value = Number.isFinite(n) ? n : fallback;
+    return Math.min(Math.max(value, min), max);
+  };
+
   const toFloat = (raw: string, fallback: number): number => {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) ? n : fallback;
@@ -788,6 +838,12 @@ export default function ChatSetup() {
     stroke: toIntOrFalse(stroke()),
     fade: toSecondsOrFalse(fade()),
     animate: animate(),
+    messageSpeed: toClampedInt(
+      messageSpeed(),
+      DEFAULT_CHAT_CONFIG.messageSpeed,
+      MIN_MESSAGE_SPEED,
+      MAX_MESSAGE_SPEED,
+    ),
     showHomies: showHomies(),
     bots: bots(),
     commands: commands(),
@@ -839,6 +895,20 @@ export default function ChatSetup() {
 
   const previewChannel = createMemo(() => channel().trim() || "chatyxpreview");
   const previewConfig = createMemo(() => buildConfig(previewChannel()));
+  const messageSpeedValue = createMemo(() =>
+    toClampedInt(
+      messageSpeed(),
+      DEFAULT_CHAT_CONFIG.messageSpeed,
+      MIN_MESSAGE_SPEED,
+      MAX_MESSAGE_SPEED,
+    ),
+  );
+  const messageIntervalMs = createMemo(() =>
+    messageSpeedToIntervalMs(messageSpeedValue()),
+  );
+  const messageSpeedLabel = createMemo(() =>
+    messageIntervalMs() === null ? "стоп" : `${messageIntervalMs()} мс`,
+  );
   const ffzBotBadgePreviewUrl = getPublicAssetUrl("img/ffz-bot-badge.png");
   const requestedBotProfiles = new Set<string>();
 
@@ -1503,13 +1573,36 @@ export default function ChatSetup() {
                     </div>
                   </div>
                 </div>
-
               </section>
             </div>
 
             <div style={styles.previewPane}>
               <div class="setup-preview-sticky" style={styles.previewSticky}>
                 <div style={styles.previewLabel}>Живое превью</div>
+                <div style={styles.speedCard}>
+                  <div style={styles.speedHeader}>
+                    <div style={styles.settingLabel}>
+                      Скорость появления сообщений
+                    </div>
+                    <div style={styles.speedValue}>{messageSpeedLabel()}</div>
+                  </div>
+                  <input
+                    type="range"
+                    min={MIN_MESSAGE_SPEED}
+                    max={MAX_MESSAGE_SPEED}
+                    step="1"
+                    value={messageSpeed()}
+                    onInput={(event) =>
+                      setMessageSpeed(event.currentTarget.value)
+                    }
+                    style={styles.speedSlider}
+                    aria-label="Скорость появления сообщений"
+                  />
+                  <div style={styles.speedScale}>
+                    <span>Полный стоп</span>
+                    <span>Летит</span>
+                  </div>
+                </div>
                 <div style={styles.previewScreen}>
                   <div class="preview-ambient" />
                   <div style={styles.previewOverlay} />

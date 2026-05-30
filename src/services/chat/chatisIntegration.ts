@@ -553,7 +553,7 @@ export function createFromQueryParams(params: ChatConfig): ChatISConfig {
     userId: "",
     animation: {
       enabled: params.animate,
-      duration: 200,
+      duration: DEFAULT_ANIMATION_OPTIONS.duration,
       easing: "ease-in-out",
       type: "fade",
     },

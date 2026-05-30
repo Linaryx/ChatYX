@@ -1,10 +1,15 @@
 import { DEFAULT_BOT_NAMES } from "./botNames";
+import {
+  DEFAULT_MESSAGE_SPEED,
+  clampMessageSpeed,
+} from "../utils/ui/animationUtils";
 
 export interface ChatConfig {
   // Required query param: `?c=...` (alias: `channel`)
   channel: string;
 
   animate: boolean;
+  messageSpeed: number;
   bots: boolean;
   commands: boolean;
   hideSpecialBadges: boolean;
@@ -44,6 +49,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   stroke: false,
   fade: 60,
   animate: true,
+  messageSpeed: DEFAULT_MESSAGE_SPEED,
   showHomies: false,
   bots: true,
   commands: true,
@@ -110,6 +116,11 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
   stroke: { query: "st", kind: "intOrFalse", aliases: ["stroke"] },
   fade: { query: "fd", kind: "secondsOrFalse", aliases: ["fade"] },
   animate: { query: "a", kind: "bool", aliases: ["animate"] },
+  messageSpeed: {
+    query: "ms",
+    kind: "int",
+    aliases: ["message_speed", "messageSpeed"],
+  },
   showHomies: { query: "hm", kind: "bool", aliases: ["show_homies"] },
   bots: { query: "b", kind: "bool", aliases: ["bots"] },
   commands: { query: "cmd", kind: "bool", aliases: ["commands"] },
@@ -294,6 +305,8 @@ export function parseChatConfigFromSearchParams(
   if (hasExplicitBotNamesParam && !hasExplicitBotsParam) {
     cfg.bots = false;
   }
+
+  cfg.messageSpeed = clampMessageSpeed(cfg.messageSpeed);
 
   return cfg;
 }
