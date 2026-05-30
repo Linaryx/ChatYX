@@ -560,7 +560,7 @@ export default function ChatSetup() {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(generatedUrl());
-      alert("URL скопирован в буфер обмена!");
+      alert("Ссылка скопирована в буфер обмена");
     } catch (err) {
       console.error("Ошибка копирования:", err);
     }
@@ -568,7 +568,7 @@ export default function ChatSetup() {
 
   const appearanceRows: ControlRow[] = [
     {
-      label: "Размер",
+      label: "Размер сообщений",
       control: (
         <select
           value={size()}
@@ -589,7 +589,7 @@ export default function ChatSetup() {
           onChange={(e) => setFont(e.currentTarget.value)}
           style={styles.input}
         >
-          <option value="0">[Custom]</option>
+          <option value="0">Свой шрифт</option>
           <option value="1">Baloo Tammudu</option>
           <option value="2">Segoe UI (Chatterino)</option>
           <option value="3">Roboto</option>
@@ -606,14 +606,14 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Кастомный шрифт",
-      hint: "Активен только когда выбран [Custom]",
+      label: "Название своего шрифта",
+      hint: "Работает, когда выше выбран пункт «Свой шрифт».",
       control: (
         <input
           type="text"
           value={fontCustom()}
           onInput={(e) => setFontCustom(e.currentTarget.value)}
-          placeholder="Название шрифта"
+          placeholder="Например: Comic Sans MS"
           disabled={font() !== "0"}
           style={{
             ...styles.input,
@@ -623,7 +623,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Масштаб эмодзи",
+      label: "Размер эмотов",
       control: (
         <SetupNumberField
           value={emoteScale()}
@@ -638,7 +638,7 @@ export default function ChatSetup() {
 
   const stylingRows: ControlRow[] = [
     {
-      label: "Тень",
+      label: "Тень текста",
       control: (
         <select
           value={shadow()}
@@ -653,7 +653,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Обводка",
+      label: "Обводка текста",
       control: (
         <select
           value={stroke()}
@@ -669,8 +669,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Исчезновение (сек)",
-      hint: "0 выключает fade",
+      label: "Скрывать сообщения через",
+      hint: "В секундах. 0 — сообщения остаются на экране.",
       control: (
         <SetupNumberField
           value={fade()}
@@ -681,7 +681,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Цвет фона",
+      label: "Фон сообщений",
       control: (
         <ColorPickerField
           color={overlayBackgroundColor()}
@@ -697,7 +697,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Скругление фона (px)",
+      label: "Скругление фона",
       control: (
         <SetupNumberField
           value={overlayBackgroundRadius()}
@@ -709,7 +709,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Прозрачность рамки (%)",
+      label: "Видимость рамки",
       control: (
         <SetupNumberField
           value={overlayBorderOpacity()}
@@ -723,30 +723,34 @@ export default function ChatSetup() {
   ];
 
   const behaviorToggles: ToggleRow[] = [
-    { label: "Анимация", checked: animate, onChange: setAnimate },
     {
-      label: "Small Caps ники",
+      label: "Анимировать новые сообщения",
+      checked: animate,
+      onChange: setAnimate,
+    },
+    {
+      label: "Писать ники капсом",
       checked: smallCaps,
       onChange: setSmallCaps,
     },
     {
-      label: "Перенос после ника",
+      label: "Переносить текст после ника",
       checked: nlAfterName,
       onChange: setNlAfterName,
     },
-    { label: "Скрыть ники", checked: hideNames, onChange: setHideNames },
+    { label: "Не показывать ники", checked: hideNames, onChange: setHideNames },
     {
-      label: "Фон последнего эмоута",
+      label: "Подсвечивать последний эмот",
       checked: lastEmoteBackground,
       onChange: setLastEmoteBackground,
     },
     {
-      label: "Реверс порядка строк",
+      label: "Обратный порядок сообщений",
       checked: reverseLineOrder,
       onChange: setReverseLineOrder,
     },
     {
-      label: "Горизонтальный режим",
+      label: "Показывать чат строкой",
       checked: horizontal,
       onChange: setHorizontal,
     },
@@ -754,22 +758,22 @@ export default function ChatSetup() {
 
   const contentToggles: ToggleRow[] = [
     {
-      label: "Показывать команды",
+      label: "Показывать команды с !",
       checked: commands,
       onChange: setCommands,
     },
     {
-      label: "7TV unlisted эмоуты",
+      label: "Показывать скрытые 7TV-эмоты",
       checked: show7tvUnlisted,
       onChange: setShow7tvUnlisted,
     },
     {
-      label: "Скрыть спец. бейджи",
+      label: "Скрыть служебные бейджи",
       checked: hideSpecialBadges,
       onChange: setHideSpecialBadges,
     },
     {
-      label: "Homies бейджи",
+      label: "Показывать Homies-бейджи",
       checked: showHomies,
       onChange: setShowHomies,
     },
@@ -777,21 +781,21 @@ export default function ChatSetup() {
 
   const ffzToggles: ToggleRow[] = [
     {
-      label: "Broadcaster",
+      label: "Стример",
       checked: ffzBotMixBroadcaster,
       onChange: setFfzBotMixBroadcaster,
     },
     {
-      label: "Moderator",
+      label: "Модератор",
       checked: ffzBotMixModerator,
       onChange: setFfzBotMixModerator,
     },
-    { label: "VIP", checked: ffzBotMixVip, onChange: setFfzBotMixVip },
+    { label: "VIP-зритель", checked: ffzBotMixVip, onChange: setFfzBotMixVip },
   ];
 
   return (
     <>
-      <Title>ChatYX • Setup</Title>
+      <Title>ChatYX • настройка</Title>
 
       <style>
         {`
@@ -858,7 +862,7 @@ export default function ChatSetup() {
 
       <div style={styles.page}>
         <div style={styles.shell}>
-          <div style={styles.title}>ChatYX Setup</div>
+          <div style={styles.title}>Настройка чат-оверлея</div>
 
           <div style={styles.channelCard}>
             <div style={styles.channelRow}>
@@ -866,7 +870,7 @@ export default function ChatSetup() {
                 type="text"
                 value={channel()}
                 onInput={(e) => setChannel(e.currentTarget.value)}
-                placeholder="Введите название канала"
+                placeholder="Ник Twitch-канала, например linaryx"
                 style={styles.channelInput}
               />
             </div>
@@ -875,9 +879,9 @@ export default function ChatSetup() {
           <div class="setup-main-grid" style={styles.mainGrid}>
             <div style={styles.leftPane}>
               <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Typography</h3>
+                <h3 style={styles.sectionTitle}>Текст и размер</h3>
                 <div style={styles.sectionHint}>
-                  Размер, шрифт и базовый масштаб элементов сообщения.
+                  Настрой, насколько крупно и каким шрифтом будет выглядеть чат.
                 </div>
                 {renderControlRows(appearanceRows, {
                   controlRow: { ...styles.controlRow },
@@ -889,9 +893,9 @@ export default function ChatSetup() {
               </section>
 
               <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Overlay Style</h3>
+                <h3 style={styles.sectionTitle}>Внешний вид</h3>
                 <div style={styles.sectionHint}>
-                  Визуальное оформление контейнера, fade и stroke/shadow.
+                  Фон сообщений, тень, обводка и время жизни строк на экране.
                 </div>
                 {renderControlRows(stylingRows, {
                   controlRow: { ...styles.controlRow },
@@ -903,9 +907,9 @@ export default function ChatSetup() {
               </section>
 
               <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Message Behavior</h3>
+                <h3 style={styles.sectionTitle}>Поведение сообщений</h3>
                 <div style={styles.sectionHint}>
-                  Анимация, переносы, направление и общее поведение строк.
+                  Управляет анимацией, переносами, порядком и форматом сообщений.
                 </div>
                 {renderToggleRows(behaviorToggles, {
                   toggleRow: { ...styles.toggleRow },
@@ -916,9 +920,9 @@ export default function ChatSetup() {
               </section>
 
               <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Content & Badges</h3>
+                <h3 style={styles.sectionTitle}>Контент и бейджи</h3>
                 <div style={styles.sectionHint}>
-                  Что показывать в сообщениях и какие типы badge/emote-данных включать.
+                  Выбери, какие сообщения, эмоты и бейджи попадут в оверлей.
                 </div>
                 {renderToggleRows(contentToggles, {
                   toggleRow: { ...styles.toggleRow },
@@ -929,32 +933,32 @@ export default function ChatSetup() {
               </section>
 
               <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Bots & Filters</h3>
+                <h3 style={styles.sectionTitle}>Боты и фильтры</h3>
                 <div style={styles.sectionHint}>
-                  Список известных ботов можно править прямо здесь, как в генераторе-панели.
+                  Спрячь ботов, команды или оставь сообщения только одного пользователя.
                 </div>
 
                 <div class="setup-bot-row" style={styles.botHeader}>
                   <div style={styles.botLabelWrap}>
-                    <div style={styles.settingLabel}>Список ботов</div>
+                    <div style={styles.settingLabel}>Ники ботов</div>
                     <div style={styles.botSwitchRow}>
                       <SetupSwitch checked={bots()} onChange={setBots} />
-                      <span>Показывать ботов</span>
+                      <span>Не фильтровать ботов</span>
                     </div>
                   </div>
                   <textarea
                     value={botNames()}
                     onInput={(e) => setBotNames(e.currentTarget.value)}
-                    placeholder={"bot1, bot2\nbot3 bot4"}
+                    placeholder={"moobot, nightbot\nstreamelements"}
                     style={styles.textarea}
                   />
                 </div>
 
                 <div class="setup-control-row" style={styles.controlRow}>
                   <div style={styles.controlLabelWrap}>
-                    <div style={styles.settingLabel}>Только один чаттер</div>
+                    <div style={styles.settingLabel}>Показывать только одного зрителя</div>
                     <div style={styles.settingHint}>
-                      Оставить в overlay только сообщения одного пользователя.
+                      Если заполнить поле, остальные сообщения будут скрыты.
                     </div>
                   </div>
                   <div style={styles.controlSlot}>
@@ -962,13 +966,15 @@ export default function ChatSetup() {
                       type="text"
                       value={singleChatter()}
                       onInput={(e) => setSingleChatter(e.currentTarget.value)}
-                      placeholder="username"
+                      placeholder="ник зрителя"
                       style={styles.input}
                     />
                   </div>
                 </div>
 
-                <div style={styles.sectionHint}>FFZ bot + Twitch badge</div>
+                <div style={styles.sectionHint}>
+                  Кому показывать FFZ-бот-бейдж вместе с Twitch-бейджем роли.
+                </div>
                 {renderToggleRows(ffzToggles, {
                   toggleRow: { ...styles.toggleRow },
                   toggleLabelWrap: styles.toggleLabelWrap,
@@ -980,7 +986,7 @@ export default function ChatSetup() {
 
             <div style={styles.previewPane}>
               <div class="setup-preview-sticky" style={styles.previewSticky}>
-                <div style={styles.previewLabel}>Превью</div>
+                <div style={styles.previewLabel}>Живое превью</div>
                 <div style={styles.previewScreen}>
                   <div class="preview-ambient" />
                   <div style={styles.previewOverlay} />
@@ -998,14 +1004,14 @@ export default function ChatSetup() {
 
           {generatedUrl() && (
             <div style={styles.resultCard}>
-              <div style={styles.sectionTitle}>Ваш URL готов</div>
+              <div style={styles.sectionTitle}>Ссылка для OBS готова</div>
               <div style={styles.resultBody}>{generatedUrl()}</div>
               <div style={styles.resultActions}>
                 <button
                   onClick={copyToClipboard}
                   style={styles.primaryButton}
                 >
-                  Копировать URL
+                  Скопировать ссылку
                 </button>
                 <a
                   href={generatedUrl()}
@@ -1013,7 +1019,7 @@ export default function ChatSetup() {
                   rel="noreferrer"
                   style={styles.secondaryButton}
                 >
-                  Открыть чат
+                  Открыть оверлей
                 </a>
               </div>
             </div>
