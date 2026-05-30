@@ -11,10 +11,7 @@ import { Title } from "@solidjs/meta";
 import { ColorPickerField } from "~/components/ColorPickerField";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
-import {
-  DEFAULT_BOT_NAMES,
-  formatBotNamesForTextarea,
-} from "~/config/botNames";
+import { DEFAULT_BOT_NAMES } from "~/config/botNames";
 import {
   DEFAULT_CHAT_CONFIG,
   chatConfigToSearchParams,
@@ -36,7 +33,106 @@ type ToggleRow = {
   hint?: string;
 };
 
-function renderToggleRows(rows: ToggleRow[], styles: Record<string, JSX.CSSProperties>) {
+type BotProfile = {
+  login: string;
+  displayName: string;
+  avatarUrl: string;
+};
+
+const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
+const TWITCH_WEB_CLIENT_ID =
+  import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
+
+function normalizeBotLogin(raw: string): string {
+  return raw.trim().replace(/^@/, "").toLowerCase();
+}
+
+function splitBotLogins(raw: string): string[] {
+  return raw
+    .split(/[\s,]+/)
+    .map(normalizeBotLogin)
+    .filter(Boolean);
+}
+
+function botFallbackName(login: string): string {
+  return login.slice(0, 1).toUpperCase();
+}
+
+async function fetchJsonWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<unknown> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+async function loadBotProfiles(logins: string[]): Promise<BotProfile[]> {
+  if (logins.length === 0) return [];
+
+  try {
+    const payload = await fetchJsonWithTimeout(
+      TWITCH_GQL_ENDPOINT,
+      {
+        method: "POST",
+        headers: {
+          "Client-ID": TWITCH_WEB_CLIENT_ID,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          operationName: "ChatYXSetupBotProfiles",
+          query: `
+            query ChatYXSetupBotProfiles($logins: [String!]!) {
+              users(logins: $logins) {
+                login
+                displayName
+                profileImageURL(width: 70)
+              }
+            }
+          `,
+          variables: { logins },
+        }),
+      },
+      3500,
+    );
+
+    const users = (payload as { data?: { users?: unknown[] } })?.data?.users;
+    if (!Array.isArray(users)) return [];
+
+    return users
+      .map((user) => {
+        const entry = user as {
+          login?: unknown;
+          displayName?: unknown;
+          profileImageURL?: unknown;
+        };
+        const login = String(entry.login || "").toLowerCase();
+        if (!login) return null;
+
+        return {
+          login,
+          displayName: String(entry.displayName || entry.login || login),
+          avatarUrl: String(entry.profileImageURL || ""),
+        };
+      })
+      .filter((profile): profile is BotProfile => profile !== null);
+  } catch {
+    return [];
+  }
+}
+
+function renderToggleRows(
+  rows: ToggleRow[],
+  styles: Record<string, JSX.CSSProperties>,
+) {
   return (
     <For each={rows}>
       {(row) => (
@@ -52,7 +148,10 @@ function renderToggleRows(rows: ToggleRow[], styles: Record<string, JSX.CSSPrope
   );
 }
 
-function renderControlRows(rows: ControlRow[], styles: Record<string, JSX.CSSProperties>) {
+function renderControlRows(
+  rows: ControlRow[],
+  styles: Record<string, JSX.CSSProperties>,
+) {
   return (
     <For each={rows}>
       {(row) => (
@@ -98,8 +197,10 @@ export default function ChatSetup() {
   const [emoteScale, setEmoteScale] = createSignal(
     String(DEFAULT_CHAT_CONFIG.emoteScale),
   );
-  const [botNames, setBotNames] = createSignal(
-    formatBotNamesForTextarea(DEFAULT_BOT_NAMES),
+  const [botNames, setBotNames] = createSignal<string[]>([...DEFAULT_BOT_NAMES]);
+  const [botInput, setBotInput] = createSignal("");
+  const [botProfiles, setBotProfiles] = createSignal<Record<string, BotProfile>>(
+    {},
   );
   const [singleChatter, setSingleChatter] = createSignal("");
   const [show7tvUnlisted, setShow7tvUnlisted] = createSignal(
@@ -131,8 +232,9 @@ export default function ChatSetup() {
   const [overlayBackgroundColor, setOverlayBackgroundColor] = createSignal(
     DEFAULT_CHAT_CONFIG.overlayBackgroundColor,
   );
-  const [overlayBackgroundOpacity, setOverlayBackgroundOpacity] =
-    createSignal(String(DEFAULT_CHAT_CONFIG.overlayBackgroundOpacity));
+  const [overlayBackgroundOpacity, setOverlayBackgroundOpacity] = createSignal(
+    String(DEFAULT_CHAT_CONFIG.overlayBackgroundOpacity),
+  );
   const [overlayBackgroundRadius, setOverlayBackgroundRadius] = createSignal(
     String(DEFAULT_CHAT_CONFIG.overlayBackgroundRadius),
   );
@@ -413,6 +515,109 @@ export default function ChatSetup() {
       "font-size": "12px",
       color: C.subtle,
     },
+    botChipField: {
+      width: "100%",
+      minHeight: "92px",
+      padding: "10px",
+      border: `1px solid ${C.border}`,
+      "border-radius": "14px",
+      background: C.input,
+      "box-sizing": "border-box",
+    },
+    botChipList: {
+      display: "flex",
+      "align-items": "center",
+      "align-content": "flex-start",
+      "flex-wrap": "wrap",
+      gap: "8px",
+      width: "100%",
+    },
+    botChip: {
+      display: "inline-flex",
+      "align-items": "center",
+      gap: "8px",
+      maxWidth: "100%",
+      minHeight: "34px",
+      padding: "3px 6px 3px 4px",
+      color: "#ffffff",
+      background: "#1f2937",
+      border: "1px solid rgba(255,255,255,0.12)",
+      "border-radius": "999px",
+      "box-sizing": "border-box",
+    },
+    botAvatar: {
+      width: "28px",
+      height: "28px",
+      "border-radius": "999px",
+      "object-fit": "cover",
+      background: "#111827",
+      flex: "0 0 auto",
+    },
+    botAvatarFallback: {
+      width: "28px",
+      height: "28px",
+      "border-radius": "999px",
+      display: "inline-flex",
+      "align-items": "center",
+      "justify-content": "center",
+      background: "#374151",
+      color: "#ffffff",
+      "font-size": "12px",
+      "font-weight": 700,
+      flex: "0 0 auto",
+    },
+    botText: {
+      display: "flex",
+      "flex-direction": "column",
+      "justify-content": "center",
+      minWidth: "0",
+      "line-height": 1.05,
+    },
+    botDisplayName: {
+      color: "#ffffff",
+      "font-size": "12px",
+      "font-weight": 700,
+      "white-space": "nowrap",
+      overflow: "hidden",
+      "text-overflow": "ellipsis",
+      maxWidth: "150px",
+    },
+    botLogin: {
+      color: "rgba(255,255,255,0.62)",
+      "font-size": "10px",
+      "white-space": "nowrap",
+      overflow: "hidden",
+      "text-overflow": "ellipsis",
+      maxWidth: "150px",
+    },
+    botRemoveButton: {
+      width: "22px",
+      height: "22px",
+      border: "0",
+      "border-radius": "999px",
+      background: "rgba(255,255,255,0.08)",
+      color: "#ffffff",
+      cursor: "pointer",
+      display: "inline-flex",
+      "align-items": "center",
+      "justify-content": "center",
+      "font-size": "16px",
+      "line-height": 1,
+      padding: "0",
+      flex: "0 0 auto",
+    },
+    botInput: {
+      flex: "1 1 180px",
+      minWidth: "150px",
+      height: "34px",
+      border: "0",
+      background: "transparent",
+      color: "#ffffff",
+      "font-family": "inherit",
+      "font-size": "13px",
+      padding: "0 4px",
+      "box-sizing": "border-box",
+    },
     resultCard: {
       background: C.card,
       padding: "16px",
@@ -480,7 +685,7 @@ export default function ChatSetup() {
     commands: commands(),
     hideSpecialBadges: hideSpecialBadges(),
     emoteScale: toFloat(emoteScale(), DEFAULT_CHAT_CONFIG.emoteScale),
-    botNames: normalizeBotNames(botNames()),
+    botNames: normalizeBotNames(botNames().join(",")),
     singleChatter: singleChatter(),
     show7tvUnlisted: show7tvUnlisted(),
     smallCaps: smallCaps(),
@@ -517,7 +722,9 @@ export default function ChatSetup() {
   ) => {
     const params = chatConfigToSearchParams(cfg);
     if (extraParams) {
-      Object.entries(extraParams).forEach(([key, value]) => params.set(key, value));
+      Object.entries(extraParams).forEach(([key, value]) =>
+        params.set(key, value),
+      );
     }
     const query = params.toString();
     return `${getAppBaseUrl()}/chat/${query ? `?${query}` : ""}`;
@@ -525,6 +732,65 @@ export default function ChatSetup() {
 
   const previewChannel = createMemo(() => channel().trim() || "chatyxpreview");
   const previewConfig = createMemo(() => buildConfig(previewChannel()));
+  const requestedBotProfiles = new Set<string>();
+
+  const addBotNames = (raw: string) => {
+    const nextLogins = splitBotLogins(raw);
+    if (nextLogins.length === 0) return;
+
+    setBotNames((current) => {
+      const seen = new Set(current);
+      const merged = [...current];
+
+      for (const login of nextLogins) {
+        if (seen.has(login)) continue;
+        seen.add(login);
+        merged.push(login);
+      }
+
+      return merged;
+    });
+  };
+
+  const removeBotName = (login: string) => {
+    setBotNames((current) => current.filter((entry) => entry !== login));
+  };
+
+  const handleBotInputKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addBotNames(botInput());
+      setBotInput("");
+      return;
+    }
+
+    if (event.key === "Backspace" && botInput().trim() === "") {
+      setBotNames((current) => current.slice(0, -1));
+    }
+  };
+
+  createEffect(() => {
+    const missing = botNames().filter(
+      (login) => !botProfiles()[login] && !requestedBotProfiles.has(login),
+    );
+    if (missing.length === 0) return;
+
+    for (const login of missing) {
+      requestedBotProfiles.add(login);
+    }
+
+    void loadBotProfiles(missing).then((profiles) => {
+      if (profiles.length === 0) return;
+
+      setBotProfiles((current) => {
+        const next = { ...current };
+        for (const profile of profiles) {
+          next[profile.login] = profile;
+        }
+        return next;
+      });
+    });
+  });
 
   createEffect(() => {
     const currentChannel = channel().trim();
@@ -763,7 +1029,7 @@ export default function ChatSetup() {
       onChange: setCommands,
     },
     {
-      label: "Показывать скрытые 7TV-эмоты",
+      label: "Показывать скрытые 7TV-эмоуты",
       checked: show7tvUnlisted,
       onChange: setShow7tvUnlisted,
     },
@@ -909,7 +1175,8 @@ export default function ChatSetup() {
               <section style={styles.sectionCard}>
                 <h3 style={styles.sectionTitle}>Поведение сообщений</h3>
                 <div style={styles.sectionHint}>
-                  Управляет анимацией, переносами, порядком и форматом сообщений.
+                  Управляет анимацией, переносами, порядком и форматом
+                  сообщений.
                 </div>
                 {renderToggleRows(behaviorToggles, {
                   toggleRow: { ...styles.toggleRow },
@@ -922,7 +1189,7 @@ export default function ChatSetup() {
               <section style={styles.sectionCard}>
                 <h3 style={styles.sectionTitle}>Контент и бейджи</h3>
                 <div style={styles.sectionHint}>
-                  Выбери, какие сообщения, эмоты и бейджи попадут в оверлей.
+                  Выбери, какие сообщения, эмоуты и бейджи попадут в оверлей.
                 </div>
                 {renderToggleRows(contentToggles, {
                   toggleRow: { ...styles.toggleRow },
@@ -935,7 +1202,8 @@ export default function ChatSetup() {
               <section style={styles.sectionCard}>
                 <h3 style={styles.sectionTitle}>Боты и фильтры</h3>
                 <div style={styles.sectionHint}>
-                  Спрячь ботов, команды или оставь сообщения только одного пользователя.
+                  Спрячь ботов, команды или оставь сообщения только одного
+                  пользователя.
                 </div>
 
                 <div class="setup-bot-row" style={styles.botHeader}>
@@ -946,17 +1214,83 @@ export default function ChatSetup() {
                       <span>Не фильтровать ботов</span>
                     </div>
                   </div>
-                  <textarea
-                    value={botNames()}
-                    onInput={(e) => setBotNames(e.currentTarget.value)}
-                    placeholder={"moobot, nightbot\nstreamelements"}
-                    style={styles.textarea}
-                  />
+                  <div style={styles.botChipField}>
+                    <div style={styles.botChipList}>
+                      <For each={botNames()}>
+                        {(login) => {
+                          const profile = () => botProfiles()[login];
+                          const displayName = () =>
+                            profile()?.displayName || login;
+                          const avatarUrl = () => profile()?.avatarUrl || "";
+
+                          return (
+                            <div
+                              style={styles.botChip}
+                              tabIndex={0}
+                              onKeyDown={(event) => {
+                                if (
+                                  event.key === "Backspace" ||
+                                  event.key === "Delete"
+                                ) {
+                                  event.preventDefault();
+                                  removeBotName(login);
+                                }
+                              }}
+                            >
+                              {avatarUrl() ? (
+                                <img
+                                  src={avatarUrl()}
+                                  alt=""
+                                  style={styles.botAvatar}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span style={styles.botAvatarFallback}>
+                                  {botFallbackName(login)}
+                                </span>
+                              )}
+                              <span style={styles.botText}>
+                                <span style={styles.botDisplayName}>
+                                  {displayName()}
+                                </span>
+                                {displayName().toLowerCase() !== login && (
+                                  <span style={styles.botLogin}>@{login}</span>
+                                )}
+                              </span>
+                              <button
+                                type="button"
+                                style={styles.botRemoveButton}
+                                onClick={() => removeBotName(login)}
+                                aria-label={`Убрать ${displayName()} из списка ботов`}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        }}
+                      </For>
+
+                      <input
+                        type="text"
+                        value={botInput()}
+                        onInput={(event) => setBotInput(event.currentTarget.value)}
+                        onKeyDown={handleBotInputKeyDown}
+                        onBlur={() => {
+                          addBotNames(botInput());
+                          setBotInput("");
+                        }}
+                        placeholder="Добавить бота и нажать Enter"
+                        style={styles.botInput}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div class="setup-control-row" style={styles.controlRow}>
                   <div style={styles.controlLabelWrap}>
-                    <div style={styles.settingLabel}>Показывать только одного зрителя</div>
+                    <div style={styles.settingLabel}>
+                      Показывать только одного зрителя
+                    </div>
                     <div style={styles.settingHint}>
                       Если заполнить поле, остальные сообщения будут скрыты.
                     </div>
@@ -1007,10 +1341,7 @@ export default function ChatSetup() {
               <div style={styles.sectionTitle}>Ссылка для OBS готова</div>
               <div style={styles.resultBody}>{generatedUrl()}</div>
               <div style={styles.resultActions}>
-                <button
-                  onClick={copyToClipboard}
-                  style={styles.primaryButton}
-                >
+                <button onClick={copyToClipboard} style={styles.primaryButton}>
                   Скопировать ссылку
                 </button>
                 <a
