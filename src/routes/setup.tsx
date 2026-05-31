@@ -1001,8 +1001,12 @@ export default function ChatSetup() {
   const buildChatUrl = (
     cfg: ChatConfig,
     extraParams?: Record<string, string>,
+    options?: { includeMessageSpeed?: boolean },
   ) => {
     const params = chatConfigToSearchParams(cfg);
+    if (options?.includeMessageSpeed === false) {
+      params.delete("ms");
+    }
     if (extraParams) {
       Object.entries(extraParams).forEach(([key, value]) =>
         params.set(key, value),
@@ -1105,7 +1109,11 @@ export default function ChatSetup() {
       return;
     }
 
-    setGeneratedUrl(buildChatUrl(buildConfig(currentChannel)));
+    setGeneratedUrl(
+      buildChatUrl(buildConfig(currentChannel), undefined, {
+        includeMessageSpeed: false,
+      }),
+    );
   });
 
   createEffect(() => {

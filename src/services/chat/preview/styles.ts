@@ -13,7 +13,7 @@ const PREVIEW_STYLE_IDS = [
   "chat-stroke-styles",
   "chat-variant-styles",
   "chat-animations",
-  "chat-preview-scrollbar-styles",
+  "chat-preview-layout-styles",
 ];
 
 export function cleanupPreviewStyles() {
@@ -54,10 +54,11 @@ export function injectPreviewStyles(config: ChatConfig) {
     injectAnimationStyles({ enabled: true, duration: 200, easing: "ease-out", type: "fade" });
   }
 
-  const scrollbarEl = document.createElement("style");
-  scrollbarEl.id = "chat-preview-scrollbar-styles";
-  scrollbarEl.innerHTML = `
+  const layoutEl = document.createElement("style");
+  layoutEl.id = "chat-preview-layout-styles";
+  layoutEl.innerHTML = `
 #chat_container {
+    overflow: visible !important;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -66,5 +67,5 @@ export function injectPreviewStyles(config: ChatConfig) {
     display: none;
 }
 `;
-  document.head.appendChild(scrollbarEl);
+  document.head.appendChild(layoutEl);
 }

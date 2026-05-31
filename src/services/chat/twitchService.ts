@@ -308,14 +308,28 @@ export class TwitchService {
     this.onConnectCallback?.();
   }
 
+  public parseMessageLine(line: string): TwitchMessage | null {
+    if (line.includes("PRIVMSG")) {
+      return this.parsePrivMsg(line);
+    }
+
+    if (line.includes("USERNOTICE")) {
+      return this.parseUserNotice(line);
+    }
+
+    return null;
+  }
+
   private parsePrivMsg(line: string): TwitchMessage | null {
     try {
       // Парсим IRC сообщение с правильным regex
-      const match = line.match(/@(.+?) PRIVMSG #(\w+) :(.+)/);
+      const match = line.match(
+        /^@([^ ]+) (?:[^ ]+ )?PRIVMSG #[A-Za-z0-9_]+ :?(.+)$/,
+      );
       if (!match) return null;
 
       const tags = this.parseTags(match[1]);
-      const message = match[3];
+      const message = match[2];
 
       // Извлекаем username из IRC формата
       const usernameMatch = line.match(/:([^!]+)!/);
@@ -360,11 +374,13 @@ export class TwitchService {
   private parseUserNotice(line: string): TwitchMessage | null {
     try {
       // Парсим USERNOTICE сообщения (включая Cheer события)
-      const match = line.match(/@(.+?) USERNOTICE #(\w+) :(.+)/);
+      const match = line.match(
+        /^@([^ ]+) (?:[^ ]+ )?USERNOTICE #[A-Za-z0-9_]+(?: :(.+))?$/,
+      );
       if (!match) return null;
 
       const tags = this.parseTags(match[1]);
-      const message = match[3];
+      const message = match[2] || "";
 
       // Извлекаем username из IRC формата
       const usernameMatch = line.match(/:([^!]+)!/);

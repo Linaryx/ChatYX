@@ -13,6 +13,7 @@ import {
   v3Integration,
   type TwitchMessage,
 } from "~/services/chat";
+import { fetchRecentMessages } from "~/services/chat/recentMessagesService";
 import {
   generateShadowStyles,
   generateSizeStyles,
@@ -39,6 +40,8 @@ type ChannelResolution = {
   channelId: string;
   displayName: string;
 };
+
+const RECENT_MESSAGE_LIMIT = 15;
 
 type OverlayRuntimeHooks = {
   onConfigResolved: (config: ChatConfig) => void;
@@ -91,6 +94,7 @@ export class OverlayRuntime {
   private readonly twitchService = new TwitchService();
   private readonly messageQueue: TwitchMessage[] = [];
   private readonly recentMessageTimes: number[] = [];
+  private readonly seenMessageIds = new Set<string>();
   private readonly styleElementIds = [
     "chat-size-styles",
     "chat-shadow-styles",
@@ -217,6 +221,9 @@ export class OverlayRuntime {
 
     this.initializeLayout(service);
 
+    this.setLoading("Загрузка последних сообщений...", 82);
+    const loadedRecentMessages = await this.loadRecentMessages();
+
     this.setLoading("Фоновая загрузка данных...", 85);
     void Promise.all([
       channelId
@@ -247,6 +254,9 @@ export class OverlayRuntime {
     this.startBatchProcessing();
 
     this.setLoading("Подключение к Twitch IRC...", 95);
+    if (loadedRecentMessages > 0) {
+      this.setLoading("Подключение к Twitch IRC...", 100);
+    }
     this.connectToTwitch();
     this.initialized = true;
     log.info(LOG_CATEGORIES.CHAT, "Chat overlay initialized");
@@ -262,6 +272,7 @@ export class OverlayRuntime {
     for (const id of this.pendingTimers) window.clearTimeout(id);
     this.pendingTimers.length = 0;
     this.messageQueue.length = 0;
+    this.seenMessageIds.clear();
     this.removeEventListeners();
     this.twitchService.disconnect();
     v3Integration.destroy();
@@ -463,31 +474,11 @@ export class OverlayRuntime {
     this.twitchService.connect(
       this.channel,
       async (message) => {
-        if (!this.activeConfig || !this.chatService) return;
-        if (messageSpeedToIntervalMs(this.activeConfig.messageSpeed) === null) {
-          return;
-        }
+        if (!this.activeConfig) return;
+        if (messageSpeedToIntervalMs(this.activeConfig.messageSpeed) === null) return;
 
-        if (
-          !this.chatService.shouldDisplayMessage(message.username, message.message)
-        ) {
-          return;
-        }
-
-        const userId = message.userId || "0";
-        const gqlSender = await this.resolveGqlSender(userId);
-        if (gqlSender) {
-          message.displayName = gqlSender.displayName || message.displayName;
-          message.color = gqlSender.chatColor || message.color;
-          this.mergeGqlBadges(message, gqlSender.displayBadges);
-        }
-
-        void badgeService.loadUserBadges(message.username, userId).catch(() => {});
-        mentionStyleService.registerMessageAuthor(message);
-
-        message.emoteSnapshot = this.createMessageEmoteSnapshot(message);
-
-        this.messageQueue.push(message);
+        const preparedMessage = await this.prepareMessageForDisplay(message);
+        if (preparedMessage) this.messageQueue.push(preparedMessage);
       },
       () => {
         this.connected = true;
@@ -522,6 +513,83 @@ export class OverlayRuntime {
     );
 
     log.info(LOG_CATEGORIES.TWITCH_IRC, "Twitch IRC connection initialized");
+  }
+
+  private async loadRecentMessages(): Promise<number> {
+    if (!this.activeConfig || !this.chatService) return 0;
+
+    try {
+      const rawMessages = await fetchRecentMessages(
+        this.channel,
+        RECENT_MESSAGE_LIMIT,
+      );
+      if (rawMessages.length === 0) return 0;
+
+      const parsedMessages = rawMessages
+        .map((line) => this.twitchService.parseMessageLine(line))
+        .filter((message): message is TwitchMessage => Boolean(message));
+
+      const preparedMessages = (
+        await Promise.all(
+          parsedMessages.map((message) => this.prepareMessageForDisplay(message)),
+        )
+      ).filter((message): message is TwitchMessage => Boolean(message));
+
+      if (preparedMessages.length === 0) return 0;
+
+      this.hooks.onMessagesChange((messages) => {
+        const nextMessages = [...messages, ...preparedMessages];
+        return nextMessages.length > 100
+          ? nextMessages.slice(-100)
+          : nextMessages;
+      });
+
+      return preparedMessages.length;
+    } catch (error) {
+      log.warn(LOG_CATEGORIES.CHAT, "Failed to load recent messages", error);
+      return 0;
+    }
+  }
+
+  private async prepareMessageForDisplay(
+    message: TwitchMessage,
+  ): Promise<TwitchMessage | null> {
+    if (!this.activeConfig || !this.chatService) return null;
+    if (this.isDuplicateMessage(message)) return null;
+
+    if (!this.chatService.shouldDisplayMessage(message.username, message.message)) {
+      return null;
+    }
+
+    const userId = message.userId || "0";
+    const gqlSender = await this.resolveGqlSender(userId);
+    if (gqlSender) {
+      message.displayName = gqlSender.displayName || message.displayName;
+      message.color = gqlSender.chatColor || message.color;
+      this.mergeGqlBadges(message, gqlSender.displayBadges);
+    }
+
+    void badgeService.loadUserBadges(message.username, userId).catch(() => {});
+    mentionStyleService.registerMessageAuthor(message);
+
+    message.emoteSnapshot = this.createMessageEmoteSnapshot(message);
+    this.rememberMessage(message);
+
+    return message;
+  }
+
+  private isDuplicateMessage(message: TwitchMessage): boolean {
+    return Boolean(message.id && this.seenMessageIds.has(message.id));
+  }
+
+  private rememberMessage(message: TwitchMessage) {
+    if (!message.id) return;
+
+    this.seenMessageIds.add(message.id);
+    if (this.seenMessageIds.size <= 300) return;
+
+    const oldest = this.seenMessageIds.values().next().value as string | undefined;
+    if (oldest) this.seenMessageIds.delete(oldest);
   }
 
   private createMessageEmoteSnapshot(message: TwitchMessage) {

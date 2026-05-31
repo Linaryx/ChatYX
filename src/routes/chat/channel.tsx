@@ -136,6 +136,10 @@ export default function ChatOverlay() {
       width: "fit-content",
       "max-width": "100%",
       "max-height": "100vh",
+      display: "flex",
+      "flex-direction": "column",
+      "align-items": "flex-start",
+      "justify-content": "flex-end",
       padding: "10px",
       "box-sizing": "border-box",
       "z-index": "10000",
@@ -159,7 +163,8 @@ export default function ChatOverlay() {
     position: "relative",
     width: "fit-content",
     "max-width": "100%",
-    "max-height": "calc(100vh - 20px)",
+    "max-height": isPreview ? "none" : "calc(100vh - 20px)",
+    "flex-shrink": "0",
     padding: "0",
     "box-sizing": "border-box",
     "pointer-events": "none",
@@ -210,14 +215,8 @@ export default function ChatOverlay() {
       const previewDemoKind = parsePreviewDemoKind(urlParams.get("demo"));
       let previewInterval: number | undefined;
       let previewDestroyed = false;
-      const scrollPreviewToLatest = () => {
-        window.requestAnimationFrame(() => {
-          if (!previewDestroyed) previewService.scrollToLatest(false);
-        });
-      };
 
       mentionStyleService.reset();
-      injectPreviewStyles(previewConfig);
       previewService.updateConfig({ userId: "0" });
 
       setConfig(previewConfig);
@@ -236,6 +235,7 @@ export default function ChatOverlay() {
       if (previewContainer) {
         previewService.initializeLayout(previewContainer);
       }
+      injectPreviewStyles(previewConfig);
 
       void (async () => {
         const isRealChannel = Boolean(channel && channel !== "chatyxpreview");
@@ -299,7 +299,6 @@ export default function ChatOverlay() {
 
           setMessages(previewMessages);
           setAnimatedIds(new Set(previewMessages.map((msg) => msg.id)));
-          scrollPreviewToLatest();
           setLoadingProgress(100);
           setLoadingStatus("Preview ready");
           setIsLoading(false);
@@ -319,7 +318,6 @@ export default function ChatOverlay() {
               const next = [...current, nextMsg];
               return next.length > 8 ? next.slice(-8) : next;
             });
-            scrollPreviewToLatest();
 
             if (previewConfig.animate) {
               setAnimatedIds((prev) => new Set([...prev, nextMsg.id]));
