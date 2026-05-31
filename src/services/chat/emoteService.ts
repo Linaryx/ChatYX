@@ -1,5 +1,9 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
-import { FALLBACK_APIS, fetchWithFallback, TWITCH_CONFIG } from "~/config/twitch";
+import {
+  FALLBACK_APIS,
+  fetchWithFallback,
+  TWITCH_CONFIG,
+} from "~/config/twitch";
 
 // Сервис для загрузки эмодзи из 7TV, FFZ, BTTV
 
@@ -65,7 +69,11 @@ class EmoteService {
       // Загружаем глобальные эмодзи один раз на сессию
       if (!this.globalEmotesPromise) {
         this.globalEmotesPromise = this.loadGlobalEmotes().catch((error) => {
-          log.error(LOG_CATEGORIES.EMOTES, "Failed to load global emotes", error);
+          log.error(
+            LOG_CATEGORIES.EMOTES,
+            "Failed to load global emotes",
+            error,
+          );
           this.globalEmotesPromise = null; // allow retry on next call
         });
       }
@@ -188,7 +196,10 @@ class EmoteService {
             });
           }
         } else {
-          log.error(LOG_CATEGORIES.EMOTES, `Failed to load emote set ${emoteSetId}: HTTP ${setResponse.status}`);
+          log.error(
+            LOG_CATEGORIES.EMOTES,
+            `Failed to load emote set ${emoteSetId}: HTTP ${setResponse.status}`,
+          );
         }
       } else {
         // Fall back to user endpoint if no set ID provided
@@ -241,7 +252,11 @@ class EmoteService {
         });
       }
     } catch (error) {
-      log.error(LOG_CATEGORIES.EMOTES, "Error loading 7TV global emotes", error);
+      log.error(
+        LOG_CATEGORIES.EMOTES,
+        "Error loading 7TV global emotes",
+        error,
+      );
     }
   }
 
@@ -294,7 +309,9 @@ class EmoteService {
         }
       });
     } catch (error) {
-      log.error(LOG_CATEGORIES.EMOTES, `Failed to load FFZ emotes from ${endpoint}`,
+      log.error(
+        LOG_CATEGORIES.EMOTES,
+        `Failed to load FFZ emotes from ${endpoint}`,
         error,
       );
     }
@@ -365,7 +382,9 @@ class EmoteService {
         }
       });
     } catch (error) {
-      log.error(LOG_CATEGORIES.EMOTES, `Failed to load BTTV emotes from ${endpoint}`,
+      log.error(
+        LOG_CATEGORIES.EMOTES,
+        `Failed to load BTTV emotes from ${endpoint}`,
         error,
       );
     }
@@ -414,7 +433,7 @@ class EmoteService {
       }
     } catch (error) {
       log.error(LOG_CATEGORIES.EMOTES, "Failed to load cheer emotes", error);
-      // Fallback: добавляем несколько базовых Cheer эмотов для тестирования
+      // Fallback: добавляем несколько базовых Cheer эмоутов для тестирования
       const fallbackEmotes = [
         {
           name: "Cheer1",

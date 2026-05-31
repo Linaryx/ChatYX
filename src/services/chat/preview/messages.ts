@@ -7,6 +7,8 @@ const PREVIEW_MESSAGES = [
   "Это я - твой единственный зритель. Я на протяжении многих лет создавал иллюзию того, что тебя смотрят много людей, но это был я. Сейчас напишу это сообщение со всех аккаунтов.",
 ];
 
+export type PreviewDemoKind = "pasta" | "emote";
+
 const PREVIEW_COLORS = [
   "#FF0000",
   "#0000FF",
@@ -78,10 +80,22 @@ function buildEmoteSnapshot(text: string, channelId: string, username: string) {
   return snapshot;
 }
 
+function pickRandomEmoteName(channelId: string, index: number): string {
+  const availableEmotes = emoteService.getAllEmoteNames(channelId);
+  if (availableEmotes.length === 0) return "Kappa";
+
+  return (
+    availableEmotes[
+      Math.floor(previewRandom(index + 600) * availableEmotes.length)
+    ] || "Kappa"
+  );
+}
+
 export function nextPreviewMessage(
   channel: string,
   service: ChatISIntegrationService,
   channelId: string,
+  demoKind: PreviewDemoKind = "pasta",
 ): TwitchMessage {
   const index = messageCounter++;
 
@@ -117,32 +131,16 @@ export function nextPreviewMessage(
     isFounder = false;
   }
 
-  const mentionTarget = lastUsername || username;
-  const template = PREVIEW_MESSAGES[index % PREVIEW_MESSAGES.length];
-  const availableEmotes = emoteService.getAllEmoteNames(channelId);
-  const emoteOnly =
-    availableEmotes.length > 0 && previewRandom(index + 500) < 0.2;
-  const selectedEmotes: string[] = [];
-
-  if (availableEmotes.length > 0) {
-    const count = emoteOnly ? 1 + (index % 2) : 1;
-    for (let ei = 0; ei < count; ei++) {
-      const name =
-        availableEmotes[
-          Math.floor(previewRandom(index + 600 + ei) * availableEmotes.length)
-        ];
-      if (name) selectedEmotes.push(name);
-    }
-  }
-
   const messageText =
-    emoteOnly && selectedEmotes.length > 0
-      ? selectedEmotes.join(" ")
+    demoKind === "emote"
+      ? pickRandomEmoteName(channelId, index)
       : (() => {
-          let text = template;
+          const mentionTarget = lastUsername || username;
+          let text = PREVIEW_MESSAGES[index % PREVIEW_MESSAGES.length];
+          const selectedEmote = pickRandomEmoteName(channelId, index);
           if (previewRandom(index + 20) < 0.3) text += ` @${mentionTarget}`;
-          if (selectedEmotes.length > 0 && previewRandom(index + 700) < 0.7)
-            text += ` ${selectedEmotes.join(" ")}`;
+          if (selectedEmote && previewRandom(index + 700) < 0.7)
+            text += ` ${selectedEmote}`;
           return text;
         })();
 
@@ -194,11 +192,12 @@ export function createPreviewMessages(
   channel: string,
   service: ChatISIntegrationService,
   channelId: string,
+  demoKind: PreviewDemoKind = "pasta",
   count = 6,
 ): TwitchMessage[] {
   resetMessageState();
   return Array.from({ length: count }, () =>
-    nextPreviewMessage(channel, service, channelId),
+    nextPreviewMessage(channel, service, channelId, demoKind),
   ).map((msg, i, list) => ({
     ...msg,
     id: `preview-${i + 1}`,

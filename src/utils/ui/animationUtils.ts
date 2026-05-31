@@ -9,7 +9,7 @@ export interface AnimationOptions {
 
 export const MIN_MESSAGE_SPEED = 0;
 export const MAX_MESSAGE_SPEED = 100;
-export const DEFAULT_MESSAGE_SPEED = 25;
+export const DEFAULT_MESSAGE_SPEED = 31;
 export const MIN_MESSAGE_INTERVAL_MS = 80;
 export const MAX_MESSAGE_INTERVAL_MS = 3000;
 

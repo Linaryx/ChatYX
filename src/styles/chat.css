@@ -20,6 +20,12 @@ body {
   word-break: break-word;
   user-select: text;
   -webkit-user-select: text;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#chat_container::-webkit-scrollbar {
+  display: none;
 }
 
 .chat_line {

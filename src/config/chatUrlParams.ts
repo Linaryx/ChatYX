@@ -50,7 +50,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   fade: 60,
   animate: true,
   messageSpeed: DEFAULT_MESSAGE_SPEED,
-  showHomies: false,
+  showHomies: true,
   bots: true,
   commands: true,
   hideSpecialBadges: false,
@@ -70,7 +70,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   ffzBotMixVip: false,
   overlayBackgroundColor: "#000000",
   overlayBackgroundOpacity: 50,
-  overlayBackgroundRadius: 0,
+  overlayBackgroundRadius: 20,
   overlayBorderOpacity: 0,
 });
 

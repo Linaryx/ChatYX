@@ -30,6 +30,7 @@ import {
   createPreviewMessages,
   injectPreviewStyles,
   cleanupPreviewStyles,
+  type PreviewDemoKind,
 } from "~/services/chat/preview";
 import {
   DEFAULT_ANIMATION_OPTIONS,
@@ -65,6 +66,10 @@ function withTimeout<T>(
 
 function isTwitchUserId(value: string): boolean {
   return /^\d+$/.test(value) && value !== "0";
+}
+
+function parsePreviewDemoKind(raw: string | null): PreviewDemoKind {
+  return raw === "emote" ? "emote" : "pasta";
 }
 
 export default function ChatOverlay() {
@@ -123,12 +128,20 @@ export default function ChatOverlay() {
     const borderOpacity = clamp(cfg.overlayBorderOpacity, 0, 100) / 100;
     const borderRadius = clamp(cfg.overlayBackgroundRadius, 0, 128);
     const fadeDurationMs = chatService()?.getConfig().fade.fadeOutDuration ?? 1000;
+
     return {
-      position: "fixed",
-      inset: "0",
-      "z-index": "9999",
-      "pointer-events": "none",
+      position: "absolute",
+      bottom: "0",
+      left: "0",
+      width: "fit-content",
+      "max-width": "100%",
+      "max-height": "100vh",
+      padding: "10px",
+      "box-sizing": "border-box",
+      "z-index": "10000",
+      "pointer-events": "auto",
       opacity: chatVisible() ? "1" : "0",
+      overflow: "hidden",
       transition: [
         "opacity 0.5s ease-in",
         `background-color ${fadeDurationMs}ms ease-out`,
@@ -139,20 +152,17 @@ export default function ChatOverlay() {
         ? `1px solid rgba(255, 255, 255, ${borderOpacity})`
         : "1px solid transparent",
       "border-radius": chromeVisible ? `${borderRadius}px` : "0px",
-      "box-sizing": "border-box",
     } as const;
   });
 
   const containerStyle = createMemo(() => ({
-    position: "absolute",
-    bottom: "0",
-    width: "100%",
-    padding: "10px",
+    position: "relative",
+    width: "fit-content",
+    "max-width": "100%",
+    "max-height": "calc(100vh - 20px)",
+    padding: "0",
     "box-sizing": "border-box",
-    "z-index": "10000",
     "pointer-events": "auto",
-    opacity: chatVisible() ? "1" : "0",
-    transition: "opacity 0.5s ease-in",
   }) as const);
 
   createEffect(() => {
@@ -197,8 +207,14 @@ export default function ChatOverlay() {
     if (isPreview) {
       const previewConfig = parseChatConfigFromSearchParams(urlParams, { channel });
       const previewService = new ChatISIntegrationService(createFromQueryParams(previewConfig));
+      const previewDemoKind = parsePreviewDemoKind(urlParams.get("demo"));
       let previewInterval: number | undefined;
       let previewDestroyed = false;
+      const scrollPreviewToLatest = () => {
+        window.requestAnimationFrame(() => {
+          if (!previewDestroyed) previewService.scrollToLatest(false);
+        });
+      };
 
       mentionStyleService.reset();
       injectPreviewStyles(previewConfig);
@@ -273,11 +289,17 @@ export default function ChatOverlay() {
         window.setTimeout(() => {
           if (previewDestroyed) return;
 
-          const previewMessages = createPreviewMessages(channel, previewService, previewChannelId);
+          const previewMessages = createPreviewMessages(
+            channel,
+            previewService,
+            previewChannelId,
+            previewDemoKind,
+          );
           previewMessages.forEach((msg) => mentionStyleService.registerMessageAuthor(msg));
 
           setMessages(previewMessages);
           setAnimatedIds(new Set(previewMessages.map((msg) => msg.id)));
+          scrollPreviewToLatest();
           setLoadingProgress(100);
           setLoadingStatus("Preview ready");
           setIsLoading(false);
@@ -285,13 +307,19 @@ export default function ChatOverlay() {
           if (previewIntervalMs === null) return;
 
           previewInterval = window.setInterval(() => {
-            const nextMsg = nextPreviewMessage(channel, previewService, previewChannelId);
+            const nextMsg = nextPreviewMessage(
+              channel,
+              previewService,
+              previewChannelId,
+              previewDemoKind,
+            );
             mentionStyleService.registerMessageAuthor(nextMsg);
 
             setMessages((current) => {
               const next = [...current, nextMsg];
               return next.length > 8 ? next.slice(-8) : next;
             });
+            scrollPreviewToLatest();
 
             if (previewConfig.animate) {
               setAnimatedIds((prev) => new Set([...prev, nextMsg.id]));
@@ -349,19 +377,20 @@ export default function ChatOverlay() {
               onComplete={() => setIsLoading(false)}
             />
           </Show>
-          <div id="chat_chrome" style={chromeStyle()} />
-          <div
-            id="chat_container"
-            data-connected={isConnected() ? "true" : "false"}
-            style={containerStyle()}
-          >
-            <ChatMessageList
-              messages={messages()}
-              config={config()}
-              service={chatService()}
-              animatedIds={animatedIds()}
-              animationDurationMs={animationDurationMs()}
-            />
+          <div id="chat_chrome" style={chromeStyle()}>
+            <div
+              id="chat_container"
+              data-connected={isConnected() ? "true" : "false"}
+              style={containerStyle()}
+            >
+              <ChatMessageList
+                messages={messages()}
+                config={config()}
+                service={chatService()}
+                animatedIds={animatedIds()}
+                animationDurationMs={animationDurationMs()}
+              />
+            </div>
           </div>
         </>
       </Show>

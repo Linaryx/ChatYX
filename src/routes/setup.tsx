@@ -44,9 +44,64 @@ type BotProfile = {
   avatarUrl: string;
 };
 
+type LocalFontData = {
+  family: string;
+  fullName?: string;
+  postscriptName?: string;
+  style?: string;
+};
+
+type LocalFontOption = {
+  family: string;
+  styles: string[];
+};
+
+type LocalFontWindow = Window & {
+  queryLocalFonts?: () => Promise<LocalFontData[]>;
+};
+
 const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_WEB_CLIENT_ID =
   import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
+
+function detectLocalFontBrowser(): string | null {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return null;
+  }
+
+  const hasApi =
+    typeof (window as LocalFontWindow).queryLocalFonts === "function";
+  if (!hasApi) return null;
+
+  const ua = navigator.userAgent;
+  const vendor = navigator.vendor || "";
+
+  if (/Edg\//.test(ua)) return "Edge";
+  if (/(OPR|Opera)\//.test(ua)) return "Opera";
+  if (/Chrome\//.test(ua) && vendor.includes("Google")) return "Chrome";
+
+  return null;
+}
+
+function normalizeLocalFonts(fonts: LocalFontData[]): LocalFontOption[] {
+  const families = new Map<string, Set<string>>();
+
+  for (const font of fonts) {
+    const family = font.family?.trim();
+    if (!family) continue;
+
+    const styles = families.get(family) ?? new Set<string>();
+    if (font.style) styles.add(font.style);
+    families.set(family, styles);
+  }
+
+  return Array.from(families.entries())
+    .map(([family, styles]) => ({
+      family,
+      styles: Array.from(styles).sort((a, b) => a.localeCompare(b)),
+    }))
+    .sort((a, b) => a.family.localeCompare(b.family));
+}
 
 function normalizeBotLogin(raw: string): string {
   return raw.trim().replace(/^@/, "").toLowerCase();
@@ -195,6 +250,10 @@ export default function ChatSetup() {
   const [size, setSize] = createSignal(String(DEFAULT_CHAT_CONFIG.size));
   const [font, setFont] = createSignal(String(DEFAULT_CHAT_CONFIG.font));
   const [fontCustom, setFontCustom] = createSignal("");
+  const [localFontBrowser, setLocalFontBrowser] = createSignal("");
+  const [localFonts, setLocalFonts] = createSignal<LocalFontOption[]>([]);
+  const [localFontStatus, setLocalFontStatus] = createSignal("");
+  const [isLoadingLocalFonts, setIsLoadingLocalFonts] = createSignal(false);
   const [shadow, setShadow] = createSignal(
     DEFAULT_CHAT_CONFIG.shadow === false
       ? "0"
@@ -212,6 +271,10 @@ export default function ChatSetup() {
   const [messageSpeed, setMessageSpeed] = createSignal(
     String(DEFAULT_CHAT_CONFIG.messageSpeed),
   );
+  const [previewMode, setPreviewMode] = createSignal<"live" | "demo">("demo");
+  const [previewDemoKind, setPreviewDemoKind] = createSignal<
+    "pasta" | "emote"
+  >("pasta");
   const [showHomies, setShowHomies] = createSignal(
     DEFAULT_CHAT_CONFIG.showHomies,
   );
@@ -223,11 +286,13 @@ export default function ChatSetup() {
   const [emoteScale, setEmoteScale] = createSignal(
     String(DEFAULT_CHAT_CONFIG.emoteScale),
   );
-  const [botNames, setBotNames] = createSignal<string[]>([...DEFAULT_BOT_NAMES]);
+  const [botNames, setBotNames] = createSignal<string[]>([
+    ...DEFAULT_BOT_NAMES,
+  ]);
   const [botInput, setBotInput] = createSignal("");
-  const [botProfiles, setBotProfiles] = createSignal<Record<string, BotProfile>>(
-    {},
-  );
+  const [botProfiles, setBotProfiles] = createSignal<
+    Record<string, BotProfile>
+  >({});
   const [allowedChatters, setAllowedChatters] = createSignal<string[]>([]);
   const [allowedChatterInput, setAllowedChatterInput] = createSignal("");
   const [show7tvUnlisted, setShow7tvUnlisted] = createSignal(
@@ -274,9 +339,21 @@ export default function ChatSetup() {
   onMount(() => {
     const previousHtmlBackground = document.documentElement.style.background;
     const previousBodyBackground = document.body.style.background;
+    const supportedBrowser = detectLocalFontBrowser();
 
     document.documentElement.style.background = "#09090b";
     document.body.style.background = "#09090b";
+
+    if (supportedBrowser) {
+      setLocalFontBrowser(supportedBrowser);
+      setLocalFontStatus(
+        `Можно загрузить локальные шрифты через ${supportedBrowser}.`,
+      );
+    } else {
+      setLocalFontStatus(
+        "Локальные шрифты доступны только в Chrome, Edge и Opera",
+      );
+    }
 
     onCleanup(() => {
       document.documentElement.style.background = previousHtmlBackground;
@@ -390,8 +467,9 @@ export default function ChatSetup() {
     sectionTitle: {
       margin: "0",
       "font-size": "11px",
-      "font-weight": 600,
-      color: C.muted,
+      "font-family": "'Inter', 'Segoe UI', sans-serif",
+      "font-weight": 700,
+      color: C.text,
       "text-transform": "uppercase",
       "letter-spacing": "0.08em",
     },
@@ -452,6 +530,34 @@ export default function ChatSetup() {
       "box-sizing": "border-box",
       width: "100%",
     },
+    fontCustomStack: {
+      display: "flex",
+      "flex-direction": "column",
+      gap: "8px",
+    },
+    localFontRow: {
+      display: "grid",
+      "grid-template-columns": "150px minmax(0, 1fr)",
+      gap: "8px",
+      width: "100%",
+    },
+    localFontButton: {
+      height: "36px",
+      padding: "0 12px",
+      border: `1px solid ${C.border}`,
+      "border-radius": "6px",
+      background: "#000000",
+      color: C.text,
+      "font-family": "inherit",
+      "font-size": "12px",
+      "font-weight": 700,
+      cursor: "pointer",
+      "box-sizing": "border-box",
+    },
+    localFontButtonDisabled: {
+      opacity: "0.45",
+      cursor: "not-allowed",
+    },
     textarea: {
       padding: "10px 12px",
       minHeight: "100px",
@@ -471,12 +577,14 @@ export default function ChatSetup() {
       top: "24px",
       display: "flex",
       "flex-direction": "column",
-      gap: "8px",
+      gap: "12px",
     },
     previewLabel: {
+      margin: "0",
       "font-size": "11px",
-      "font-weight": 600,
-      color: C.muted,
+      "font-family": "'Inter', 'Segoe UI', sans-serif",
+      "font-weight": 700,
+      color: C.text,
       "text-transform": "uppercase",
       "letter-spacing": "0.08em",
     },
@@ -511,18 +619,28 @@ export default function ChatSetup() {
       color: C.muted,
       "font-size": "11px",
     },
+    previewControlsGrid: {
+      display: "grid",
+      "grid-template-columns": "1fr 1fr",
+      gap: "8px",
+    },
+    previewControlStack: {
+      display: "flex",
+      "flex-direction": "column",
+      gap: "5px",
+      "min-width": "0",
+    },
     previewScreen: {
       position: "relative",
       height: "600px",
       width: "100%",
       overflow: "hidden",
-      background: "#08090f",
+      background: "transparent",
     },
     previewOverlay: {
       position: "absolute",
       inset: "0",
-      background:
-        "linear-gradient(180deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.04) 40%, rgba(0,0,0,0.38) 100%)",
+      background: "transparent",
       "pointer-events": "none",
     },
     previewFrame: {
@@ -532,6 +650,7 @@ export default function ChatSetup() {
       border: "0",
       display: "block",
       background: "transparent",
+      "pointer-events": "none",
       "z-index": "1",
     },
     secondaryButton: {
@@ -955,10 +1074,11 @@ export default function ChatSetup() {
   };
 
   createEffect(() => {
-    const missing = Array.from(new Set([...botNames(), ...allowedChatters()]))
-      .filter(
-        (login) => !botProfiles()[login] && !requestedBotProfiles.has(login),
-      );
+    const missing = Array.from(
+      new Set([...botNames(), ...allowedChatters()]),
+    ).filter(
+      (login) => !botProfiles()[login] && !requestedBotProfiles.has(login),
+    );
     if (missing.length === 0) return;
 
     for (const login of missing) {
@@ -990,11 +1110,22 @@ export default function ChatSetup() {
 
   createEffect(() => {
     const cfg = previewConfig(); // read synchronously so SolidJS tracks the dependency
+    const mode = previewMode();
+    const demoKind = previewDemoKind();
     const timer = window.setTimeout(() => {
-      const nextPreviewUrl = buildChatUrl(cfg, {
-        preview: "true",
-        refresh: String(Date.now()),
-      });
+      const nextPreviewUrl = buildChatUrl(
+        cfg,
+        mode === "demo"
+          ? {
+              preview: "true",
+              demo: demoKind,
+              refresh: String(Date.now()),
+            }
+          : {
+              preview: "false",
+              refresh: String(Date.now()),
+            },
+      );
 
       // Set via ref to avoid about:blank flash — just swap src directly
       if (iframeRef) {
@@ -1015,6 +1146,35 @@ export default function ChatSetup() {
       alert("Ссылка скопирована в буфер обмена");
     } catch (err) {
       console.error("Ошибка копирования:", err);
+    }
+  };
+
+  const loadLocalFonts = async () => {
+    const queryLocalFonts = (window as LocalFontWindow).queryLocalFonts;
+    if (!localFontBrowser() || typeof queryLocalFonts !== "function") {
+      setLocalFontStatus(
+        "Этот браузер не даёт сайту список локальных шрифтов.",
+      );
+      return;
+    }
+
+    setIsLoadingLocalFonts(true);
+    setLocalFontStatus("Запрашиваю доступ к локальным шрифтам...");
+
+    try {
+      const fonts = normalizeLocalFonts(await queryLocalFonts());
+      setLocalFonts(fonts);
+      setLocalFontStatus(
+        fonts.length > 0
+          ? `Найдено локальных шрифтов: ${fonts.length}.`
+          : "Браузер не вернул локальные шрифты.",
+      );
+    } catch {
+      setLocalFontStatus(
+        "Не получилось получить список шрифтов. Проверь разрешение браузера.",
+      );
+    } finally {
+      setIsLoadingLocalFonts(false);
     }
   };
 
@@ -1061,21 +1221,71 @@ export default function ChatSetup() {
       label: "Название своего шрифта",
       hint: "Работает, когда выше выбран пункт «Свой шрифт».",
       control: (
-        <input
-          type="text"
-          value={fontCustom()}
-          onInput={(e) => setFontCustom(e.currentTarget.value)}
-          placeholder="Например: Comic Sans MS"
-          disabled={font() !== "0"}
-          style={{
-            ...styles.input,
-            opacity: font() === "0" ? "1" : "0.5",
-          }}
-        />
+        <div style={styles.fontCustomStack}>
+          <input
+            type="text"
+            value={fontCustom()}
+            onInput={(e) => setFontCustom(e.currentTarget.value)}
+            placeholder="Например: Comic Sans MS"
+            disabled={font() !== "0"}
+            style={{
+              ...styles.input,
+              opacity: font() === "0" ? "1" : "0.5",
+            }}
+          />
+          <div style={styles.localFontRow}>
+            <button
+              type="button"
+              onClick={loadLocalFonts}
+              disabled={
+                font() !== "0" || !localFontBrowser() || isLoadingLocalFonts()
+              }
+              style={{
+                ...styles.localFontButton,
+                ...((font() !== "0" ||
+                  !localFontBrowser() ||
+                  isLoadingLocalFonts()) &&
+                  styles.localFontButtonDisabled),
+              }}
+            >
+              {isLoadingLocalFonts() ? "Загрузка..." : "Локальные"}
+            </button>
+            <select
+              value=""
+              onChange={(e) => {
+                const selectedFont = e.currentTarget.value;
+                if (selectedFont) setFontCustom(selectedFont);
+              }}
+              disabled={font() !== "0" || localFonts().length === 0}
+              style={{
+                ...styles.input,
+                opacity:
+                  font() === "0" && localFonts().length > 0 ? "1" : "0.5",
+              }}
+            >
+              <option value="">
+                {localFonts().length > 0
+                  ? "Выбрать локальный шрифт"
+                  : "Сначала загрузить список"}
+              </option>
+              <For each={localFonts()}>
+                {(localFont) => (
+                  <option value={localFont.family}>
+                    {localFont.family}
+                    {localFont.styles.length > 0
+                      ? ` (${localFont.styles.join(", ")})`
+                      : ""}
+                  </option>
+                )}
+              </For>
+            </select>
+          </div>
+          <div style={styles.settingHint}>{localFontStatus()}</div>
+        </div>
       ),
     },
     {
-      label: "Размер эмотов",
+      label: "Размер эмоутов",
       control: (
         <SetupNumberField
           value={emoteScale()}
@@ -1329,41 +1539,12 @@ export default function ChatSetup() {
             .setup-role-pills {
               grid-template-columns: 1fr !important;
             }
+
+            .setup-preview-controls {
+              grid-template-columns: 1fr !important;
+            }
           }
 
-          @keyframes preview-ambient-shift {
-            0%   { background-position: 0% 50%; }
-            50%  { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-
-          .preview-ambient {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(
-              -45deg,
-              #06080f,
-              #0a1220,
-              #0e1a30,
-              #0c1528,
-              #110d22,
-              #0a0e1a,
-              #081018,
-              #0d1a2e
-            );
-            background-size: 400% 400%;
-            animation: preview-ambient-shift 14s ease infinite;
-          }
-
-          .preview-ambient::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-              radial-gradient(ellipse 60% 40% at 20% 80%, rgba(59, 130, 246, 0.07) 0%, transparent 70%),
-              radial-gradient(ellipse 50% 35% at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 70%),
-              radial-gradient(ellipse 40% 30% at 50% 50%, rgba(16, 185, 129, 0.03) 0%, transparent 70%);
-          }
         `}
       </style>
 
@@ -1520,7 +1701,9 @@ export default function ChatSetup() {
                       <input
                         type="text"
                         value={botInput()}
-                        onInput={(event) => setBotInput(event.currentTarget.value)}
+                        onInput={(event) =>
+                          setBotInput(event.currentTarget.value)
+                        }
                         onKeyDown={handleBotInputKeyDown}
                         onBlur={() => {
                           addBotNames(botInput());
@@ -1578,65 +1761,121 @@ export default function ChatSetup() {
 
             <div style={styles.previewPane}>
               <div class="setup-preview-sticky" style={styles.previewSticky}>
-                <div style={styles.previewLabel}>Живое превью</div>
-                <div style={styles.speedCard}>
-                  <div style={styles.speedHeader}>
-                    <div style={styles.settingLabel}>
-                      Скорость появления сообщений
+                <section style={styles.sectionCard}>
+                  <h3 style={styles.previewLabel}>Живое превью</h3>
+                  <div style={styles.speedCard}>
+                    <div
+                      class="setup-preview-controls"
+                      style={styles.previewControlsGrid}
+                    >
+                      <div style={styles.previewControlStack}>
+                        <div style={styles.settingLabel}>Режим превью</div>
+                        <select
+                          value={previewMode()}
+                          onChange={(event) =>
+                            setPreviewMode(
+                              event.currentTarget.value === "live"
+                                ? "live"
+                                : "demo",
+                            )
+                          }
+                          style={styles.input}
+                        >
+                          <option value="demo">Демонстрация</option>
+                          <option value="live">Лайв режим</option>
+                        </select>
+                      </div>
+                      <div style={styles.previewControlStack}>
+                        <div style={styles.settingLabel}>Сценарий</div>
+                        <select
+                          value={previewDemoKind()}
+                          onChange={(event) =>
+                            setPreviewDemoKind(
+                              event.currentTarget.value === "emote"
+                                ? "emote"
+                                : "pasta",
+                            )
+                          }
+                          disabled={previewMode() !== "demo"}
+                          style={{
+                            ...styles.input,
+                            opacity: previewMode() === "demo" ? "1" : "0.5",
+                          }}
+                        >
+                          <option value="pasta">Паста</option>
+                          <option value="emote">Обычный</option>
+                        </select>
+                      </div>
                     </div>
-                    <div style={styles.speedValue}>{messageSpeedLabel()}</div>
+                    <div style={styles.settingHint}>
+                      Лайв режим берёт реальный чат канала. Демонстрация
+                      использует тестовые сообщения.
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min={MIN_MESSAGE_SPEED}
-                    max={MAX_MESSAGE_SPEED}
-                    step="1"
-                    value={messageSpeed()}
-                    onInput={(event) =>
-                      setMessageSpeed(event.currentTarget.value)
-                    }
-                    style={styles.speedSlider}
-                    aria-label="Скорость появления сообщений"
-                  />
-                  <div style={styles.speedScale}>
-                    <span>Полный стоп</span>
-                    <span>Летит</span>
+                  {previewMode() === "demo" && (
+                    <div style={styles.speedCard}>
+                      <div style={styles.speedHeader}>
+                        <div style={styles.settingLabel}>
+                          Скорость появления сообщений
+                        </div>
+                        <div style={styles.speedValue}>
+                          {messageSpeedLabel()}
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min={MIN_MESSAGE_SPEED}
+                        max={MAX_MESSAGE_SPEED}
+                        step="1"
+                        value={messageSpeed()}
+                        onInput={(event) =>
+                          setMessageSpeed(event.currentTarget.value)
+                        }
+                        style={styles.speedSlider}
+                        aria-label="Скорость появления сообщений"
+                      />
+                      <div style={styles.speedScale}>
+                        <span>Полный стоп</span>
+                        <span>Летит</span>
+                      </div>
+                    </div>
+                  )}
+                  <div style={styles.previewScreen}>
+                    <div style={styles.previewOverlay} />
+                    <iframe
+                      ref={iframeRef}
+                      src={previewUrl()}
+                      style={styles.previewFrame}
+                      title="Chat preview"
+                      scrolling="no"
+                    />
                   </div>
-                </div>
-                <div style={styles.previewScreen}>
-                  <div class="preview-ambient" />
-                  <div style={styles.previewOverlay} />
-                  <iframe
-                    ref={iframeRef}
-                    src={previewUrl()}
-                    style={styles.previewFrame}
-                    title="Chat preview"
-                    scrolling="no"
-                  />
-                </div>
+                </section>
+                {generatedUrl() && (
+                  <div style={styles.resultCard}>
+                    <div style={styles.sectionTitle}>Ссылка для OBS готова</div>
+                    <div style={styles.resultBody}>{generatedUrl()}</div>
+                    <div style={styles.resultActions}>
+                      <button
+                        onClick={copyToClipboard}
+                        style={styles.primaryButton}
+                      >
+                        Скопировать ссылку
+                      </button>
+                      <a
+                        href={generatedUrl()}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={styles.secondaryButton}
+                      >
+                        Открыть оверлей
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
-          {generatedUrl() && (
-            <div style={styles.resultCard}>
-              <div style={styles.sectionTitle}>Ссылка для OBS готова</div>
-              <div style={styles.resultBody}>{generatedUrl()}</div>
-              <div style={styles.resultActions}>
-                <button onClick={copyToClipboard} style={styles.primaryButton}>
-                  Скопировать ссылку
-                </button>
-                <a
-                  href={generatedUrl()}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={styles.secondaryButton}
-                >
-                  Открыть оверлей
-                </a>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </>
