@@ -231,9 +231,19 @@ export class LayoutManager {
    * Scroll to latest message if auto-scroll enabled
    */
   scrollIfNeeded(smooth: boolean = true): void {
-    if (this.autoScroll || isScrolledToEnd(this.container, this.options)) {
-      scrollToLatest(this.container, this.options, smooth);
-    }
+    const shouldScroll =
+      this.autoScroll || isScrolledToEnd(this.container, this.options);
+    if (!shouldScroll) return;
+
+    const scroll = () => scrollToLatest(this.container, this.options, smooth);
+    scroll();
+
+    if (typeof window === "undefined") return;
+
+    window.requestAnimationFrame(() => {
+      scroll();
+      window.setTimeout(scroll, 60);
+    });
   }
 
   /**

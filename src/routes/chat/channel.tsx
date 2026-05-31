@@ -139,7 +139,7 @@ export default function ChatOverlay() {
       padding: "10px",
       "box-sizing": "border-box",
       "z-index": "10000",
-      "pointer-events": "auto",
+      "pointer-events": "none",
       opacity: chatVisible() ? "1" : "0",
       overflow: "hidden",
       transition: [
@@ -162,7 +162,7 @@ export default function ChatOverlay() {
     "max-height": "calc(100vh - 20px)",
     padding: "0",
     "box-sizing": "border-box",
-    "pointer-events": "auto",
+    "pointer-events": "none",
   }) as const);
 
   createEffect(() => {
