@@ -11,6 +11,7 @@ import {
   mentionStyleService,
   twitchGqlService,
   v3Integration,
+  type TwitchGqlCustomReward,
   type TwitchMessage,
 } from "~/services/chat";
 import { fetchRecentMessages } from "~/services/chat/recentMessagesService";
@@ -220,6 +221,10 @@ export class OverlayRuntime {
     }
 
     this.initializeLayout(service);
+
+    void twitchGqlService
+      .loadChannelPointRewards(this.channel)
+      .catch(() => {});
 
     this.setLoading("Загрузка последних сообщений...", 82);
     const loadedRecentMessages = await this.loadRecentMessages();
@@ -569,13 +574,43 @@ export class OverlayRuntime {
       this.mergeGqlBadges(message, gqlSender.displayBadges);
     }
 
-    void badgeService.loadUserBadges(message.username, userId).catch(() => {});
+    if (message.customRewardId) {
+      const reward = await this.resolveChannelPointReward(message.customRewardId);
+      if (reward) {
+        message.channelPointReward = reward;
+        if (reward.prompt.toUpperCase().includes("FFZ:GE")) {
+          message.isGigantifiedEmote = true;
+        }
+      }
+    }
+
+    this.loadUserBadgesAndRefresh(message, userId);
     mentionStyleService.registerMessageAuthor(message);
 
     message.emoteSnapshot = this.createMessageEmoteSnapshot(message);
     this.rememberMessage(message);
 
     return message;
+  }
+
+  private loadUserBadgesAndRefresh(message: TwitchMessage, userId: string) {
+    if (!message.id) return;
+
+    const messageId = message.id;
+    const username = message.username;
+
+    void badgeService
+      .loadUserBadges(username, userId)
+      .then((badges) => {
+        if (badges.length === 0) return;
+
+        this.hooks.onMessagesChange((messages) =>
+          messages.map((entry) =>
+            entry.id === messageId ? { ...entry } : entry,
+          ),
+        );
+      })
+      .catch(() => {});
   }
 
   private isDuplicateMessage(message: TwitchMessage): boolean {
@@ -628,6 +663,23 @@ export class OverlayRuntime {
           .finally(() => window.clearTimeout(timeout));
       },
     );
+  }
+
+  private async resolveChannelPointReward(
+    rewardId: string,
+  ): Promise<TwitchGqlCustomReward | null> {
+    if (!rewardId) return null;
+
+    return new Promise<TwitchGqlCustomReward | null>((resolve) => {
+      const timeout = window.setTimeout(() => resolve(null), 350);
+      twitchGqlService
+        .loadChannelPointRewards(this.channel)
+        .then(
+          (rewards) => resolve(rewards.get(rewardId) ?? null),
+          () => resolve(null),
+        )
+        .finally(() => window.clearTimeout(timeout));
+    });
   }
 
   private mergeGqlBadges(

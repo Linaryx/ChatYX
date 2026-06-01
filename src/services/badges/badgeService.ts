@@ -37,6 +37,7 @@ export interface BadgeData {
 
 class BadgeService {
   private currentChannelId = "";
+  private thirdPartyBadgesReady: Promise<void> | null = null;
   private badgeData: BadgeData = {
     badges: {
       // Локальные fallback баджи с Twitch CDN (работают всегда)
@@ -184,7 +185,9 @@ class BadgeService {
       // Third-party баджи грузим в фоне (не блокируем инициализацию IRC)
       await this.loadTwitchBadges(channelId, channel);
       void this.loadTwitchGqlBadgeSets(channelId);
-      this.loadThirdPartyBadges(); // Без await - запускаем в фоне
+      // Third-party badges stay background-loaded, but user badge resolution
+      // waits for this promise to avoid caching empty recent-message badges.
+      void this.ensureThirdPartyBadgesReady();
     } catch (error) {
       log.error(LOG_CATEGORIES.BADGE, " Failed to load badges:", error);
     }
@@ -392,6 +395,8 @@ class BadgeService {
     const userBadges: Badge[] = [];
 
     try {
+      await this.ensureThirdPartyBadgesReady();
+
       const normalizedUsername = username.toLowerCase();
 
       const gqlSender = await twitchGqlService.loadSender(
@@ -580,6 +585,16 @@ class BadgeService {
 
     this.badgeData.userBadges[username] = userBadges;
     return userBadges;
+  }
+
+  private ensureThirdPartyBadgesReady(): Promise<void> {
+    if (!this.thirdPartyBadgesReady) {
+      this.thirdPartyBadgesReady = this.loadThirdPartyBadges().catch((error) => {
+        log.error(LOG_CATEGORIES.BADGE, "Failed to load third-party badges", error);
+      });
+    }
+
+    return this.thirdPartyBadgesReady;
   }
 
   private async loadTwitchGqlBadgeSets(channelId: string): Promise<void> {

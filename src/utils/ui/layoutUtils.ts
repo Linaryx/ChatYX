@@ -25,20 +25,27 @@ export function getLayoutStyles(options: LayoutOptions): string {
         display: flex;
         flex-direction: row;
         align-items: flex-end;
+        justify-content: flex-end;
         gap: 1rem;
-        overflow-x: auto;
+        overflow-x: hidden;
         overflow-y: hidden;
       }
       #chat_container .chat_line {
-        flex-shrink: 0;
+        flex: 0 0 auto;
       }
     `;
   } else {
     styles += `
       #chat_container {
-        display: block;
-        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-end;
+        overflow-y: hidden;
         overflow-x: hidden;
+      }
+      #chat_container .chat_line {
+        flex: 0 0 auto;
       }
     `;
   }
@@ -143,19 +150,11 @@ export function scrollToLatest(
   options: LayoutOptions,
   smooth: boolean = true,
 ): void {
-  const behavior = smooth ? "smooth" : "auto";
-
-  if (options.horizontal) {
-    container.scrollTo({
-      left: options.reverse ? 0 : container.scrollWidth,
-      behavior,
-    });
-  } else {
-    container.scrollTo({
-      top: options.reverse ? 0 : container.scrollHeight,
-      behavior,
-    });
-  }
+  void container;
+  void options;
+  void smooth;
+  // The overlay is bottom/right anchored with overflow clipping. New messages
+  // shift old content out of view, so runtime must not depend on scroll state.
 }
 
 /**
@@ -166,25 +165,10 @@ export function isScrolledToEnd(
   options: LayoutOptions,
   threshold: number = 50,
 ): boolean {
-  if (options.horizontal) {
-    if (options.reverse) {
-      return container.scrollLeft <= threshold;
-    } else {
-      return (
-        container.scrollWidth - container.scrollLeft - container.clientWidth <=
-        threshold
-      );
-    }
-  } else {
-    if (options.reverse) {
-      return container.scrollTop <= threshold;
-    } else {
-      return (
-        container.scrollHeight - container.scrollTop - container.clientHeight <=
-        threshold
-      );
-    }
-  }
+  void container;
+  void options;
+  void threshold;
+  return true;
 }
 
 /**

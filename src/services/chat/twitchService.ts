@@ -1,6 +1,8 @@
 // Сервис для подключения к Twitch IRC
 
 import { log, LOG_CATEGORIES } from "../../utils/logger";
+import type { ReplyThread } from "../../types/replyThread";
+import { parseReplyThread } from "../../utils/chat/replyParser";
 
 export interface TwitchMessage {
   id: string;
@@ -15,6 +17,16 @@ export interface TwitchMessage {
   isSubscriber: boolean;
   timestamp: Date;
   userId?: string;
+  reply?: ReplyThread;
+  msgId?: string;
+  customRewardId?: string;
+  channelPointReward?: {
+    id: string;
+    title: string;
+    prompt: string;
+    cost: number;
+  };
+  isGigantifiedEmote?: boolean;
   // Cheer события
   bits?: number;
   cheerPrefix?: string;
@@ -329,6 +341,7 @@ export class TwitchService {
       if (!match) return null;
 
       const tags = this.parseTags(match[1]);
+      const tagMap = new Map(Object.entries(tags));
       const message = match[2];
 
       // Извлекаем username из IRC формата
@@ -364,6 +377,10 @@ export class TwitchService {
         isSubscriber: tags.subscriber === "1",
         timestamp: new Date(),
         userId: tags["user-id"] || undefined,
+        reply: parseReplyThread(tagMap) || undefined,
+        msgId: tags["msg-id"] || undefined,
+        customRewardId: tags["custom-reward-id"] || undefined,
+        isGigantifiedEmote: tags["msg-id"] === "gigantified-emote-message",
       };
     } catch (error) {
       log.error(LOG_CATEGORIES.IRC, "Error parsing PRIVMSG", error);
@@ -425,6 +442,9 @@ export class TwitchService {
         isSubscriber: tags.subscriber === "1",
         timestamp: new Date(),
         userId: tags["user-id"] || undefined,
+        msgId,
+        customRewardId: tags["custom-reward-id"] || undefined,
+        isGigantifiedEmote: msgId === "gigantified-emote-message",
         bits: bits,
         cheerPrefix: cheerPrefix,
       };

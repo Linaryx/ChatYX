@@ -15,6 +15,7 @@ export const SIZE_CONFIGS = {
     cheerEmoteMaxHeight: 25,
     cheerEmoteMarginBottom: "-6px",
     upscaleHeight: 25,
+    gigantifiedEmoteWidth: "180px",
     emojiHeight: 22,
     colonMarginRight: "8px",
     cheerBitsFontWeight: 700,
@@ -34,6 +35,7 @@ export const SIZE_CONFIGS = {
     cheerEmoteMaxHeight: 42,
     cheerEmoteMarginBottom: "-10px",
     upscaleHeight: 42,
+    gigantifiedEmoteWidth: "240px",
     emojiHeight: 39,
     colonMarginRight: "14px",
     cheerBitsFontWeight: 600,
@@ -53,6 +55,7 @@ export const SIZE_CONFIGS = {
     cheerEmoteMaxHeight: 60,
     cheerEmoteMarginBottom: "-15px",
     upscaleHeight: 60,
+    gigantifiedEmoteWidth: "300px",
     emojiHeight: 55,
     colonMarginRight: "20px",
     cheerBitsFontWeight: 500,
@@ -109,6 +112,10 @@ export const generateSizeStyles = (size: 1 | 2 | 3) => {
 
 .upscale {
     height: ${config.upscaleHeight}px;
+}
+
+.gigantified-emote {
+    --gigantified-emote-width: ${config.gigantifiedEmoteWidth};
 }
 
 .emoji {

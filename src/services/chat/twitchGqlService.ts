@@ -9,6 +9,8 @@ const PERSISTED_QUERIES = {
     "e36a0d9f21ec04006dbda91e933c1071d45ecd96b477bfcaa2c3e7b61f83c296",
   AutoModSender:
     "87b94ec5116e7d29af7531eccb5c058ed3ae6cc893eda79c1168dd3db7606461",
+  ChannelPointsContext:
+    "7fe050e3761eb2cf258d70ee1a21cbd76fa8cf3d7e7b12fc437e7029d446b5e3",
 } as const;
 
 export type TwitchGqlBadge = {
@@ -27,6 +29,13 @@ export type TwitchGqlSender = {
   displayName: string;
   chatColor: string;
   displayBadges: TwitchGqlBadge[];
+};
+
+export type TwitchGqlCustomReward = {
+  id: string;
+  title: string;
+  prompt: string;
+  cost: number;
 };
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -52,6 +61,10 @@ function isTwitchUserId(value: string): boolean {
 class TwitchGqlService {
   private senderCache = new Map<string, Promise<TwitchGqlSender | null>>();
   private badgeSetCache = new Map<string, Promise<TwitchGqlBadge[]>>();
+  private channelPointRewardsCache = new Map<
+    string,
+    Promise<Map<string, TwitchGqlCustomReward>>
+  >();
 
   async loadBadgeSets(channelId: string): Promise<TwitchGqlBadge[]> {
     if (!isTwitchUserId(channelId)) return [];
@@ -111,6 +124,54 @@ class TwitchGqlService {
       });
 
     this.senderCache.set(cacheKey, promise);
+    return promise;
+  }
+
+  async loadChannelPointRewards(
+    channelLogin: string,
+  ): Promise<Map<string, TwitchGqlCustomReward>> {
+    const normalizedLogin = channelLogin.trim().toLowerCase();
+    if (!normalizedLogin) return new Map();
+
+    const cached = this.channelPointRewardsCache.get(normalizedLogin);
+    if (cached) return cached;
+
+    const promise = this.request("ChannelPointsContext", {
+      channelLogin: normalizedLogin,
+      includeGoalTypes: ["CREATOR", "BOOST"],
+    })
+      .then((data) => {
+        const rawRewards =
+          data?.community?.channel?.communityPointsSettings?.customRewards;
+        const rewards = new Map<string, TwitchGqlCustomReward>();
+
+        if (!Array.isArray(rawRewards)) return rewards;
+
+        for (const reward of rawRewards) {
+          if (!reward?.id) continue;
+          rewards.set(String(reward.id), {
+            id: String(reward.id),
+            title: String(reward.title || ""),
+            prompt: String(reward.prompt || ""),
+            cost: Number.isFinite(Number(reward.cost))
+              ? Number(reward.cost)
+              : 0,
+          });
+        }
+
+        return rewards;
+      })
+      .catch((error) => {
+        log.warn(
+          LOG_CATEGORIES.CHAT,
+          "Twitch GQL channel point rewards unavailable",
+          error,
+        );
+        this.channelPointRewardsCache.delete(normalizedLogin);
+        return new Map<string, TwitchGqlCustomReward>();
+      });
+
+    this.channelPointRewardsCache.set(normalizedLogin, promise);
     return promise;
   }
 

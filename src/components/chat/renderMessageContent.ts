@@ -261,6 +261,24 @@ export function renderMessageWithEmotes(
   const joinedText = segments.map((segment) => segment.html).join("");
   const element = document.createElement("span");
   element.innerHTML = joinedText;
+
+  if (message.isGigantifiedEmote) {
+    const target = element.querySelector("img.emote, img.emoji");
+    if (target) {
+      const line = document.createElement("span");
+      const giant = target.cloneNode(true) as HTMLImageElement;
+      const emoteContainer = target.closest(".emote-container");
+      const sourceNode =
+        emoteContainer instanceof HTMLElement ? emoteContainer : target;
+
+      line.className = "gigantified-emote-line";
+      giant.classList.add("gigantified");
+      line.append(giant);
+      sourceNode.remove();
+      element.append(line);
+    }
+  }
+
   return element;
 }
 

@@ -16,6 +16,10 @@ export type { SevenTVEventApiService } from "./sevenTVEventApi";
 export { TwitchService } from "./twitchService";
 export type { TwitchMessage } from "./twitchService";
 export { twitchGqlService } from "./twitchGqlService";
-export type { TwitchGqlBadge, TwitchGqlSender } from "./twitchGqlService";
+export type {
+  TwitchGqlBadge,
+  TwitchGqlCustomReward,
+  TwitchGqlSender,
+} from "./twitchGqlService";
 export { v3Integration } from "./v3Integration";
 export { OverlayRuntime } from "./overlayRuntime";

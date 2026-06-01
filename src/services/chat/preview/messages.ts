@@ -7,6 +7,9 @@ const PREVIEW_MESSAGES = [
   "Это я - твой единственный зритель. Я на протяжении многих лет создавал иллюзию того, что тебя смотрят много людей, но это был я. Сейчас напишу это сообщение со всех аккаунтов.",
 ];
 
+const PREVIEW_REPLY_BODY =
+  "Это старое сообщение, на которое сейчас отвечают, и оно специально длинное, чтобы проверить обрезку reply в одну строку.";
+
 export type PreviewDemoKind = "pasta" | "emote";
 
 const PREVIEW_COLORS = [
@@ -183,6 +186,16 @@ export function nextPreviewMessage(
     isSubscriber,
     timestamp: new Date(),
     userId: String(2000 + index),
+    reply:
+      demoKind === "pasta" && index > 0 && previewRandom(index + 470) < 0.45
+        ? {
+            parentMsgId: `preview-parent-${index}`,
+            parentDisplayName: lastUsername || channel,
+            parentUserLogin: lastUsername || channel,
+            parentMsgBody: PREVIEW_REPLY_BODY,
+            parentUserId: String(1000 + index),
+          }
+        : undefined,
   };
   message.emoteSnapshot = buildEmoteSnapshot(messageText, channelId, username);
   return message;

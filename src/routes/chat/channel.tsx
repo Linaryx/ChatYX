@@ -316,7 +316,7 @@ export default function ChatOverlay() {
 
             setMessages((current) => {
               const next = [...current, nextMsg];
-              return next.length > 8 ? next.slice(-8) : next;
+              return next.length > 30 ? next.slice(-30) : next;
             });
 
             if (previewConfig.animate) {

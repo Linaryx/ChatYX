@@ -58,7 +58,7 @@ export function injectPreviewStyles(config: ChatConfig) {
   layoutEl.id = "chat-preview-layout-styles";
   layoutEl.innerHTML = `
 #chat_container {
-    overflow: visible !important;
+    overflow: hidden !important;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
