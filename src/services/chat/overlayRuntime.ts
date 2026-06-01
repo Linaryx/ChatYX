@@ -390,24 +390,28 @@ export class OverlayRuntime {
 
       if (!this.chatService || !this.activeConfig) return;
 
-      setTrackedTimeout(this.pendingTimers, () => {
-        batch.forEach((message) => {
-          const messageElement = document.querySelector(
-            `[data-id="${message.id}"]`,
-          ) as HTMLElement | null;
-          if (messageElement?.isConnected) {
-            this.chatService?.scheduleMessageFade(messageElement, () => {
-              this.hooks.onMessagesChange((messages) =>
-                messages.filter((entry) => entry.id !== message.id),
-              );
-              messageElement.remove();
-            });
-          }
-        });
-      }, 100);
+      this.scheduleMessagesFade(batch, 100);
 
       this.chatService.scrollToLatest(this.activeConfig.animate);
     }, batchIntervalMs);
+  }
+
+  private scheduleMessagesFade(messages: TwitchMessage[], delayMs: number) {
+    setTrackedTimeout(this.pendingTimers, () => {
+      messages.forEach((message) => {
+        const messageElement = document.querySelector(
+          `[data-id="${message.id}"]`,
+        ) as HTMLElement | null;
+        if (messageElement?.isConnected) {
+          this.chatService?.scheduleMessageFade(messageElement, () => {
+            this.hooks.onMessagesChange((currentMessages) =>
+              currentMessages.filter((entry) => entry.id !== message.id),
+            );
+            messageElement.remove();
+          });
+        }
+      });
+    }, delayMs);
   }
 
   private setupEventListeners() {
@@ -548,6 +552,7 @@ export class OverlayRuntime {
           ? nextMessages.slice(-100)
           : nextMessages;
       });
+      this.scheduleMessagesFade(preparedMessages, 100);
 
       return preparedMessages.length;
     } catch (error) {

@@ -291,8 +291,8 @@ class EmoteService {
             url: imageUrl,
             source: "ffz",
             zero_width: false,
-            width: emote.width || 28,
-            height: emote.height || 28,
+            width: emote.width,
+            height: emote.height,
           };
         } else if (channelId) {
           this.emoteData.channelEmotes[channelId] =
@@ -303,8 +303,8 @@ class EmoteService {
             url: imageUrl,
             source: "ffz",
             zero_width: false,
-            width: emote.width || 28,
-            height: emote.height || 28,
+            width: emote.width,
+            height: emote.height,
           };
         }
       });
@@ -364,8 +364,8 @@ class EmoteService {
             url: "https://cdn.betterttv.net/emote/" + emote.id + "/3x",
             source: "bttv",
             zero_width: bttvZerowidth.includes(emote.id),
-            width: emote.width || 28,
-            height: emote.height || 28,
+            width: emote.width,
+            height: emote.height,
           };
         } else if (channelId) {
           this.emoteData.channelEmotes[channelId] =
@@ -376,8 +376,8 @@ class EmoteService {
             url: "https://cdn.betterttv.net/emote/" + emote.id + "/3x",
             source: "bttv",
             zero_width: bttvZerowidth.includes(emote.id),
-            width: emote.width || 28,
-            height: emote.height || 28,
+            width: emote.width,
+            height: emote.height,
           };
         }
       });
@@ -602,15 +602,15 @@ class EmoteService {
     const webpFiles = seventvEmote.host.files.filter(
       (file: any) => file.format === "WEBP",
     );
-    const maxSizeName = webpFiles[webpFiles.length - 1].name;
+    const maxSizeFile = webpFiles[webpFiles.length - 1];
     return {
       id: seventvEmote.id,
       name: seventvEmote.name,
-      url: "https:" + seventvEmote.host.url + "/" + (maxSizeName || "4x.webp"),
+      url: "https:" + seventvEmote.host.url + "/" + (maxSizeFile?.name || "4x.webp"),
       source: "7tv",
       zero_width: (seventvEmote.flags & 256) !== 0, // EmoteFlagsZeroWidth = 256
-      width: seventvEmote.width?.[0] || 28,
-      height: seventvEmote.height?.[0] || 28,
+      width: maxSizeFile?.width,
+      height: maxSizeFile?.height,
     };
   }
 }

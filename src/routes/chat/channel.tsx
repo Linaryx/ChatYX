@@ -88,14 +88,12 @@ export default function ChatOverlay() {
   const [messages, setMessages] = createSignal<TwitchMessage[]>([]);
   const [isConnected, setIsConnected] = createSignal(false);
   const [chatService, setChatService] = createSignal<ChatISIntegrationService | null>(null);
-  const [animatedIds, setAnimatedIds] = createSignal<Set<string>>(new Set());
   const [animationDurationMs, setAnimationDurationMs] = createSignal(
     DEFAULT_ANIMATION_OPTIONS.duration,
   );
   const [loadingProgress, setLoadingProgress] = createSignal(0);
   const [loadingStatus, setLoadingStatus] = createSignal("Initializing...");
   const [isLoading, setIsLoading] = createSignal(true);
-  const seenMessageIds = new Set<string>();
 
   const runtime =
     hasChannel && !isPreview
@@ -172,40 +170,6 @@ export default function ChatOverlay() {
 
   createEffect(() => {
     document.title = pageTitle();
-  });
-
-  createEffect(() => {
-    const currentMessages = messages();
-    const currentIds = new Set<string>();
-    const pendingAnimations: string[] = [];
-
-    currentMessages.forEach((msg) => {
-      currentIds.add(msg.id);
-      if (!seenMessageIds.has(msg.id)) {
-        seenMessageIds.add(msg.id);
-        pendingAnimations.push(msg.id);
-      }
-    });
-
-    if (pendingAnimations.length > 0 && config()?.animate) {
-      const duration = animationDurationMs();
-      setAnimatedIds((prev) => {
-        const next = new Set(prev);
-        pendingAnimations.forEach((id) => next.add(id));
-        return next;
-      });
-      window.setTimeout(() => {
-        setAnimatedIds((prev) => {
-          const next = new Set(prev);
-          pendingAnimations.forEach((id) => next.delete(id));
-          return next;
-        });
-      }, duration + 40);
-    }
-
-    seenMessageIds.forEach((id) => {
-      if (!currentIds.has(id)) seenMessageIds.delete(id);
-    });
   });
 
   onMount(() => {
@@ -298,7 +262,6 @@ export default function ChatOverlay() {
           previewMessages.forEach((msg) => mentionStyleService.registerMessageAuthor(msg));
 
           setMessages(previewMessages);
-          setAnimatedIds(new Set(previewMessages.map((msg) => msg.id)));
           setLoadingProgress(100);
           setLoadingStatus("Preview ready");
           setIsLoading(false);
@@ -318,17 +281,6 @@ export default function ChatOverlay() {
               const next = [...current, nextMsg];
               return next.length > 30 ? next.slice(-30) : next;
             });
-
-            if (previewConfig.animate) {
-              setAnimatedIds((prev) => new Set([...prev, nextMsg.id]));
-              window.setTimeout(() => {
-                setAnimatedIds((prev) => {
-                  const next = new Set(prev);
-                  next.delete(nextMsg.id);
-                  return next;
-                });
-              }, previewAnimationDuration + 40);
-            }
           }, previewIntervalMs);
         }, 700);
       })().catch((error) => {
@@ -385,7 +337,6 @@ export default function ChatOverlay() {
                 messages={messages()}
                 config={config()}
                 service={chatService()}
-                animatedIds={animatedIds()}
                 animationDurationMs={animationDurationMs()}
               />
             </div>

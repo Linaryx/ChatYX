@@ -7,7 +7,6 @@ type ChatMessageListProps = {
   messages: TwitchMessage[];
   config: ChatConfig | null;
   service: ChatISIntegrationService | null;
-  animatedIds: Set<string>;
   animationDurationMs: number;
 };
 
@@ -20,7 +19,6 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
             message={message}
             config={props.config!}
             service={props.service!}
-            animated={props.animatedIds.has(message.id)}
             animationDurationMs={props.animationDurationMs}
           />
         )}

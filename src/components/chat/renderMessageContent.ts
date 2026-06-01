@@ -39,6 +39,98 @@ function sanitizeImageUrl(value: string): string {
   }
 }
 
+function imageSizeDataAttrs(width?: number, height?: number): string {
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return "";
+  if (!width || !height || width <= 0 || height <= 0) return "";
+  return ` data-emote-width="${Math.round(width)}" data-emote-height="${Math.round(height)}"`;
+}
+
+function renderSizeStyle(
+  width: number | undefined,
+  height: number | undefined,
+  config: ChatConfig,
+  size: (typeof SIZE_CONFIGS)[keyof typeof SIZE_CONFIGS],
+): string {
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return "";
+  if (!width || !height || width <= 0 || height <= 0) return "";
+
+  const emoteScale = Number.isFinite(config.emoteScale)
+    ? Math.min(Math.max(config.emoteScale, 0.25), 3)
+    : 1;
+  const maxWidth = Number.parseFloat(size.emoteMaxWidth) * emoteScale;
+  const maxHeight = size.emoteMaxHeight * emoteScale;
+  const scale = Math.min(1, maxWidth / width, maxHeight / height);
+
+  return ` style="width: ${(width * scale).toFixed(3)}px; height: ${(height * scale).toFixed(3)}px;"`;
+}
+
+function emoteImageAttrs(
+  width: number | undefined,
+  height: number | undefined,
+  config: ChatConfig,
+  size: (typeof SIZE_CONFIGS)[keyof typeof SIZE_CONFIGS],
+): string {
+  return (
+    imageSizeDataAttrs(width, height) +
+    renderSizeStyle(width, height, config, size)
+  );
+}
+
+function applyImageSizeAttrsFromData(image: HTMLImageElement) {
+  const width = Number(image.dataset.emoteWidth || image.getAttribute("width"));
+  const height = Number(image.dataset.emoteHeight || image.getAttribute("height"));
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+  if (width <= 0 || height <= 0) return;
+
+  image.setAttribute("width", String(Math.round(width)));
+  image.setAttribute("height", String(Math.round(height)));
+}
+
+function getPositiveNumber(value: string | null | undefined): number {
+  const parsed = Number.parseFloat(value || "");
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function hideBrokenMessageImage(image: HTMLImageElement) {
+  const rect = image.getBoundingClientRect();
+  const width =
+    rect.width ||
+    getPositiveNumber(image.style.width) ||
+    getPositiveNumber(image.getAttribute("width")) ||
+    getPositiveNumber(image.dataset.emoteWidth);
+  const height =
+    rect.height ||
+    getPositiveNumber(image.style.height) ||
+    getPositiveNumber(image.getAttribute("height")) ||
+    getPositiveNumber(image.dataset.emoteHeight);
+
+  image.alt = "";
+  image.removeAttribute("src");
+  image.removeAttribute("srcset");
+  image.setAttribute("aria-hidden", "true");
+
+  image.style.width = width ? `${width}px` : "1em";
+  image.style.height = height ? `${height}px` : "1em";
+  image.style.opacity = "0";
+  image.style.visibility = "hidden";
+}
+
+function installBrokenImageFallback(root: HTMLElement) {
+  root
+    .querySelectorAll("img.emote, img.emoji, img.cheer_emote")
+    .forEach((node) => {
+      if (!(node instanceof HTMLImageElement)) return;
+
+      node.addEventListener("error", () => hideBrokenMessageImage(node), {
+        once: true,
+      });
+
+      if (node.complete && node.naturalWidth === 0) {
+        hideBrokenMessageImage(node);
+      }
+    });
+}
+
 function renderMentionHtml(token: string, service: ChatISIntegrationService): string | null {
   const mentionStyle = mentionStyleService.resolveMention(token, service);
   if (!mentionStyle) return null;
@@ -115,7 +207,7 @@ export function renderMessageWithEmotes(
 
           replacements[emoteCode] = {
             kind: "html",
-            html: `<span class="emote-container"><img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0" alt="${escapeAttr(emoteCode)}" /></span>`,
+            html: `<span class="emote-container"><img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0" alt="" title="${escapeAttr(emoteCode)}"${emoteImageAttrs(112, 112, config, size)} /></span>`,
             isOverlayTarget: true,
           };
         });
@@ -137,7 +229,7 @@ export function renderMessageWithEmotes(
       const cheerEmoteUrl = parsed ? sanitizeImageUrl(parsed.emoteUrl) : "";
       if (parsed && cheerEmoteUrl) {
         const cheerHtml = `<span class="cheer-container">
-                        <img class="cheer_emote" src="${cheerEmoteUrl}" style="max-height: ${size.cheerEmoteMaxHeight}px; margin-bottom: ${size.cheerEmoteMarginBottom}; vertical-align: middle;" alt="${escapeAttr(parsed.prefix)}" />
+                        <img class="cheer_emote" src="${cheerEmoteUrl}" style="max-height: ${size.cheerEmoteMaxHeight}px; margin-bottom: ${size.cheerEmoteMarginBottom}; vertical-align: middle;" alt="" title="${escapeAttr(parsed.prefix)}" />
                         <span class="cheer_bits" style="color: ${parsed.color}; font-weight: ${size.cheerBitsFontWeight}; margin-left: ${size.cheerBitsMarginLeft}; margin-right: ${size.cheerBitsMarginRight};">${totalBits}</span>
                     </span>`;
 
@@ -210,16 +302,17 @@ export function renderMessageWithEmotes(
       if (!url) return null;
 
       if (emote.zero_width) {
+        const attrs = emoteImageAttrs(emote.width, emote.height, config, size);
         return {
           kind: "zw" as const,
-          overlayHtml: `<img class="emote zerowidth" src="${url}" alt="${escapeAttr(cleanText)}" />`,
-          fallbackHtml: `<span class="emote-container"><img class="emote" src="${url}" alt="${escapeAttr(cleanText)}" /></span>`,
+          overlayHtml: `<img class="emote zerowidth" src="${url}" alt="" title="${escapeAttr(cleanText)}"${attrs} />`,
+          fallbackHtml: `<span class="emote-container"><img class="emote" src="${url}" alt="" title="${escapeAttr(cleanText)}"${attrs} /></span>`,
         };
       }
 
       return {
         kind: "html" as const,
-        html: `<span class="emote-container"><img class="emote" src="${url}" alt="${escapeAttr(cleanText)}" /></span>`,
+        html: `<span class="emote-container"><img class="emote" src="${url}" alt="" title="${escapeAttr(cleanText)}"${emoteImageAttrs(emote.width, emote.height, config, size)} /></span>`,
         isOverlayTarget: true,
       };
     })();
@@ -272,12 +365,16 @@ export function renderMessageWithEmotes(
         emoteContainer instanceof HTMLElement ? emoteContainer : target;
 
       line.className = "gigantified-emote-line";
+      giant.removeAttribute("style");
+      applyImageSizeAttrsFromData(giant);
       giant.classList.add("gigantified");
       line.append(giant);
       sourceNode.remove();
       element.append(line);
     }
   }
+
+  installBrokenImageFallback(element);
 
   return element;
 }

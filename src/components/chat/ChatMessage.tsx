@@ -1,4 +1,4 @@
-import { createMemo, type JSX } from "solid-js";
+import { createMemo, onCleanup, onMount, type JSX } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
 import {
   colorService,
@@ -18,7 +18,6 @@ type ChatMessageProps = {
   message: TwitchMessage;
   config: ChatConfig;
   service: ChatISIntegrationService;
-  animated: boolean;
   animationDurationMs: number;
 };
 
@@ -66,6 +65,8 @@ function stripReplyMention(message: TwitchMessage, text: string) {
 
 export const ChatMessage = (props: ChatMessageProps) => {
   const { message, config, service } = props;
+  let rootRef: HTMLDivElement | undefined;
+  let animationTimer: number | undefined;
 
   const actionPrefix = "\x01ACTION";
   const actionSuffix = "\x01";
@@ -115,14 +116,29 @@ export const ChatMessage = (props: ChatMessageProps) => {
       (paintCSS as { useGlobalCSS?: boolean }).useGlobalCSS);
 
   const messageTextColor = isAction ? userColor : "white";
-  const isAnimated = createMemo(() => props.config.animate && props.animated);
   const replyText = createMemo(() => getReplyText(message));
+
+  onMount(() => {
+    if (!props.config.animate || !rootRef) return;
+
+    rootRef.classList.add("message-enter");
+    animationTimer = window.setTimeout(() => {
+      rootRef?.classList.remove("message-enter");
+      animationTimer = undefined;
+    }, props.animationDurationMs + 40);
+  });
+
+  onCleanup(() => {
+    if (animationTimer !== undefined) window.clearTimeout(animationTimer);
+  });
 
   return (
     <div
+      ref={(element) => {
+        rootRef = element;
+      }}
       class="chat_line"
       classList={{
-        "message-enter": isAnimated(),
         "gigantified-emote": message.isGigantifiedEmote,
       }}
       style={messageStyle}

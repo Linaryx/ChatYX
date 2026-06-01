@@ -46,7 +46,7 @@ export function getTwemojiURL(
  */
 export function renderEmoji(emoji: string, height: number = 24): string {
   const url = getTwemojiURL(emoji);
-  return `<img class="emoji" src="${url}" alt="${emoji}" style="height: ${height}px; vertical-align: middle;" draggable="false" />`;
+  return `<img class="emoji" src="${url}" alt="" title="${emoji}" style="height: ${height}px; vertical-align: middle;" draggable="false" />`;
 }
 
 /**

@@ -85,6 +85,6 @@ export function parseGoogleEmoji(text: string, size: number = 32): string {
     const iconId = grabTheRightIcon(match);
     const emojiUrl = `${TWEMOJI_BASE}${TWEMOJI_SIZE}/${iconId}${TWEMOJI_EXT}`;
 
-    return `<span class="emote-container"><img class="emoji" src="${emojiUrl}" alt="${match}" style="width: ${size}px; height: ${size}px; vertical-align: middle; display: inline-block;" draggable="false" /></span>`;
+    return `<span class="emote-container"><img class="emoji" src="${emojiUrl}" alt="" title="${match}" width="${size}" height="${size}" style="width: ${size}px; height: ${size}px; vertical-align: middle; display: inline-block;" draggable="false" /></span>`;
   });
 }
