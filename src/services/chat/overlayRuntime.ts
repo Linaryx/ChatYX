@@ -396,19 +396,45 @@ export class OverlayRuntime {
     }, batchIntervalMs);
   }
 
-  private scheduleMessagesFade(messages: TwitchMessage[], delayMs: number) {
+  private findMessageElement(messageId: string): HTMLElement | null {
+    if (!messageId) return null;
+
+    for (const element of document.querySelectorAll<HTMLElement>(".chat_line")) {
+      if (element.dataset.id === messageId) return element;
+    }
+
+    return null;
+  }
+
+  private scheduleMessagesFade(
+    messages: TwitchMessage[],
+    delayMs: number,
+    attempt = 0,
+  ) {
+    const messagesWithIds = messages.filter((message) => message.id);
+    if (messagesWithIds.length === 0) return;
+
     setTrackedTimeout(this.pendingTimers, () => {
-      messages.forEach((message) => {
-        const messageElement = document.querySelector(
-          `[data-id="${message.id}"]`,
-        ) as HTMLElement | null;
-        if (messageElement?.isConnected) {
+      window.requestAnimationFrame(() => {
+        const missingMessages: TwitchMessage[] = [];
+
+        messagesWithIds.forEach((message) => {
+          const messageElement = this.findMessageElement(message.id);
+          if (!messageElement?.isConnected) {
+            missingMessages.push(message);
+            return;
+          }
+
           this.chatService?.scheduleMessageFade(messageElement, () => {
             this.hooks.onMessagesChange((currentMessages) =>
               currentMessages.filter((entry) => entry.id !== message.id),
             );
             messageElement.remove();
           });
+        });
+
+        if (missingMessages.length > 0 && attempt < 8) {
+          this.scheduleMessagesFade(missingMessages, 50, attempt + 1);
         }
       });
     }, delayMs);
