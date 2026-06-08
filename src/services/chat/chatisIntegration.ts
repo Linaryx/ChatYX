@@ -456,6 +456,13 @@ export class ChatISIntegrationService {
   }
 
   /**
+   * Cancel scheduled fade for a message element
+   */
+  cancelMessageFade(element: HTMLElement): void {
+    this.fadeManager.cancelMessage(element);
+  }
+
+  /**
    * Scroll to latest message
    */
   scrollToLatest(smooth: boolean = true): void {

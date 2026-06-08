@@ -8,6 +8,7 @@ type ChatMessageListProps = {
   config: ChatConfig | null;
   service: ChatISIntegrationService | null;
   animationDurationMs: number;
+  onMessageExpired?: (messageId: string) => void;
 };
 
 export const ChatMessageList = (props: ChatMessageListProps) => {
@@ -20,6 +21,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
             config={props.config!}
             service={props.service!}
             animationDurationMs={props.animationDurationMs}
+            onExpired={props.onMessageExpired}
           />
         )}
       </For>

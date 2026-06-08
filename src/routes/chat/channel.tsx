@@ -118,6 +118,11 @@ export default function ChatOverlay() {
   });
   const chatVisible = createMemo(() => !isLoading() || loadingProgress() >= 100);
   const hasMessages = createMemo(() => messages().length > 0);
+  const removeMessageById = (messageId: string) => {
+    setMessages((current) =>
+      current.filter((message) => message.id !== messageId),
+    );
+  };
 
   const chromeStyle = createMemo(() => {
     const cfg = config() ?? initialConfig;
@@ -338,6 +343,7 @@ export default function ChatOverlay() {
                 config={config()}
                 service={chatService()}
                 animationDurationMs={animationDurationMs()}
+                onMessageExpired={removeMessageById}
               />
             </div>
           </div>

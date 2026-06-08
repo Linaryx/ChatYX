@@ -19,6 +19,7 @@ type ChatMessageProps = {
   config: ChatConfig;
   service: ChatISIntegrationService;
   animationDurationMs: number;
+  onExpired?: (messageId: string) => void;
 };
 
 const CSS_COLOR_PATTERN =
@@ -119,17 +120,30 @@ export const ChatMessage = (props: ChatMessageProps) => {
   const replyText = createMemo(() => getReplyText(message));
 
   onMount(() => {
-    if (!props.config.animate || !rootRef) return;
+    if (!rootRef) return;
 
-    rootRef.classList.add("message-enter");
-    animationTimer = window.setTimeout(() => {
-      rootRef?.classList.remove("message-enter");
-      animationTimer = undefined;
-    }, props.animationDurationMs + 40);
+    if (message.id) {
+      props.service.scheduleMessageFade(rootRef, () => {
+        if (props.onExpired) {
+          props.onExpired(message.id);
+        } else {
+          rootRef?.remove();
+        }
+      });
+    }
+
+    if (props.config.animate) {
+      rootRef.classList.add("message-enter");
+      animationTimer = window.setTimeout(() => {
+        rootRef?.classList.remove("message-enter");
+        animationTimer = undefined;
+      }, props.animationDurationMs + 40);
+    }
   });
 
   onCleanup(() => {
     if (animationTimer !== undefined) window.clearTimeout(animationTimer);
+    if (rootRef) props.service.cancelMessageFade(rootRef);
   });
 
   return (
