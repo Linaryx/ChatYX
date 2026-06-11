@@ -10,7 +10,7 @@ import {
 describe("chat URL params", () => {
   test("parses aliases and typed values", () => {
     const params = new URLSearchParams(
-      "channel=forsen&s=2&sh=0&fd=0&a=false&ms=91&b=false&cmd=false&es=1.5&sg=someuser&u7=false",
+      "channel=forsen&s=2&sh=0&fd=0&a=false&ms=91&rm=false&b=false&cmd=false&es=1.5&sg=someuser&u7=false",
     );
 
     const cfg = parseChatConfigFromSearchParams(params);
@@ -21,6 +21,7 @@ describe("chat URL params", () => {
     expect(cfg.fade).toBe(false);
     expect(cfg.animate).toBe(false);
     expect(cfg.messageSpeed).toBe(91);
+    expect(cfg.recentMessages).toBe(false);
     expect(cfg.bots).toBe(false);
     expect(cfg.commands).toBe(false);
     expect(cfg.emoteScale).toBe(1.5);
@@ -34,6 +35,7 @@ describe("chat URL params", () => {
       channel: "xqc",
       bots: false,
       fade: false,
+      recentMessages: false,
       shadow: false,
       messageSpeed: 72,
       emoteScale: 1.25,
@@ -45,6 +47,7 @@ describe("chat URL params", () => {
     expect(params.get("c")).toBe("xqc");
     expect(params.get("b")).toBe("false");
     expect(params.get("fd")).toBe("0");
+    expect(params.get("rm")).toBe("false");
     expect(params.get("sh")).toBe("0");
     expect(params.get("ms")).toBe("72");
     expect(params.get("es")).toBe("1.25");

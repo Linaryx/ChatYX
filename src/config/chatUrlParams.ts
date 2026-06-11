@@ -14,6 +14,7 @@ export interface ChatConfig {
   commands: boolean;
   hideSpecialBadges: boolean;
   showHomies: boolean;
+  recentMessages: boolean;
   fade: number | false; // seconds; false disables fade
   size: number;
   font: number;
@@ -51,6 +52,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   animate: true,
   messageSpeed: DEFAULT_MESSAGE_SPEED,
   showHomies: true,
+  recentMessages: true,
   bots: true,
   commands: true,
   hideSpecialBadges: false,
@@ -122,6 +124,11 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     aliases: ["message_speed", "messageSpeed"],
   },
   showHomies: { query: "hm", kind: "bool", aliases: ["show_homies"] },
+  recentMessages: {
+    query: "rm",
+    kind: "bool",
+    aliases: ["recent_messages", "recentMessages"],
+  },
   bots: { query: "b", kind: "bool", aliases: ["bots"] },
   commands: { query: "cmd", kind: "bool", aliases: ["commands"] },
   hideSpecialBadges: {

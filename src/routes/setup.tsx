@@ -278,6 +278,9 @@ export default function ChatSetup() {
   const [showHomies, setShowHomies] = createSignal(
     DEFAULT_CHAT_CONFIG.showHomies,
   );
+  const [recentMessages, setRecentMessages] = createSignal(
+    DEFAULT_CHAT_CONFIG.recentMessages,
+  );
   const [bots, setBots] = createSignal(DEFAULT_CHAT_CONFIG.bots);
   const [commands, setCommands] = createSignal(DEFAULT_CHAT_CONFIG.commands);
   const [hideSpecialBadges, setHideSpecialBadges] = createSignal(
@@ -964,6 +967,7 @@ export default function ChatSetup() {
       MAX_MESSAGE_SPEED,
     ),
     showHomies: showHomies(),
+    recentMessages: recentMessages(),
     bots: bots(),
     commands: commands(),
     hideSpecialBadges: hideSpecialBadges(),
@@ -1397,6 +1401,12 @@ export default function ChatSetup() {
       label: "Анимировать новые сообщения",
       checked: animate,
       onChange: setAnimate,
+    },
+    {
+      label: "Загружать последние сообщения",
+      checked: recentMessages,
+      onChange: setRecentMessages,
+      hint: "Показывает recent-messages до подключения к Twitch IRC. Если выключить, чат стартует только с новых сообщений.",
     },
     {
       label: "Писать ники капсом",

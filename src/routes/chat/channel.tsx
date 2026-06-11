@@ -136,7 +136,7 @@ export default function ChatOverlay() {
       position: "absolute",
       bottom: "0",
       left: "0",
-      width: "fit-content",
+      width: "100%",
       "max-width": "100%",
       "max-height": "100vh",
       display: "flex",

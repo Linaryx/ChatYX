@@ -226,8 +226,15 @@ export class OverlayRuntime {
       .loadChannelPointRewards(this.channel)
       .catch(() => {});
 
-    this.setLoading("Загрузка последних сообщений...", 82);
-    const loadedRecentMessages = await this.loadRecentMessages();
+    this.setLoading(
+      chatConfig.recentMessages
+        ? "Загрузка последних сообщений..."
+        : "Пропуск последних сообщений...",
+      82,
+    );
+    const loadedRecentMessages = chatConfig.recentMessages
+      ? await this.loadRecentMessages()
+      : 0;
 
     this.setLoading("Фоновая загрузка данных...", 85);
     void Promise.all([
