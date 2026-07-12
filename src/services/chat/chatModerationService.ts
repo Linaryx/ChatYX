@@ -1,6 +1,6 @@
 /**
- * Message Management Service
- * Handles message deletion, timeouts, and bans
+ * Chat Moderation Service
+ * Tracks message deletions, user timeouts, bans, and chat clears.
  */
 
 import { log, LOG_CATEGORIES } from "../../utils/logger";
@@ -25,9 +25,9 @@ export interface ChatClearEvent {
   timestamp: Date;
 }
 
-export type MessageManagerCallback = () => void;
+export type ChatModerationCallback = () => void;
 
-export class MessageManager {
+export class ChatModerationService {
   private deletedMessages: Set<string> = new Set();
   private timedOutUsers: Map<string, Date> = new Map(); // username -> timeout end time
   private bannedUsers: Set<string> = new Set();
@@ -263,4 +263,4 @@ export class MessageManager {
 }
 
 // Singleton instance
-export const messageManager = new MessageManager();
+export const chatModerationService = new ChatModerationService();

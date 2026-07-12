@@ -30,6 +30,14 @@ render(
             path="/chat/"
             component={lazy(() => import("./routes/chat/channel"))}
           />
+          <Route
+            path="/predictions"
+            component={lazy(() => import("./routes/predictions"))}
+          />
+          <Route
+            path="/predictions/"
+            component={lazy(() => import("./routes/predictions"))}
+          />
           <Route path="*" component={lazy(() => import("./routes/[...404]"))} />
         </Suspense>
       </Router>

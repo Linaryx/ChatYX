@@ -1,4 +1,6 @@
 import { NumberField } from "@kobalte/core/number-field";
+import type { JSX } from "solid-js";
+import "./SetupNumberField.css";
 
 type SetupNumberFieldProps = {
   value: string;
@@ -9,17 +11,43 @@ type SetupNumberFieldProps = {
   placeholder?: string;
 };
 
+function parseNumber(value: string, fallback: number): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 export function SetupNumberField(props: SetupNumberFieldProps) {
+  const rangeMin = () => props.min ?? 0;
+  const rangeStep = () => props.step ?? 1;
+  const rangeMax = () => {
+    if (props.max !== undefined) return props.max;
+
+    const min = rangeMin();
+    const current = parseNumber(props.value, min);
+    return Math.max(min + 100, current, 300);
+  };
+  const rangeValue = () =>
+    clamp(parseNumber(props.value, rangeMin()), rangeMin(), rangeMax());
+  const rangeFill = () => {
+    const min = rangeMin();
+    const max = rangeMax();
+    if (max <= min) return "0%";
+
+    return `${((rangeValue() - min) / (max - min)) * 100}%`;
+  };
   const styles = {
     root: {
       width: "100%",
     },
     group: {
-      display: "grid",
-      "grid-template-columns": "36px minmax(0, 1fr) 36px",
-      gap: "6px",
+      display: "flex",
+      "flex-direction": "column",
+      gap: "9px",
       width: "100%",
-      "align-items": "stretch",
     },
     input: {
       padding: "7px 10px",
@@ -36,22 +64,6 @@ export function SetupNumberField(props: SetupNumberFieldProps) {
       "-moz-appearance": "textfield",
       "text-align": "center",
     },
-    trigger: {
-      height: "34px",
-      border: "1px solid #2a2a2a",
-      "border-radius": "10px",
-      background: "#111111",
-      color: "#e5e7eb",
-      cursor: "pointer",
-      display: "flex",
-      "align-items": "center",
-      "justify-content": "center",
-      "font-size": "16px",
-      "font-weight": 700,
-      "line-height": 1,
-      transition: "background 0.2s ease, border-color 0.2s ease",
-      padding: "0",
-    },
   } as const;
 
   return (
@@ -66,13 +78,22 @@ export function SetupNumberField(props: SetupNumberFieldProps) {
       style={styles.root}
     >
       <div style={styles.group}>
-        <NumberField.DecrementTrigger style={styles.trigger}>
-          -
-        </NumberField.DecrementTrigger>
         <NumberField.Input placeholder={props.placeholder} style={styles.input} />
-        <NumberField.IncrementTrigger style={styles.trigger}>
-          +
-        </NumberField.IncrementTrigger>
+        <input
+          class="setup-number-slider"
+          type="range"
+          min={rangeMin()}
+          max={rangeMax()}
+          step={rangeStep()}
+          value={rangeValue()}
+          onInput={(event) => props.onChange(event.currentTarget.value)}
+          style={
+            {
+              "--setup-number-slider-fill": rangeFill(),
+            } as JSX.CSSProperties
+          }
+          aria-label={props.placeholder || "Настройка значения"}
+        />
       </div>
     </NumberField>
   );

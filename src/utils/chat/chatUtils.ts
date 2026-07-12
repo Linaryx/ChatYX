@@ -1,4 +1,4 @@
-// Утилиты для работы с параметрами чата из оригинального ChatIS
+// Utilities for working with chat parameters.
 
 export type { ChatConfig } from "../../config/chatUrlParams";
 

@@ -1,4 +1,5 @@
 import type { ChatConfig } from "~/utils/chat";
+import { normalizeFontWeight } from "~/config/chatUrlParams";
 
 // Size presets (v2 parity)
 export const SIZE_CONFIGS = {
@@ -156,9 +157,23 @@ export const generateVariantStyles = (config: ChatConfig) => {
   let styles = "";
   const size =
     SIZE_CONFIGS[config.size as keyof typeof SIZE_CONFIGS] || SIZE_CONFIGS[2];
+  const fontWeight = normalizeFontWeight(config.fontWeight);
+  const nickFontWeight = normalizeFontWeight(config.nickFontWeight);
   const emoteScale = Number.isFinite(config.emoteScale)
     ? Math.min(Math.max(config.emoteScale, 0.25), 3)
     : 1;
+
+  styles += `
+#chat_container,
+.message {
+    font-weight: ${fontWeight};
+}
+
+.nick,
+.colon {
+    font-weight: ${nickFontWeight};
+}
+`;
 
   if (config.hideNames) {
     styles += `

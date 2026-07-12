@@ -1,4 +1,4 @@
-// 7TV username paint/cosmetic service
+// 7TV paint CSS generator.
 
 export interface Paint {
   id: string;
@@ -17,16 +17,19 @@ export interface Paint {
   image_url?: string;
 }
 
-export class PaintService {
+export class SevenTVPaintService {
   private paints: Map<string, Paint> = new Map();
   private userPaints: Map<string, string[]> = new Map(); // username -> paintIds
+  private paintCssCache = new Map<string, string>();
 
   addPaint(paint: Paint) {
     this.paints.set(paint.id, paint);
+    this.paintCssCache.delete(paint.id);
   }
 
   removePaint(paintId: string) {
     this.paints.delete(paintId);
+    this.paintCssCache.delete(paintId);
   }
 
   getPaint(paintId: string): Paint | undefined {
@@ -64,6 +67,9 @@ export class PaintService {
   }
 
   generatePaintCSS(paint: Paint): string {
+    const cached = this.paintCssCache.get(paint.id);
+    if (cached !== undefined) return cached;
+
     const { function: func, color, stops, shadows, angle, image_url } = paint;
 
     let css = "";
@@ -115,8 +121,9 @@ export class PaintService {
       css += `text-shadow: ${shadowStrings.join(", ")};`;
     }
 
+    this.paintCssCache.set(paint.id, css);
     return css;
   }
 }
 
-export const paintService = new PaintService();
+export const sevenTVPaintService = new SevenTVPaintService();

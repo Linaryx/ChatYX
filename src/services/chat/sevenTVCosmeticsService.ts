@@ -1,6 +1,6 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
 
-// Интерфейсы как в 7TV Extension (современный формат)
+// 7TV cosmetics / paint loader and cache.
 export interface PaintGradient {
     function: 'LINEAR_GRADIENT' | 'RADIAL_GRADIENT' | 'URL' | 'linear-gradient' | 'radial-gradient' | 'url';
     canvas_repeat?: string;
@@ -62,7 +62,7 @@ export interface Cosmetics {
     [id: string]: Paint; // paint ID -> paint object
 }
 
-class ColorService {
+class SevenTVCosmeticsService {
     private cosmetics: Cosmetics = {};
     private userCosmetics: UserCosmetics = {};
     private paintCSSCache: Map<string, any> = new Map();
@@ -204,7 +204,7 @@ class ColorService {
         if (this.paintStylesheet) return this.paintStylesheet;
 
         const style = document.createElement('style');
-        style.id = 'chatis-seventv-paint-styles';
+        style.id = 'chatyx-seventv-paint-styles';
         document.head.appendChild(style);
 
         return (this.paintStylesheet = style.sheet ?? null);
@@ -263,7 +263,7 @@ class ColorService {
         const filter = this.createFilterString(paint.shadows);
         const defaultColor = paint.color ? this.getCSSColorFromInt(paint.color) : '';
 
-        const selector = `.chatis-seventv-paint[data-seventv-paint-id="${paint.id}"]`;
+        const selector = `.chatyx-seventv-paint[data-seventv-paint-id="${paint.id}"]`;
         const text = this.generateCSSText(selector, gradients, defaultColor, filter);
 
         this.updateCSSRule(sheet, selector, text, remove);
@@ -405,4 +405,4 @@ class ColorService {
     }
 }
 
-export const colorService = new ColorService();
+export const sevenTVCosmeticsService = new SevenTVCosmeticsService();

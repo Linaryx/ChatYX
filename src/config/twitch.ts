@@ -5,11 +5,6 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3002";
 export const TWITCH_CONFIG = {
   API_BASE_URL: `${API_BASE}/api/twitch`,
 
-  // ChatIS API Proxy (fallback)
-  API_PROXY_URL:
-    import.meta.env.VITE_CHATIS_API_URL ||
-    "https://chatis.is2511.com/v2/twitch-api/",
-
   TWITCH_API_BASE: "https://api.twitch.tv/helix",
   TWITCH_OAUTH_URL: "https://id.twitch.tv/oauth2/token",
 };

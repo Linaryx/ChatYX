@@ -7,6 +7,8 @@ import {
 export interface ChatConfig {
   // Required query param: `?c=...` (alias: `channel`)
   channel: string;
+  youtubeChannel: string;
+  youtubeWebSocketUrl: string;
 
   animate: boolean;
   messageSpeed: number;
@@ -18,6 +20,8 @@ export interface ChatConfig {
   fade: number | false; // seconds; false disables fade
   size: number;
   font: number;
+  fontWeight: number;
+  nickFontWeight: number;
   fontCustom: string;
   stroke: number | false;
   shadow: number | false;
@@ -41,10 +45,16 @@ export interface ChatConfig {
   overlayBorderOpacity: number;
 }
 
+export const DEFAULT_FONT_WEIGHT = 800;
+
 export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   channel: "",
+  youtubeChannel: "",
+  youtubeWebSocketUrl: "",
   size: 1,
   font: 2,
+  fontWeight: DEFAULT_FONT_WEIGHT,
+  nickFontWeight: DEFAULT_FONT_WEIGHT,
   fontCustom: "",
   shadow: 1,
   stroke: false,
@@ -76,6 +86,15 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   overlayBorderOpacity: 0,
 });
 
+export function normalizeFontWeight(
+  value: number | undefined,
+  fallback = DEFAULT_FONT_WEIGHT,
+): number {
+  const numeric = Number(value);
+  const resolved = Number.isFinite(numeric) ? numeric : fallback;
+  return Math.min(Math.max(Math.round(resolved), 100), 1000);
+}
+
 export function parseBotNames(raw: string): string[] {
   return raw
     .split(/[\s,]+/)
@@ -104,9 +123,39 @@ type ParamDef<K extends keyof ChatConfig> = {
 
 const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
   channel: { query: "c", kind: "string", aliases: ["channel"] },
+  youtubeChannel: {
+    query: "yt",
+    kind: "string",
+    aliases: ["youtube", "youtube_channel", "youtubeChannel"],
+    serialize: (value) => {
+      const normalized = String(value || "").trim().replace(/^@/, "");
+      return normalized || null;
+    },
+  },
+  youtubeWebSocketUrl: {
+    query: "ytws",
+    kind: "string",
+    aliases: ["youtube_ws", "youtubeWebSocketUrl"],
+    serialize: (value) => {
+      const normalized = String(value || "").trim().replace(/\/+$/, "");
+      return normalized || null;
+    },
+  },
 
   size: { query: "s", kind: "int", aliases: ["size"] },
   font: { query: "f", kind: "int", aliases: ["font"] },
+  fontWeight: {
+    query: "fw",
+    kind: "int",
+    aliases: ["font_weight", "fontWeight"],
+    serialize: (value) => String(normalizeFontWeight(Number(value))),
+  },
+  nickFontWeight: {
+    query: "nfw",
+    kind: "int",
+    aliases: ["nick_font_weight", "nickFontWeight"],
+    serialize: (value) => String(normalizeFontWeight(Number(value))),
+  },
   fontCustom: {
     query: "fc",
     kind: "string",
@@ -314,6 +363,8 @@ export function parseChatConfigFromSearchParams(
   }
 
   cfg.messageSpeed = clampMessageSpeed(cfg.messageSpeed);
+  cfg.fontWeight = normalizeFontWeight(cfg.fontWeight);
+  cfg.nickFontWeight = normalizeFontWeight(cfg.nickFontWeight);
 
   return cfg;
 }

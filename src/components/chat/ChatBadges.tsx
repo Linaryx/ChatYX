@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
-import type { TwitchMessage, ChatISIntegrationService } from "~/services/chat";
+import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { badgeService } from "~/services/badges";
 import {
   isTwitchRoleBadge,
@@ -15,7 +15,7 @@ import {
 type ChatBadgesProps = {
   message: TwitchMessage;
   config: ChatConfig;
-  service: ChatISIntegrationService;
+  service: ChatPresentationService;
 };
 
 export const ChatBadges = (props: ChatBadgesProps): JSX.Element[] => {
@@ -199,6 +199,21 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element[] => {
       badges.push(<img class="badge" src={badgeUrl} alt="badge" />);
     }
   }
+
+  message.platformBadges
+    ?.filter((badge) => badge.url)
+    .forEach((badge) => {
+      const title = badge.title || "YouTube badge";
+      badges.push(
+        <img
+          class="badge"
+          src={badge.url}
+          title={title}
+          alt={title}
+          loading="lazy"
+        />,
+      );
+    });
 
   return badges;
 };

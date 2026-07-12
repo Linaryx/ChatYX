@@ -1,13 +1,13 @@
 /**
- * V3 Integration Service
- * Integrates all new v2 features into v3 chat
+ * Chat Feature Integration Service
+ * Orchestrates all overlay chat features (badges, emotes, bits, 7TV, moderation events, etc.)
  */
 
 import { log, LOG_CATEGORIES } from "../../utils/logger";
 
 // Services
 import { bitsService } from "./bitsService";
-import { messageManager } from "./messageManager";
+import { chatModerationService } from "./chatModerationService";
 import { ffzapBadgeService } from "../badges/ffzapBadgeService";
 import { bttvBadgeService } from "../badges/bttvBadgeService";
 import { chatterinoBadgeService } from "../badges/chatterinoBadgeService";
@@ -45,7 +45,7 @@ function shouldRetrySevenTvError(error: unknown): boolean {
   return code === 408 || code === 429 || code >= 500;
 }
 
-export interface V3IntegrationOptions {
+export interface ChatFeatureIntegrationOptions {
   // Badge options
   showFFZAPBadges: boolean;
   showBTTVBadges: boolean;
@@ -70,15 +70,15 @@ export interface V3IntegrationOptions {
 }
 
 /**
- * V3 Integration Service
+ * Chat feature integration Service
  * Orchestrates all new features
  */
-export class V3IntegrationService {
-  private options: V3IntegrationOptions;
+export class ChatFeatureIntegrationService {
+  private options: ChatFeatureIntegrationOptions;
   private initialized: boolean = false;
   private sevenTvRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(options: Partial<V3IntegrationOptions> = {}) {
+  constructor(options: Partial<ChatFeatureIntegrationOptions> = {}) {
     // Default options
     this.options = {
       showFFZAPBadges: true,
@@ -105,12 +105,12 @@ export class V3IntegrationService {
     if (this.initialized) {
       log.warn(
         LOG_CATEGORIES.INTEGRATION,
-        "V3 Integration already initialized",
+        "Chat feature integration already initialized",
       );
       return;
     }
 
-    log.info(LOG_CATEGORIES.INTEGRATION, "Initializing V3 Integration...");
+    log.info(LOG_CATEGORIES.INTEGRATION, "Initializing Chat feature integration...");
 
     try {
       // Load badge services
@@ -159,12 +159,12 @@ export class V3IntegrationService {
       this.initialized = true;
       log.info(
         LOG_CATEGORIES.INTEGRATION,
-        "V3 Integration initialized successfully",
+        "Chat feature integration initialized successfully",
       );
     } catch (error) {
       log.error(
         LOG_CATEGORIES.INTEGRATION,
-        "Failed to initialize V3 Integration:",
+        "Failed to initialize Chat feature integration:",
         error,
       );
       throw error;
@@ -175,39 +175,39 @@ export class V3IntegrationService {
    * Setup message manager callbacks
    */
   private setupMessageManager(): void {
-    messageManager.clearCallbacks();
+    chatModerationService.clearCallbacks();
 
     // Message deleted callback
-    messageManager.onMessageDelete((event) => {
+    chatModerationService.onMessageDelete((event) => {
       log.debug(
         LOG_CATEGORIES.INTEGRATION,
         `Message deleted: ${event.messageId}`,
       );
       // Emit event for UI to handle
       window.dispatchEvent(
-        new CustomEvent("chatis:message-deleted", {
+        new CustomEvent("chatyx:message-deleted", {
           detail: { messageId: event.messageId },
         }),
       );
     });
 
     // User timed out callback
-    messageManager.onUserTimeout((event) => {
+    chatModerationService.onUserTimeout((event) => {
       log.debug(
         LOG_CATEGORIES.INTEGRATION,
         `User timed out: ${event.username} for ${event.duration}s`,
       );
       window.dispatchEvent(
-        new CustomEvent("chatis:user-timeout", {
+        new CustomEvent("chatyx:user-timeout", {
           detail: { username: event.username, duration: event.duration },
         }),
       );
     });
 
     // Chat cleared callback
-    messageManager.onChatClear(() => {
+    chatModerationService.onChatClear(() => {
       log.debug(LOG_CATEGORIES.INTEGRATION, "Chat cleared");
-      window.dispatchEvent(new CustomEvent("chatis:chat-cleared"));
+      window.dispatchEvent(new CustomEvent("chatyx:chat-cleared"));
     });
   }
 
@@ -236,7 +236,7 @@ export class V3IntegrationService {
 
         // Emit event for UI to handle
         window.dispatchEvent(
-          new CustomEvent("chatis:7tv-event", {
+          new CustomEvent("chatyx:7tv-event", {
             detail: event,
           }),
         );
@@ -318,12 +318,12 @@ export class V3IntegrationService {
 
       // Check message manager
       const messageId = tags.get("id");
-      if (messageId && messageManager.isMessageDeleted(messageId)) {
+      if (messageId && chatModerationService.isMessageDeleted(messageId)) {
         result.enhanced.isDeleted = true;
       }
 
       const username = tags.get("login");
-      if (username && messageManager.shouldHideUser(username)) {
+      if (username && chatModerationService.shouldHideUser(username)) {
         result.enhanced.isHidden = true;
       }
     } catch (error) {
@@ -437,7 +437,7 @@ export class V3IntegrationService {
   /**
    * Update options
    */
-  setOptions(options: Partial<V3IntegrationOptions>): void {
+  setOptions(options: Partial<ChatFeatureIntegrationOptions>): void {
     this.options = { ...this.options, ...options };
 
     // Update layout manager
@@ -460,13 +460,13 @@ export class V3IntegrationService {
   destroy(): void {
     this.clearSevenTvRetryTimer();
     sevenTVEventApi.disconnect();
-    messageManager.clearCallbacks();
-    messageManager.clear();
+    chatModerationService.clearCallbacks();
+    chatModerationService.clear();
     this.initialized = false;
 
-    log.info(LOG_CATEGORIES.INTEGRATION, "V3 Integration destroyed");
+    log.info(LOG_CATEGORIES.INTEGRATION, "Chat feature integration destroyed");
   }
 }
 
 // Singleton instance
-export const v3Integration = new V3IntegrationService();
+export const chatFeatureIntegration = new ChatFeatureIntegrationService();

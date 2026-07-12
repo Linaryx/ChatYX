@@ -35,9 +35,149 @@ export interface BadgeData {
   seventvBadges: { [id: string]: any };
 }
 
+export type ThirdPartyBadgeIndex = {
+  byUserId: Map<string, Badge[]>;
+  byUsername: Map<string, Badge[]>;
+};
+
+const THIRD_PARTY_BADGE_ORDER: Record<string, number> = {
+  ffzap: 0,
+  bttv: 1,
+  chatterino: 2,
+  homies: 3,
+};
+
+function addIndexedBadge(
+  index: Map<string, Badge[]>,
+  key: string,
+  badge: Badge,
+) {
+  if (!key || !badge.url) return;
+
+  const badges = index.get(key) ?? [];
+  if (
+    !badges.some(
+      (entry) => entry.source === badge.source && entry.url === badge.url,
+    )
+  ) {
+    badges.push(badge);
+    index.set(key, badges);
+  }
+}
+
+export function buildThirdPartyBadgeIndex(
+  data: Pick<
+    BadgeData,
+    "ffzapBadges" | "bttvBadges" | "chatterinoBadges" | "homiesBadges"
+  >,
+): ThirdPartyBadgeIndex {
+  const index: ThirdPartyBadgeIndex = {
+    byUserId: new Map(),
+    byUsername: new Map(),
+  };
+
+  if (Array.isArray(data.ffzapBadges)) {
+    for (const user of data.ffzapBadges) {
+      const userId = String(user?.id ?? "");
+      if (!userId) continue;
+
+      let color = "#755000";
+      if (Number(user.tier) === 2) {
+        color = user.badge_color || "#755000";
+      } else if (Number(user.tier) === 3) {
+        color = Number(user.badge_is_colored) === 0
+          ? user.badge_color || "#755000"
+          : "";
+      }
+
+      addIndexedBadge(index.byUserId, userId, {
+        source: "ffzap",
+        description: "FFZ:AP Badge",
+        url: `https://api.ffzap.com/v1/user/badge/${userId}/3`,
+        color,
+      });
+    }
+  }
+
+  if (Array.isArray(data.bttvBadges)) {
+    for (const user of data.bttvBadges) {
+      const username = String(user?.name ?? "").toLowerCase();
+      addIndexedBadge(index.byUsername, username, {
+        source: "bttv",
+        description: String(user?.badge?.description ?? "BTTV Badge"),
+        url: String(user?.badge?.svg ?? ""),
+      });
+    }
+  }
+
+  if (Array.isArray(data.chatterinoBadges)) {
+    for (const badge of data.chatterinoBadges) {
+      if (!Array.isArray(badge?.users)) continue;
+
+      const indexedBadge: Badge = {
+        source: "chatterino",
+        description: String(badge.tooltip ?? "Chatterino Badge"),
+        url: String(badge.image3 || badge.image2 || badge.image1 || ""),
+      };
+      for (const userId of badge.users) {
+        addIndexedBadge(index.byUserId, String(userId), indexedBadge);
+      }
+    }
+  }
+
+  for (const tier of [1, 2] as const) {
+    const badges = data.homiesBadges[tier];
+    if (!Array.isArray(badges)) continue;
+
+    for (const badge of badges) {
+      if (!Array.isArray(badge?.users)) continue;
+
+      const indexedBadge: Badge = {
+        source: "homies",
+        description: String(badge.tooltip || "Homies Badge"),
+        url: String(badge.image3 || ""),
+      };
+      for (const userId of badge.users) {
+        addIndexedBadge(index.byUserId, String(userId), indexedBadge);
+      }
+    }
+  }
+
+  if (Array.isArray(data.homiesBadges[3])) {
+    for (const badge of data.homiesBadges[3]) {
+      addIndexedBadge(index.byUserId, String(badge?.userId ?? ""), {
+        source: "homies",
+        description: String(badge?.tooltip || "Homies Badge"),
+        url: String(badge?.image3 || ""),
+      });
+    }
+  }
+
+  return index;
+}
+
+export function getIndexedThirdPartyBadges(
+  index: ThirdPartyBadgeIndex,
+  userId: string,
+  username: string,
+): Badge[] {
+  return [
+    ...(index.byUserId.get(userId) ?? []),
+    ...(index.byUsername.get(username.toLowerCase()) ?? []),
+  ].sort(
+    (left, right) =>
+      (THIRD_PARTY_BADGE_ORDER[left.source] ?? Number.MAX_SAFE_INTEGER) -
+      (THIRD_PARTY_BADGE_ORDER[right.source] ?? Number.MAX_SAFE_INTEGER),
+  );
+}
+
 class BadgeService {
   private currentChannelId = "";
   private thirdPartyBadgesReady: Promise<void> | null = null;
+  private thirdPartyBadgeIndex: ThirdPartyBadgeIndex = {
+    byUserId: new Map(),
+    byUsername: new Map(),
+  };
   private badgeData: BadgeData = {
     badges: {
       // Локальные fallback баджи с Twitch CDN (работают всегда)
@@ -384,6 +524,7 @@ class BadgeService {
       results[5].status === "fulfilled" ? results[5].value : [];
     this.badgeData.homiesBadges[3] =
       results[6].status === "fulfilled" ? results[6].value : [];
+    this.thirdPartyBadgeIndex = buildThirdPartyBadgeIndex(this.badgeData);
   }
 
   async loadUserBadges(username: string, userId: string): Promise<Badge[]> {
@@ -427,128 +568,19 @@ class BadgeService {
         });
       }
 
-      // FFZ:AP баджи (могут быть недоступны из-за CORS)
-      if (Array.isArray(this.badgeData.ffzapBadges)) {
-        this.badgeData.ffzapBadges.forEach((user: any) => {
-          if (user.id.toString() === userId) {
-            let color = "#755000";
-            if (user.tier == 2) color = user.badge_color || "#755000";
-            else if (user.tier == 3) {
-              if (user.badge_is_colored == 0)
-                color = user.badge_color || "#755000";
-              else color = "";
-            }
-
-            const userBadge: Badge = {
-              source: "ffzap",
-              description: "FFZ:AP Badge",
-              url: `https://api.ffzap.com/v1/user/badge/${userId}/3`,
-              color: color,
-            };
-            if (
-              !userBadges.some(
-                (b) =>
-                  b.source === userBadge.source &&
-                  b.description === userBadge.description,
-              )
-            ) {
-              userBadges.push(userBadge);
-            }
-          }
-        });
-      }
-
-      // BTTV баджи
-      this.badgeData.bttvBadges.forEach((user: any) => {
-        if (user.name === username) {
-          const userBadge: Badge = {
-            source: "bttv",
-            description: user.badge.description,
-            url: user.badge.svg,
-          };
-          if (
-            !userBadges.some(
-              (b) =>
-                b.source === userBadge.source &&
-                b.description === userBadge.description,
-            )
-          ) {
-            userBadges.push(userBadge);
-          }
-        }
-      });
-
-      // Chatterino баджи
-      this.badgeData.chatterinoBadges.forEach((badge: any) => {
-        if (Array.isArray(badge.users)) {
-          badge.users.forEach((user: string) => {
-            if (user === userId) {
-              const userBadge: Badge = {
-                source: "chatterino",
-                description: badge.tooltip,
-                url: badge.image3 || badge.image2 || badge.image1,
-              };
-              if (
-                !userBadges.some(
-                  (b) =>
-                    b.source === userBadge.source && b.url === userBadge.url,
-                )
-              ) {
-                userBadges.push(userBadge);
-              }
-            }
-          });
-        }
-      });
-
-      // Homies баджи
-      // Tier 1 и 2: badge.users - массив userIds
-      [1, 2].forEach((tier) => {
+      for (const badge of getIndexedThirdPartyBadges(
+        this.thirdPartyBadgeIndex,
+        userId,
+        normalizedUsername,
+      )) {
         if (
-          this.badgeData.homiesBadges[
-            tier as keyof typeof this.badgeData.homiesBadges
-          ]
+          !userBadges.some(
+            (entry) =>
+              entry.source === badge.source && entry.url === badge.url,
+          )
         ) {
-          this.badgeData.homiesBadges[
-            tier as keyof typeof this.badgeData.homiesBadges
-          ].forEach((badge: any) => {
-            if (Array.isArray(badge.users) && badge.users.includes(userId)) {
-              const userBadge: Badge = {
-                source: "homies",
-                description: badge.tooltip || "Homies Badge",
-                url: badge.image3,
-              };
-              if (
-                !userBadges.some(
-                  (b) =>
-                    b.source === userBadge.source && b.url === userBadge.url,
-                )
-              ) {
-                userBadges.push(userBadge);
-              }
-            }
-          });
+          userBadges.push(badge);
         }
-      });
-
-      // Tier 3: badge.userId - одно значение
-      if (this.badgeData.homiesBadges[3]) {
-        this.badgeData.homiesBadges[3].forEach((badge: any) => {
-          if (badge.userId === userId) {
-            const userBadge: Badge = {
-              source: "homies",
-              description: badge.tooltip || "Homies Badge",
-              url: badge.image3,
-            };
-            if (
-              !userBadges.some(
-                (b) => b.source === userBadge.source && b.url === userBadge.url,
-              )
-            ) {
-              userBadges.push(userBadge);
-            }
-          }
-        });
       }
 
       // ChatIS баджи

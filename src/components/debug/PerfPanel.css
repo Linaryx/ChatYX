@@ -1,0 +1,202 @@
+/* PerfPanel — compact dark monospace OBS-debug-overlay styles */
+
+.perf-overlay {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 99999;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.perf-toggle {
+  display: block;
+  margin-left: auto;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #a1a1aa;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: inherit;
+  margin-bottom: 4px;
+}
+
+.perf-toggle:hover {
+  background: #27272a;
+  border-color: #52525b;
+}
+
+.perf-toggle:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 1px;
+}
+
+.perf-panel {
+  background: rgba(9, 9, 11, 0.94);
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-width: 240px;
+  max-width: min(90vw, 340px);
+  max-height: 80vh;
+  overflow-y: auto;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Section labels */
+
+.perf-section-label {
+  color: #52525b;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  margin-top: 8px;
+  margin-bottom: 3px;
+  border-bottom: 1px solid #1f1f23;
+  padding-bottom: 2px;
+  text-transform: uppercase;
+}
+
+/* Health summary row */
+
+.perf-health-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #1f1f23;
+}
+
+.perf-health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.perf-health-reason {
+  color: #a1a1aa;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+/* Stat row — label on left, value(s) on right */
+
+.perf-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+
+.perf-stat-label {
+  color: #71717a;
+}
+
+.perf-stat-value {
+  text-align: right;
+}
+
+.perf-stat-sub {
+  color: #52525b;
+  font-size: 9px;
+  margin-left: 4px;
+}
+
+/* Bar row — stat + micro bar */
+
+.perf-bar-row {
+  margin-bottom: 5px;
+}
+
+.perf-bar-track {
+  height: 2px;
+  background: #27272a;
+  border-radius: 1px;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.perf-bar-fill {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .perf-bar-fill {
+    transition: none;
+  }
+}
+
+/* Sparkline */
+
+.perf-sparkline-container {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.perf-sparkline-svg {
+  display: block;
+}
+
+/* Action buttons */
+
+.perf-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid #1f1f23;
+}
+
+.perf-action-btn {
+  flex: 1;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #a1a1aa;
+  border-radius: 4px;
+  padding: 3px 6px;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: inherit;
+  text-align: center;
+}
+
+.perf-action-btn:hover {
+  background: #27272a;
+  border-color: #52525b;
+}
+
+.perf-action-btn:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 1px;
+}
+
+.perf-action-btn:active {
+  background: #3f3f46;
+}
+
+/* Aria-live feedback region (visually hidden but accessible) */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+

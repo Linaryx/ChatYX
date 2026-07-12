@@ -1,17 +1,29 @@
-import { For, Show } from "solid-js";
+import { For, Show, onCleanup, onMount } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
-import type { TwitchMessage, ChatISIntegrationService } from "~/services/chat";
+import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { ChatMessage } from "~/components/chat/ChatMessage";
+import { installMessageImageFallback } from "~/utils/chat/messageImageFallback";
 
 type ChatMessageListProps = {
   messages: TwitchMessage[];
   config: ChatConfig | null;
-  service: ChatISIntegrationService | null;
+  service: ChatPresentationService | null;
   animationDurationMs: number;
   onMessageExpired?: (messageId: string) => void;
 };
 
 export const ChatMessageList = (props: ChatMessageListProps) => {
+  let cleanupImageFallback: (() => void) | undefined;
+
+  onMount(() => {
+    const container = document.getElementById("chat_container");
+    if (container) {
+      cleanupImageFallback = installMessageImageFallback(container);
+    }
+  });
+
+  onCleanup(() => cleanupImageFallback?.());
+
   return (
     <Show when={props.config && props.service}>
       <For each={props.messages}>

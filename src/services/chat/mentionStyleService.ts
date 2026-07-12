@@ -1,5 +1,5 @@
-import type { ChatISIntegrationService } from "./chatisIntegration";
-import { colorService } from "./colorService";
+import type { ChatPresentationService } from "./chatPresentationService";
+import { sevenTVCosmeticsService } from "./sevenTVCosmeticsService";
 import type { TwitchMessage } from "./twitchService";
 
 type KnownUserStyle = {
@@ -29,7 +29,7 @@ class MentionStyleService {
     this.knownUsers.clear();
   }
 
-  resolveMention(token: string, service: ChatISIntegrationService): MentionStyle | null {
+  resolveMention(token: string, service: ChatPresentationService): MentionStyle | null {
     const match = token.match(/^@([A-Za-z0-9_][A-Za-z0-9_.-]*)(.*)$/);
     if (!match) return null;
 
@@ -38,7 +38,7 @@ class MentionStyleService {
     const suffix = match[2] || "";
     const knownUser = this.knownUsers.get(username);
 
-    const cachedPaint = colorService.calculatePaintCSS(username);
+    const cachedPaint = sevenTVCosmeticsService.calculatePaintCSS(username);
     if (
       cachedPaint &&
       typeof cachedPaint === "object" &&

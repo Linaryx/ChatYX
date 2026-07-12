@@ -1,9 +1,9 @@
-// ChatIS Integration Service - Combines all v2 features into v3
+// Presentation services shared by the live overlay and preview.
 
 import { emoteService } from "./emoteService";
 import type { Emote } from "./emoteService";
 import { badgeService } from "../badges/badgeService";
-import { PaintService } from "./paintService";
+import { SevenTVPaintService } from "./sevenTVPaintService";
 import { sevenTVEventApi } from "./sevenTVEventApi";
 import type { SevenTVEventApiService } from "./sevenTVEventApi";
 import { BotFilterService } from "../../utils/botFilter";
@@ -26,7 +26,7 @@ import { injectZeroWidthStyles } from "../../utils/chat/zeroWidthEmotes";
 import { parseBotNames, type ChatConfig } from "../../config/chatUrlParams";
 import { log, LOG_CATEGORIES } from "../../utils/logger";
 
-export interface ChatISConfig {
+export interface ChatPresentationConfig {
   channel: string;
   userId: string;
   animation: AnimationOptions;
@@ -47,7 +47,7 @@ export interface ChatISConfig {
   };
 }
 
-export const DEFAULT_ChatIS_CONFIG: ChatISConfig = {
+export const DEFAULT_CHAT_PRESENTATION_CONFIG: ChatPresentationConfig = {
   channel: "",
   userId: "",
   animation: DEFAULT_ANIMATION_OPTIONS,
@@ -69,24 +69,25 @@ export const DEFAULT_ChatIS_CONFIG: ChatISConfig = {
 };
 
 /**
- * Main integration service that manages all ChatIS features
+ * Coordinates filtering, cosmetics, layout, animation, and message lifecycle.
  */
-export class ChatISIntegrationService {
-  private config: ChatISConfig;
-  // Using legacy badgeService singleton
-  private paintService: PaintService;
+export class ChatPresentationService {
+  private config: ChatPresentationConfig;
+  private sevenTVPaintService: SevenTVPaintService;
   private eventApiService?: SevenTVEventApiService;
   private botFilterService: BotFilterService;
+  private allowedChatters = new Set<string>();
   private fadeManager: MessageFadeManager;
   private layoutManager?: LayoutManager;
+  private sevenTVPaintCssCache = new WeakMap<object, string>();
   private initialized: boolean = false;
 
-  constructor(config: Partial<ChatISConfig> = {}) {
-    this.config = { ...DEFAULT_ChatIS_CONFIG, ...config };
+  constructor(config: Partial<ChatPresentationConfig> = {}) {
+    this.config = { ...DEFAULT_CHAT_PRESENTATION_CONFIG, ...config };
 
-    // Initialize services (badgeService is global singleton)
-    this.paintService = new PaintService();
+    this.sevenTVPaintService = new SevenTVPaintService();
     this.botFilterService = new BotFilterService(this.config.botFilter.customBots);
+    this.updateAllowedChatters();
     this.fadeManager = new MessageFadeManager(this.config.fade);
   }
 
@@ -238,10 +239,9 @@ export class ChatISIntegrationService {
    * Check if message should be displayed
    */
   shouldDisplayMessage(username: string, message: string): boolean {
-    const allowedChatters = parseBotNames(this.config.botFilter.singleChatter);
     if (
-      allowedChatters.length > 0 &&
-      !allowedChatters.includes(username.toLowerCase())
+      this.allowedChatters.size > 0 &&
+      !this.allowedChatters.has(username.toLowerCase())
     ) {
       return false;
     }
@@ -285,12 +285,12 @@ export class ChatISIntegrationService {
     const sevenTVBadges = sevenTVEventApi.getUserBadges(username);
 
     if (sevenTVBadges && sevenTVBadges.length > 0) {
-      const chatisIndex = thirdPartyBadges.findIndex(
+      const providerBadgeIndex = thirdPartyBadges.findIndex(
         (b) => b.source === "chatis",
       );
 
-      if (chatisIndex >= 0) {
-        thirdPartyBadges.splice(chatisIndex, 0, ...sevenTVBadges);
+      if (providerBadgeIndex >= 0) {
+        thirdPartyBadges.splice(providerBadgeIndex, 0, ...sevenTVBadges);
       } else {
         thirdPartyBadges.push(...sevenTVBadges);
       }
@@ -310,14 +310,24 @@ export class ChatISIntegrationService {
     if (username) {
       const paint = sevenTVEventApi.getUserPaint(username);
       if (paint) {
-        return this.generate7TVPaintCSS(paint);
+        if (typeof paint !== "object") return this.generate7TVPaintCSS(paint);
+
+        const cached = this.sevenTVPaintCssCache.get(paint);
+        if (cached !== undefined) return cached;
+        const css = this.generate7TVPaintCSS(paint);
+        this.sevenTVPaintCssCache.set(paint, css);
+        return css;
       }
     }
 
-    const paint = this.paintService.getPaint(userId);
+    const paint = this.sevenTVPaintService.getPaint(userId);
     if (!paint) return null;
 
-    return this.paintService.generatePaintCSS(paint);
+    return this.sevenTVPaintService.generatePaintCSS(paint);
+  }
+
+  clearPaintCache(): void {
+    this.sevenTVPaintCssCache = new WeakMap();
   }
 
   /**
@@ -483,7 +493,7 @@ export class ChatISIntegrationService {
   /**
    * Update configuration
    */
-  updateConfig(config: Partial<ChatISConfig>): void {
+  updateConfig(config: Partial<ChatPresentationConfig>): void {
     this.config = {
       ...this.config,
       ...config,
@@ -516,12 +526,21 @@ export class ChatISIntegrationService {
     if (config.botFilter?.customBots) {
       this.botFilterService.setBotNames(this.config.botFilter.customBots);
     }
+    if (config.botFilter) {
+      this.updateAllowedChatters();
+    }
+  }
+
+  private updateAllowedChatters(): void {
+    this.allowedChatters = new Set(
+      parseBotNames(this.config.botFilter.singleChatter),
+    );
   }
 
   /**
    * Get current configuration
    */
-  getConfig(): ChatISConfig {
+  getConfig(): ChatPresentationConfig {
     return { ...this.config };
   }
 
@@ -545,6 +564,7 @@ export class ChatISIntegrationService {
 
     // Clear fade timers
     this.fadeManager.clear();
+    this.clearPaintCache();
 
     this.initialized = false;
     log.info(LOG_CATEGORIES.INTEGRATION, "Cleanup complete");
@@ -554,7 +574,9 @@ export class ChatISIntegrationService {
 /**
  * Create integration service from query parameters
  */
-export function createFromQueryParams(params: ChatConfig): ChatISConfig {
+export function createChatPresentationConfig(
+  params: ChatConfig,
+): ChatPresentationConfig {
   return {
     channel: params.channel,
     userId: "",

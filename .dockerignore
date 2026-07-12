@@ -1,0 +1,8 @@
+.git
+.github
+.cache
+.omo
+.playwright-mcp
+dist
+node_modules
+*.log

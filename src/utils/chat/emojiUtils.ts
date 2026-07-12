@@ -65,6 +65,47 @@ export function extractEmojis(text: string): [string, string[]] {
   return [processed, emojis];
 }
 
+export type MessageToken = {
+  raw: string;
+  isWhitespace: boolean;
+  withPlaceholders: string;
+  emojis: string[];
+  cleanText: string;
+};
+
+export type MessageTokenSnapshot = {
+  source: string;
+  tokens: MessageToken[];
+};
+
+export function createMessageTokenSnapshot(
+  message: string,
+): MessageTokenSnapshot {
+  const tokens = message.split(/(\s+)/).map((raw): MessageToken => {
+    const isWhitespace = /^\s+$/.test(raw);
+    if (!raw || isWhitespace) {
+      return {
+        raw,
+        isWhitespace,
+        withPlaceholders: raw,
+        emojis: [],
+        cleanText: raw,
+      };
+    }
+
+    const [withPlaceholders, emojis] = extractEmojis(raw);
+    return {
+      raw,
+      isWhitespace: false,
+      withPlaceholders,
+      emojis,
+      cleanText: withPlaceholders.replace(/__EMOJI\d+__/g, ""),
+    };
+  });
+
+  return { source: message, tokens };
+}
+
 /**
  * Восстанавливает эмодзи из плейсхолдеров
  */
@@ -85,6 +126,6 @@ export function parseGoogleEmoji(text: string, size: number = 32): string {
     const iconId = grabTheRightIcon(match);
     const emojiUrl = `${TWEMOJI_BASE}${TWEMOJI_SIZE}/${iconId}${TWEMOJI_EXT}`;
 
-    return `<span class="emote-container"><img class="emoji" src="${emojiUrl}" alt="" title="${match}" width="${size}" height="${size}" style="width: ${size}px; height: ${size}px; vertical-align: middle; display: inline-block;" draggable="false" /></span>`;
+    return `<span class="emoji-container"><img class="emoji" src="${emojiUrl}" alt="" title="${match}" width="${size}" height="${size}" style="width: ${size}px; height: ${size}px; vertical-align: middle; display: inline-block;" draggable="false" /></span>`;
   });
 }

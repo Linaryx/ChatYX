@@ -186,13 +186,13 @@ class EmoteService {
               const emote = emoteWithMeta.data;
               const activeName = emoteWithMeta.name;
               const originalName = emote.name;
-              const chatisEmote = this.emoteToChatisEmote(emote);
-              chatisEmote.name = activeName;
-              chatisEmote.original_name =
+              const normalizedEmote = this.normalizeSevenTVEmote(emote);
+              normalizedEmote.name = activeName;
+              normalizedEmote.original_name =
                 activeName !== originalName ? originalName : undefined;
               this.emoteData.channelEmotes[channelId] =
                 this.emoteData.channelEmotes[channelId] || {};
-              this.emoteData.channelEmotes[channelId][activeName] = chatisEmote;
+              this.emoteData.channelEmotes[channelId][activeName] = normalizedEmote;
             });
           }
         } else {
@@ -215,14 +215,14 @@ class EmoteService {
               const emote = emoteWithMeta.data;
               const activeName = emoteWithMeta.name; // Renamed name (priority)
               const originalName = emote.name; // Original name
-              const chatisEmote = this.emoteToChatisEmote(emote);
+              const normalizedEmote = this.normalizeSevenTVEmote(emote);
               // Override name with active name (v2 behavior)
-              chatisEmote.name = activeName;
-              chatisEmote.original_name =
+              normalizedEmote.name = activeName;
+              normalizedEmote.original_name =
                 activeName !== originalName ? originalName : undefined;
               this.emoteData.channelEmotes[channelId] =
                 this.emoteData.channelEmotes[channelId] || {};
-              this.emoteData.channelEmotes[channelId][activeName] = chatisEmote;
+              this.emoteData.channelEmotes[channelId][activeName] = normalizedEmote;
             });
           }
         }
@@ -244,11 +244,11 @@ class EmoteService {
           const emote = emoteWithMeta.data;
           const activeName = emoteWithMeta.name;
           const originalName = emote.name;
-          const chatisEmote = this.emoteToChatisEmote(emote);
-          chatisEmote.name = activeName;
-          chatisEmote.original_name =
+          const normalizedEmote = this.normalizeSevenTVEmote(emote);
+          normalizedEmote.name = activeName;
+          normalizedEmote.original_name =
             activeName !== originalName ? originalName : undefined;
-          this.emoteData.emotes[activeName] = chatisEmote;
+          this.emoteData.emotes[activeName] = normalizedEmote;
         });
       }
     } catch (error) {
@@ -598,7 +598,7 @@ class EmoteService {
     return null;
   }
 
-  private emoteToChatisEmote(seventvEmote: any): Emote {
+  private normalizeSevenTVEmote(seventvEmote: any): Emote {
     const webpFiles = seventvEmote.host.files.filter(
       (file: any) => file.format === "WEBP",
     );

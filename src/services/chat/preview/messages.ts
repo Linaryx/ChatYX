@@ -1,6 +1,6 @@
 import { emoteService } from "~/services/chat";
 import { PREVIEW_USERNAME_BASES } from "~/config/previewUsernames";
-import type { TwitchMessage, ChatISIntegrationService } from "~/services/chat";
+import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { previewRealUsers, type PreviewRealUser } from "./userPool";
 
 const PREVIEW_MESSAGES = [
@@ -96,7 +96,7 @@ function pickRandomEmoteName(channelId: string, index: number): string {
 
 export function nextPreviewMessage(
   channel: string,
-  service: ChatISIntegrationService,
+  service: ChatPresentationService,
   channelId: string,
   demoKind: PreviewDemoKind = "pasta",
 ): TwitchMessage {
@@ -203,7 +203,7 @@ export function nextPreviewMessage(
 
 export function createPreviewMessages(
   channel: string,
-  service: ChatISIntegrationService,
+  service: ChatPresentationService,
   channelId: string,
   demoKind: PreviewDemoKind = "pasta",
   count = 6,

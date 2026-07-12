@@ -401,8 +401,7 @@ export class SevenTVEventApiService {
               const emoteData = item.value.data || item.value;
               const emoteName = item.value.name || emoteData.name;
 
-              // Convert to ChatIS format
-              const chatisEmote = {
+              const normalizedEmote = {
                 id: emoteData.id,
                 name: emoteName,
                 url: `https://cdn.7tv.app/emote/${emoteData.id}/4x.webp`,
@@ -413,12 +412,12 @@ export class SevenTVEventApiService {
               if (isPersonalSet) {
                 // Personal set — only add if we know the owner; never leak to channel emotes
                 if (personalSetOwner) {
-                  emoteService.addPersonalEmote(personalSetOwner, emoteName, chatisEmote);
+                  emoteService.addPersonalEmote(personalSetOwner, emoteName, normalizedEmote);
                 }
                 // If owner unknown: ignore — entitlement.create will load the full set later
               } else if (this.channelId) {
                 // Channel emote
-                emoteService.addChannelEmote(this.channelId, emoteName, chatisEmote);
+                emoteService.addChannelEmote(this.channelId, emoteName, normalizedEmote);
               }
             }
           }
@@ -708,7 +707,7 @@ export class SevenTVEventApiService {
         const activeName = emoteWithMeta.name;
         const originalName = emote.name;
 
-        const chatisEmote = {
+        const normalizedEmote = {
           id: emote.id,
           name: activeName,
           url: `https://cdn.7tv.app/emote/${emote.id}/4x.webp`,
@@ -717,7 +716,7 @@ export class SevenTVEventApiService {
           original_name: activeName !== originalName ? originalName : undefined,
         };
 
-        emoteService.addPersonalEmote(username, activeName, chatisEmote);
+        emoteService.addPersonalEmote(username, activeName, normalizedEmote);
         addedCount++;
       });
 

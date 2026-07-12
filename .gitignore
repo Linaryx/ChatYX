@@ -12,7 +12,6 @@ functions
 
 # Dependencies
 node_modules
-bun.lock
 
 # Codesnippets
 codesnippets
@@ -31,6 +30,8 @@ codesnippets
 
 # Claude Code
 .claude
+.omo
+.playwright-mcp
 
 # System Files
 .DS_Store

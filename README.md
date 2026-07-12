@@ -1,10 +1,11 @@
 # ChatYX
 
-Modern Twitch chat overlay with multi-platform emote and cosmetic support.
+Modern Twitch and YouTube chat overlay with multi-platform emote and cosmetic support.
 
 ## Features
 
 - **Twitch IRC** — real-time chat via WebSocket
+- **YouTube Live Chat** — optional server-side Innertube bridge
 - **Multi-platform emotes** — 7TV, BTTV, FFZ (global + channel)
 - **7TV EventAPI** — live emote set updates, cosmetics (paints, badges), personal emotes
 - **Badges** — Twitch, 7TV, BTTV, FFZ:AP, Chatterino, ChatIS
@@ -16,7 +17,7 @@ Modern Twitch chat overlay with multi-platform emote and cosmetic support.
 
 ### Requirements
 
-- [Bun](https://bun.sh) ≥ 1.0
+- [Bun](https://bun.sh) 1.3.14 or newer
 
 ### Install & Run
 
@@ -32,6 +33,12 @@ http://localhost:5173/?channel=yourchannelname
 ```
 
 Copy the generated overlay URL and paste it into OBS as a Browser Source.
+
+To develop with YouTube live chat, start the bridge in a second terminal:
+
+```bash
+bun run youtube:dev
+```
 
 ### Build
 
@@ -49,6 +56,12 @@ In repository settings, open **Pages** and set **Source** to **GitHub Actions**.
 
 The custom domain is configured via `public/CNAME` as `chat.ruina.team`. The workflow builds with relative asset paths (`VITE_BASE_PATH=./`), so the same artifact works on both `https://chat.ruina.team/` and the GitHub project URL.
 
+GitHub Pages hosts only the static overlay. Browser requests to YouTube's
+Innertube endpoints are blocked by CORS, so YouTube chat requires the bridge in
+`services/youtube-websocket` to be deployed separately and exposed through
+`wss://`. The frontend and bridge live in this repository and share one Bun
+lockfile.
+
 ## Configuration
 
 All config is passed via URL query parameters. The setup page generates the correct URL for you.
@@ -61,14 +74,22 @@ Create a `.env` file to override defaults:
 # Your own backend API (optional — falls back to localhost:3002 for local dev)
 VITE_API_URL=https://your-api.example.com
 
-# ChatIS API proxy (optional)
-VITE_CHATIS_API_URL=https://chatis.is2511.com/v2/twitch-api/
-
 # Twitch web GraphQL Client-ID override (optional)
 VITE_TWITCH_GQL_CLIENT_ID=your-client-id
 ```
 
 The local API (`localhost:3002`) is only needed for cheermotes (requires Twitch OAuth). All other features work without it via public fallback APIs.
+
+The YouTube WebSocket URL is configured by the setup page and stored in the
+overlay URL. It defaults to `ws://localhost:9905` for local development.
+
+### Checks
+
+```bash
+bun run check
+```
+
+This runs lint, frontend and service typechecks, tests, and the production build.
 
 ### Debug Mode
 

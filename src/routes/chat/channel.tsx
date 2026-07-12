@@ -12,12 +12,12 @@ import { LoadingScreen } from "~/components/LoadingScreen";
 import { ChatMessageList } from "~/components/chat/ChatMessageList";
 import { parseChatConfigFromSearchParams } from "~/config/chatUrlParams";
 import {
-  createFromQueryParams,
+  createChatPresentationConfig,
   OverlayRuntime,
-  ChatISIntegrationService,
+  ChatPresentationService,
   emoteService,
-  colorService,
   mentionStyleService,
+  sevenTVCosmeticsService,
   type TwitchMessage,
 } from "~/services/chat";
 import { badgeService } from "~/services/badges";
@@ -81,13 +81,13 @@ export default function ChatOverlay() {
   const isDebug = urlParams.get("debug") === "true";
   const initialConfig = parseChatConfigFromSearchParams(urlParams);
   const channel = initialConfig.channel || (isPreview ? "chatyxpreview" : "");
-  const hasChannel = Boolean(channel);
+  const hasChannel = Boolean(channel || initialConfig.youtubeChannel);
 
   const [channelDisplayName, setChannelDisplayName] = createSignal("");
   const [config, setConfig] = createSignal<ChatConfig | null>(null);
   const [messages, setMessages] = createSignal<TwitchMessage[]>([]);
   const [isConnected, setIsConnected] = createSignal(false);
-  const [chatService, setChatService] = createSignal<ChatISIntegrationService | null>(null);
+  const [chatService, setChatService] = createSignal<ChatPresentationService | null>(null);
   const [animationDurationMs, setAnimationDurationMs] = createSignal(
     DEFAULT_ANIMATION_OPTIONS.duration,
   );
@@ -114,7 +114,7 @@ export default function ChatOverlay() {
   const pageTitle = createMemo(() => {
     if (!hasChannel) return "ChatYX";
     if (isPreview) return "ChatYX • Preview";
-    return `ChatYX • ${channelDisplayName() || channel}`;
+    return `ChatYX • ${channelDisplayName() || channel || initialConfig.youtubeChannel}`;
   });
   const chatVisible = createMemo(() => !isLoading() || loadingProgress() >= 100);
   const hasMessages = createMemo(() => messages().length > 0);
@@ -180,7 +180,9 @@ export default function ChatOverlay() {
   onMount(() => {
     if (isPreview) {
       const previewConfig = parseChatConfigFromSearchParams(urlParams, { channel });
-      const previewService = new ChatISIntegrationService(createFromQueryParams(previewConfig));
+      const previewService = new ChatPresentationService(
+        createChatPresentationConfig(previewConfig),
+      );
       const previewDemoKind = parsePreviewDemoKind(urlParams.get("demo"));
       let previewInterval: number | undefined;
       let previewDestroyed = false;
@@ -235,7 +237,7 @@ export default function ChatOverlay() {
                   undefined,
                 ),
                 withTimeout(
-                  colorService.loadCosmetics(previewChannelId),
+                  sevenTVCosmeticsService.loadCosmetics(previewChannelId),
                   4500,
                   undefined,
                 ),

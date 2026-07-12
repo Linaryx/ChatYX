@@ -3,6 +3,7 @@
 import { log, LOG_CATEGORIES } from "../../utils/logger";
 import type { ReplyThread } from "../../types/replyThread";
 import { parseReplyThread } from "../../utils/chat/replyParser";
+import type { MessageTokenSnapshot } from "../../utils/chat/emojiUtils";
 
 export interface TwitchMessage {
   id: string;
@@ -26,12 +27,18 @@ export interface TwitchMessage {
     prompt: string;
     cost: number;
   };
+  platform?: "twitch" | "youtube";
+  platformBadges?: Array<{
+    url: string;
+    title?: string;
+  }>;
   isGigantifiedEmote?: boolean;
   // Cheer события
   bits?: number;
   cheerPrefix?: string;
   // Snapshot of emotes at message creation time (to prevent updates when emote sets change)
   emoteSnapshot?: Map<string, any>;
+  tokenSnapshot?: MessageTokenSnapshot;
 }
 
 export class TwitchService {
@@ -380,6 +387,7 @@ export class TwitchService {
         reply: parseReplyThread(tagMap) || undefined,
         msgId: tags["msg-id"] || undefined,
         customRewardId: tags["custom-reward-id"] || undefined,
+        platform: "twitch",
         isGigantifiedEmote: tags["msg-id"] === "gigantified-emote-message",
       };
     } catch (error) {
@@ -444,6 +452,7 @@ export class TwitchService {
         userId: tags["user-id"] || undefined,
         msgId,
         customRewardId: tags["custom-reward-id"] || undefined,
+        platform: "twitch",
         isGigantifiedEmote: msgId === "gigantified-emote-message",
         bits: bits,
         cheerPrefix: cheerPrefix,

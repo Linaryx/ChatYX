@@ -1,4 +1,4 @@
-// ChatIS Logger - Enhanced logging system
+// ChatYX runtime logger.
 
 export enum LogLevel {
   DEBUG = 0,

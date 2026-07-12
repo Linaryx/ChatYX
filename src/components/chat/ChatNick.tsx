@@ -4,6 +4,7 @@ import type { TwitchMessage } from "~/services/chat";
 type ChatNickProps = {
   message: TwitchMessage;
   nickStyle: string;
+  fontWeight: string;
   paintClasses: string;
   paintAttributes: Record<string, string>;
   colonColor: string;
@@ -15,6 +16,7 @@ export const ChatNick = (props: ChatNickProps): JSX.Element => {
   const {
     message,
     nickStyle,
+    fontWeight,
     paintClasses,
     paintAttributes,
     colonColor,
@@ -27,7 +29,7 @@ export const ChatNick = (props: ChatNickProps): JSX.Element => {
     <span class="user_info">
       <span
         class={`nick ${paintClasses}`}
-        style={nickStyle}
+        style={`${nickStyle} font-weight: ${fontWeight};`}
         {...paintAttributes}
       >
         {uppercase ? displayName.toUpperCase() : displayName}
@@ -35,7 +37,10 @@ export const ChatNick = (props: ChatNickProps): JSX.Element => {
       {isAction ? (
         <span>&nbsp;</span>
       ) : (
-        <span class="colon" style={{ color: colonColor }}>
+        <span
+          class="colon"
+          style={{ color: colonColor, "font-weight": fontWeight }}
+        >
           :
         </span>
       )}

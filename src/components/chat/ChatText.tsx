@@ -1,12 +1,12 @@
 import type { JSX } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
-import type { TwitchMessage, ChatISIntegrationService } from "~/services/chat";
+import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { renderMessageWithEmotes } from "./renderMessageContent";
 
 type ChatTextProps = {
   message: TwitchMessage;
   config: ChatConfig;
-  service: ChatISIntegrationService;
+  service: ChatPresentationService;
   color: string;
   fontWeight?: string;
 };

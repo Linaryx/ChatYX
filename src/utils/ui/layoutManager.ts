@@ -134,7 +134,7 @@ export class LayoutManager {
         const css = this.getLayoutCSS();
         if (!css) return;
 
-        const styleId = 'chatis-layout-styles';
+        const styleId = 'chatyx-layout-styles';
         let style = document.getElementById(styleId);
 
         if (!style) {

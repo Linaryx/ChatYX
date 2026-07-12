@@ -1,11 +1,11 @@
 import type { JSX } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
-import type { TwitchMessage, ChatISIntegrationService } from "~/services/chat";
+import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { bitsService } from "~/services/chat";
 import { mentionStyleService } from "~/services/chat";
 import {
+  createMessageTokenSnapshot,
   parseGoogleEmoji,
-  extractEmojis,
   restoreEmojis,
 } from "~/utils/chat/emojiUtils";
 import { SIZE_CONFIGS } from "~/styles/chatStyles";
@@ -86,52 +86,7 @@ function applyImageSizeAttrsFromData(image: HTMLImageElement) {
   image.setAttribute("height", String(Math.round(height)));
 }
 
-function getPositiveNumber(value: string | null | undefined): number {
-  const parsed = Number.parseFloat(value || "");
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-}
-
-function hideBrokenMessageImage(image: HTMLImageElement) {
-  const rect = image.getBoundingClientRect();
-  const width =
-    rect.width ||
-    getPositiveNumber(image.style.width) ||
-    getPositiveNumber(image.getAttribute("width")) ||
-    getPositiveNumber(image.dataset.emoteWidth);
-  const height =
-    rect.height ||
-    getPositiveNumber(image.style.height) ||
-    getPositiveNumber(image.getAttribute("height")) ||
-    getPositiveNumber(image.dataset.emoteHeight);
-
-  image.alt = "";
-  image.removeAttribute("src");
-  image.removeAttribute("srcset");
-  image.setAttribute("aria-hidden", "true");
-
-  image.style.width = width ? `${width}px` : "1em";
-  image.style.height = height ? `${height}px` : "1em";
-  image.style.opacity = "0";
-  image.style.visibility = "hidden";
-}
-
-function installBrokenImageFallback(root: HTMLElement) {
-  root
-    .querySelectorAll("img.emote, img.emoji, img.cheer_emote")
-    .forEach((node) => {
-      if (!(node instanceof HTMLImageElement)) return;
-
-      node.addEventListener("error", () => hideBrokenMessageImage(node), {
-        once: true,
-      });
-
-      if (node.complete && node.naturalWidth === 0) {
-        hideBrokenMessageImage(node);
-      }
-    });
-}
-
-function renderMentionHtml(token: string, service: ChatISIntegrationService): string | null {
+function renderMentionHtml(token: string, service: ChatPresentationService): string | null {
   const mentionStyle = mentionStyleService.resolveMention(token, service);
   if (!mentionStyle) return null;
 
@@ -140,7 +95,7 @@ function renderMentionHtml(token: string, service: ChatISIntegrationService): st
 
   switch (mentionStyle.kind) {
     case "global-paint":
-      return `<span class="mention chatis-seventv-paint" data-seventv-paint-id="${escapeAttr(mentionStyle.paintId)}">${escapedText}</span>${escapedSuffix}`;
+      return `<span class="mention chatyx-seventv-paint" data-seventv-paint-id="${escapeAttr(mentionStyle.paintId)}">${escapedText}</span>${escapedSuffix}`;
     case "inline-paint": {
       // css is generated internally from 7TV paint data — strip any quotes to prevent attr breakout
       const safeCss = mentionStyle.css.replace(/"/g, "'");
@@ -162,7 +117,7 @@ function renderMentionHtml(token: string, service: ChatISIntegrationService): st
 export function renderMessageWithEmotes(
   message: TwitchMessage,
   config: ChatConfig,
-  service: ChatISIntegrationService,
+  service: ChatPresentationService,
 ): JSX.Element {
   const size =
     SIZE_CONFIGS[config.size as keyof typeof SIZE_CONFIGS] || SIZE_CONFIGS[2];
@@ -207,7 +162,7 @@ export function renderMessageWithEmotes(
 
           replacements[emoteCode] = {
             kind: "html",
-            html: `<span class="emote-container"><img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0" alt="" title="${escapeAttr(emoteCode)}"${emoteImageAttrs(112, 112, config, size)} /></span>`,
+            html: `<span class="emote-container"><img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0" alt="" title="${escapeAttr(emoteCode)}" /></span>`,
             isOverlayTarget: true,
           };
         });
@@ -252,7 +207,10 @@ export function renderMessageWithEmotes(
     }
   }
 
-  const parts = rawMessage.split(/(\s+)/);
+  const tokenSnapshot =
+    message.tokenSnapshot?.source === rawMessage
+      ? message.tokenSnapshot
+      : createMessageTokenSnapshot(rawMessage);
 
   type SegmentKind = "ws" | "text" | "target" | "other";
   type Segment = { kind: SegmentKind; html: string };
@@ -275,80 +233,163 @@ export function renderMessageWithEmotes(
 
     const combined = html.slice(0, closeIndex) + overlayHtml + closingTag;
     // Mark container so CSS and fixZeroWidthEmotes() can widen it to the largest emote
-    segments[index].html = combined.replace(
-      '<span class="emote-container">',
-      '<span class="emote-container" data-zw-group="true">',
-    );
+    segments[index].html = combined
+      .replace(
+        '<span class="emote-container">',
+        '<span class="emote-container" data-zw-group="true">',
+      )
+      .replace(
+        '<span class="emoji-container">',
+        '<span class="emoji-container" data-zw-group="true">',
+      );
     return true;
   };
 
-  for (const part of parts) {
-    if (/^\s+$/.test(part)) {
-      segments.push({ kind: "ws", html: part });
-      continue;
+  const createEmoteReplacement = (
+    cleanText: string,
+    emote: any,
+  ): Replacement | null => {
+    if (!emote || !cleanText) return null;
+
+    const url = sanitizeImageUrl(String(emote.url || ""));
+    if (!url) return null;
+
+    const sourceClass = emote.source === "youtube" ? " youtube-emote" : "";
+
+    if (emote.zero_width) {
+      const attrs = emoteImageAttrs(emote.width, emote.height, config, size);
+      return {
+        kind: "zw",
+        overlayHtml: `<img class="emote zerowidth${sourceClass}" src="${url}" alt="" title="${escapeAttr(cleanText)}"${attrs} />`,
+        fallbackHtml: `<span class="emote-container"><img class="emote${sourceClass}" src="${url}" alt="" title="${escapeAttr(cleanText)}"${attrs} /></span>`,
+      };
     }
 
-    const [withPlaceholders, emojis] = extractEmojis(part);
-    const cleanText = withPlaceholders.replace(/__EMOJI\d+__/g, "");
+    return {
+      kind: "html",
+      html: `<span class="emote-container"><img class="emote${sourceClass}" src="${url}" alt="" title="${escapeAttr(cleanText)}"${emoteImageAttrs(emote.width, emote.height, config, size)} /></span>`,
+      isOverlayTarget: true,
+    };
+  };
 
-    const replacement = replacements[cleanText];
-    const emote =
-      message.emoteSnapshot?.get(cleanText) ||
-      service.getEmote(cleanText, message.username);
-    const emoteReplacement = (() => {
-      if (!emote || !cleanText) return null;
-
-      const url = sanitizeImageUrl(String(emote.url || ""));
-      if (!url) return null;
-
-      if (emote.zero_width) {
-        const attrs = emoteImageAttrs(emote.width, emote.height, config, size);
-        return {
-          kind: "zw" as const,
-          overlayHtml: `<img class="emote zerowidth" src="${url}" alt="" title="${escapeAttr(cleanText)}"${attrs} />`,
-          fallbackHtml: `<span class="emote-container"><img class="emote" src="${url}" alt="" title="${escapeAttr(cleanText)}"${attrs} /></span>`,
-        };
-      }
-
-      return {
-        kind: "html" as const,
-        html: `<span class="emote-container"><img class="emote" src="${url}" alt="" title="${escapeAttr(cleanText)}"${emoteImageAttrs(emote.width, emote.height, config, size)} /></span>`,
-        isOverlayTarget: true,
-      };
-    })();
-
-    if (replacement || emoteReplacement) {
-      const activeReplacement = replacement || emoteReplacement;
-      if (!activeReplacement) continue;
-
-      if (activeReplacement.kind === "zw") {
-        if (!attachZeroWidth(activeReplacement.overlayHtml)) {
-          segments.push({ kind: "target", html: activeReplacement.fallbackHtml });
-        }
-      } else {
+  const pushReplacement = (activeReplacement: Replacement) => {
+    if (activeReplacement.kind === "zw") {
+      if (!attachZeroWidth(activeReplacement.overlayHtml)) {
         segments.push({
-          kind: activeReplacement.isOverlayTarget ? "target" : "other",
-          html: activeReplacement.html,
+          kind: "target",
+          html: activeReplacement.fallbackHtml,
         });
       }
-      continue;
+    } else {
+      segments.push({
+        kind: activeReplacement.isOverlayTarget ? "target" : "other",
+        html: activeReplacement.html,
+      });
     }
+  };
 
-    const restoredText = restoreEmojis(withPlaceholders, emojis);
+  const pushTextSegment = (textWithPlaceholders: string, emojis: string[]) => {
+    if (!textWithPlaceholders) return;
+
+    const restoredText = restoreEmojis(textWithPlaceholders, emojis);
+    if (!restoredText) return;
+
     const mentionHtml = renderMentionHtml(restoredText, service);
     if (mentionHtml) {
       segments.push({ kind: "text", html: mentionHtml });
-      continue;
+      return;
     }
 
     const escapedText = escapeHtml(restoredText);
     const withEmojiImages = parseGoogleEmoji(escapedText, size.emojiHeight);
-
+    const cleanText = textWithPlaceholders.replace(/__EMOJI\d+__/g, "");
     const isEmojiOnlyToken = cleanText.length === 0 && emojis.length > 0;
+
     segments.push({
       kind: isEmojiOnlyToken ? "target" : "text",
       html: withEmojiImages,
     });
+  };
+
+  const pushInlineSnapshotTokens = (
+    withPlaceholders: string,
+    emojis: string[],
+  ): boolean => {
+    const snapshot = message.emoteSnapshot;
+    if (!snapshot) return false;
+
+    const tokens = Array.from(snapshot.keys())
+      .filter((token) => token.startsWith("yt_emoji_") && withPlaceholders.includes(token))
+      .sort((left, right) => right.length - left.length);
+    if (tokens.length === 0) return false;
+
+    let index = 0;
+    while (index < withPlaceholders.length) {
+      let matchToken = "";
+      let matchIndex = -1;
+
+      for (const token of tokens) {
+        const tokenIndex = withPlaceholders.indexOf(token, index);
+        if (tokenIndex === -1) continue;
+        if (
+          matchIndex === -1 ||
+          tokenIndex < matchIndex ||
+          (tokenIndex === matchIndex && token.length > matchToken.length)
+        ) {
+          matchIndex = tokenIndex;
+          matchToken = token;
+        }
+      }
+
+      if (matchIndex === -1) {
+        pushTextSegment(withPlaceholders.slice(index), emojis);
+        break;
+      }
+
+      pushTextSegment(withPlaceholders.slice(index, matchIndex), emojis);
+
+      const replacement = createEmoteReplacement(
+        matchToken,
+        snapshot.get(matchToken),
+      );
+      if (replacement) {
+        pushReplacement(replacement);
+      } else {
+        pushTextSegment(matchToken, emojis);
+      }
+
+      index = matchIndex + matchToken.length;
+    }
+
+    return true;
+  };
+
+  for (const token of tokenSnapshot.tokens) {
+    if (token.isWhitespace) {
+      segments.push({ kind: "ws", html: token.raw });
+      continue;
+    }
+
+    const { withPlaceholders, emojis, cleanText } = token;
+    const isPlainLookupToken = withPlaceholders === cleanText;
+
+    const replacement = isPlainLookupToken ? replacements[cleanText] : undefined;
+    const emote = isPlainLookupToken
+      ? message.emoteSnapshot?.get(cleanText) ||
+        service.getEmote(cleanText, message.username)
+      : null;
+    const emoteReplacement = createEmoteReplacement(cleanText, emote);
+
+    if (replacement || emoteReplacement) {
+      const activeReplacement = replacement || emoteReplacement;
+      if (!activeReplacement) continue;
+      pushReplacement(activeReplacement);
+      continue;
+    }
+
+    if (pushInlineSnapshotTokens(withPlaceholders, emojis)) continue;
+
+    pushTextSegment(withPlaceholders, emojis);
   }
 
   const joinedText = segments.map((segment) => segment.html).join("");
@@ -360,7 +401,7 @@ export function renderMessageWithEmotes(
     if (target) {
       const line = document.createElement("span");
       const giant = target.cloneNode(true) as HTMLImageElement;
-      const emoteContainer = target.closest(".emote-container");
+      const emoteContainer = target.closest(".emote-container, .emoji-container");
       const sourceNode =
         emoteContainer instanceof HTMLElement ? emoteContainer : target;
 
@@ -373,8 +414,6 @@ export function renderMessageWithEmotes(
       element.append(line);
     }
   }
-
-  installBrokenImageFallback(element);
 
   return element;
 }

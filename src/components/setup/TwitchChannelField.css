@@ -1,0 +1,174 @@
+.twitch-channel-field {
+  min-height: 40px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  background: #0d0d0f;
+  box-sizing: border-box;
+}
+
+.twitch-channel-chip {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px 5px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: #050505;
+  color: #ffffff;
+  box-sizing: border-box;
+}
+
+.twitch-channel-avatar,
+.twitch-channel-avatar-fallback {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: #000000;
+  box-sizing: border-box;
+}
+
+.twitch-channel-avatar {
+  object-fit: cover;
+}
+
+.twitch-channel-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.twitch-channel-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  line-height: 1;
+}
+
+.twitch-channel-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.twitch-channel-name {
+  min-width: 0;
+  max-width: 150px;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.twitch-channel-loading {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  animation: twitch-channel-loading 0.9s ease-in-out infinite alternate;
+}
+
+.twitch-channel-metrics {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.twitch-channel-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.twitch-channel-metric svg,
+.twitch-channel-metric-image {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.twitch-channel-metric svg {
+  fill: currentColor;
+}
+
+.twitch-channel-metric-image {
+  display: block;
+  object-fit: contain;
+}
+
+.twitch-channel-remove {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.twitch-channel-input {
+  min-width: 190px;
+  flex: 1 1 220px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.twitch-channel-input::placeholder {
+  color: #a1a1aa;
+}
+
+@keyframes twitch-channel-loading {
+  from {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

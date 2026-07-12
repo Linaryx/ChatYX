@@ -11,6 +11,7 @@ import { Title } from "@solidjs/meta";
 import { ColorPickerField } from "~/components/ColorPickerField";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
+import { TwitchChannelField } from "~/components/setup/TwitchChannelField";
 import { DEFAULT_BOT_NAMES } from "~/config/botNames";
 import {
   DEFAULT_CHAT_CONFIG,
@@ -63,6 +64,34 @@ type LocalFontWindow = Window & {
 const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_WEB_CLIENT_ID =
   import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
+const SETUP_STORAGE_KEYS = {
+  twitchChannel: "chatyx.setup.twitchChannel",
+} as const;
+
+function readStoredSetupValue(key: string): string {
+  if (typeof window === "undefined") return "";
+
+  try {
+    return window.localStorage.getItem(key) || "";
+  } catch {
+    return "";
+  }
+}
+
+function writeStoredSetupValue(key: string, value: string) {
+  if (typeof window === "undefined") return;
+
+  try {
+    const normalized = value.trim();
+    if (normalized) {
+      window.localStorage.setItem(key, normalized);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage can be blocked in private windows; setup must still work.
+  }
+}
 
 function detectLocalFontBrowser(): string | null {
   if (typeof window === "undefined" || typeof navigator === "undefined") {
@@ -246,9 +275,18 @@ function renderControlRows(
 }
 
 export default function ChatSetup() {
-  const [channel, setChannel] = createSignal("");
+  const [channel, setChannel] = createSignal(
+    readStoredSetupValue(SETUP_STORAGE_KEYS.twitchChannel),
+  );
+  const [youtubeChannel, setYoutubeChannel] = createSignal("");
   const [size, setSize] = createSignal(String(DEFAULT_CHAT_CONFIG.size));
   const [font, setFont] = createSignal(String(DEFAULT_CHAT_CONFIG.font));
+  const [fontWeight, setFontWeight] = createSignal(
+    String(DEFAULT_CHAT_CONFIG.fontWeight),
+  );
+  const [nickFontWeight, setNickFontWeight] = createSignal(
+    String(DEFAULT_CHAT_CONFIG.nickFontWeight),
+  );
   const [fontCustom, setFontCustom] = createSignal("");
   const [localFontBrowser, setLocalFontBrowser] = createSignal("");
   const [localFonts, setLocalFonts] = createSignal<LocalFontOption[]>([]);
@@ -352,10 +390,6 @@ export default function ChatSetup() {
       setLocalFontStatus(
         `Можно загрузить локальные шрифты через ${supportedBrowser}.`,
       );
-    } else {
-      setLocalFontStatus(
-        "Локальные шрифты доступны только в Chrome, Edge и Opera",
-      );
     }
 
     onCleanup(() => {
@@ -379,7 +413,7 @@ export default function ChatSetup() {
     page: {
       background: C.bg,
       color: C.text,
-      padding: "24px 16px 48px",
+      padding: "16px 32px 48px",
       "min-height": "100vh",
       width: "100%",
       "box-sizing": "border-box",
@@ -388,7 +422,7 @@ export default function ChatSetup() {
     shell: {
       margin: "0 auto",
       width: "100%",
-      "max-width": "1320px",
+      "max-width": "1760px",
       display: "flex",
       "flex-direction": "column",
       gap: "16px",
@@ -405,6 +439,7 @@ export default function ChatSetup() {
       background: C.card,
       padding: "14px 16px",
       width: "100%",
+      "box-sizing": "border-box",
       "border-radius": "8px",
       border: `1px solid ${C.border}`,
       display: "flex",
@@ -412,13 +447,14 @@ export default function ChatSetup() {
       gap: "12px",
     },
     channelRow: {
-      display: "flex",
+      display: "grid",
+      "grid-template-columns": "repeat(2, minmax(0, 1fr))",
       "align-items": "center",
       gap: "10px",
-      "flex-wrap": "wrap",
     },
     channelInput: {
-      flex: "1 1 420px",
+      width: "100%",
+      "min-width": "0",
       height: "40px",
       padding: "9px 14px",
       border: `1px solid ${C.border}`,
@@ -457,12 +493,14 @@ export default function ChatSetup() {
     },
     previewPane: {
       "min-width": "0",
+      width: "100%",
     },
     sectionCard: {
       background: C.card,
       border: `1px solid ${C.border}`,
       "border-radius": "8px",
       padding: "16px",
+      "box-sizing": "border-box",
       display: "flex",
       "flex-direction": "column",
       gap: "12px",
@@ -611,10 +649,6 @@ export default function ChatSetup() {
       "font-size": "11px",
       "font-weight": 600,
       "white-space": "nowrap",
-    },
-    speedSlider: {
-      width: "100%",
-      accentColor: "#ffffff",
     },
     speedScale: {
       display: "flex",
@@ -953,8 +987,21 @@ export default function ChatSetup() {
   const buildConfig = (selectedChannel: string): ChatConfig => ({
     ...DEFAULT_CHAT_CONFIG,
     channel: selectedChannel,
+    youtubeChannel: youtubeChannel().trim().replace(/^@/, ""),
     size: toInt(size(), DEFAULT_CHAT_CONFIG.size),
     font: toInt(font(), DEFAULT_CHAT_CONFIG.font),
+    fontWeight: toClampedInt(
+      fontWeight(),
+      DEFAULT_CHAT_CONFIG.fontWeight,
+      100,
+      1000,
+    ),
+    nickFontWeight: toClampedInt(
+      nickFontWeight(),
+      DEFAULT_CHAT_CONFIG.nickFontWeight,
+      100,
+      1000,
+    ),
     fontCustom: fontCustom(),
     shadow: toIntOrFalse(shadow()),
     stroke: toIntOrFalse(stroke()),
@@ -1020,7 +1067,14 @@ export default function ChatSetup() {
     return `${getAppBaseUrl()}/chat/${query ? `?${query}` : ""}`;
   };
 
-  const previewChannel = createMemo(() => channel().trim() || "chatyxpreview");
+  const hasTwitchChannel = createMemo(() => Boolean(channel().trim()));
+  const hasYouTubeChannel = createMemo(() => Boolean(youtubeChannel().trim()));
+  const isYouTubeOnly = createMemo(
+    () => hasYouTubeChannel() && !hasTwitchChannel(),
+  );
+  const previewChannel = createMemo(() =>
+    channel().trim() || (hasYouTubeChannel() ? "" : "chatyxpreview"),
+  );
   const previewConfig = createMemo(() => buildConfig(previewChannel()));
   const messageSpeedValue = createMemo(() =>
     toClampedInt(
@@ -1107,8 +1161,19 @@ export default function ChatSetup() {
   });
 
   createEffect(() => {
+    if (isYouTubeOnly() && previewMode() === "demo") {
+      setPreviewMode("live");
+    }
+  });
+
+  createEffect(() => {
+    writeStoredSetupValue(SETUP_STORAGE_KEYS.twitchChannel, channel());
+  });
+
+  createEffect(() => {
     const currentChannel = channel().trim();
-    if (!currentChannel) {
+    const currentYouTubeChannel = youtubeChannel().trim();
+    if (!currentChannel && !currentYouTubeChannel) {
       setGeneratedUrl("");
       return;
     }
@@ -1245,55 +1310,79 @@ export default function ChatSetup() {
               opacity: font() === "0" ? "1" : "0.5",
             }}
           />
-          <div style={styles.localFontRow}>
-            <button
-              type="button"
-              onClick={loadLocalFonts}
-              disabled={
-                font() !== "0" || !localFontBrowser() || isLoadingLocalFonts()
-              }
-              style={{
-                ...styles.localFontButton,
-                ...((font() !== "0" ||
-                  !localFontBrowser() ||
-                  isLoadingLocalFonts()) &&
-                  styles.localFontButtonDisabled),
-              }}
-            >
-              {isLoadingLocalFonts() ? "Загрузка..." : "Локальные"}
-            </button>
-            <select
-              value=""
-              onChange={(e) => {
-                const selectedFont = e.currentTarget.value;
-                if (selectedFont) setFontCustom(selectedFont);
-              }}
-              disabled={font() !== "0" || localFonts().length === 0}
-              style={{
-                ...styles.input,
-                opacity:
-                  font() === "0" && localFonts().length > 0 ? "1" : "0.5",
-              }}
-            >
-              <option value="">
-                {localFonts().length > 0
-                  ? "Выбрать локальный шрифт"
-                  : "Сначала загрузить список"}
-              </option>
-              <For each={localFonts()}>
-                {(localFont) => (
-                  <option value={localFont.family}>
-                    {localFont.family}
-                    {localFont.styles.length > 0
-                      ? ` (${localFont.styles.join(", ")})`
-                      : ""}
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
+          {localFontBrowser() && (
+            <div style={styles.localFontRow}>
+              <button
+                type="button"
+                onClick={loadLocalFonts}
+                disabled={font() !== "0" || isLoadingLocalFonts()}
+                style={{
+                  ...styles.localFontButton,
+                  ...((font() !== "0" || isLoadingLocalFonts()) &&
+                    styles.localFontButtonDisabled),
+                }}
+              >
+                {isLoadingLocalFonts() ? "Загрузка..." : "Локальные"}
+              </button>
+              <select
+                value=""
+                onChange={(e) => {
+                  const selectedFont = e.currentTarget.value;
+                  if (selectedFont) setFontCustom(selectedFont);
+                }}
+                disabled={font() !== "0" || localFonts().length === 0}
+                style={{
+                  ...styles.input,
+                  opacity:
+                    font() === "0" && localFonts().length > 0 ? "1" : "0.5",
+                }}
+              >
+                <option value="">
+                  {localFonts().length > 0
+                    ? "Выбрать локальный шрифт"
+                    : "Сначала загрузить список"}
+                </option>
+                <For each={localFonts()}>
+                  {(localFont) => (
+                    <option value={localFont.family}>
+                      {localFont.family}
+                      {localFont.styles.length > 0
+                        ? ` (${localFont.styles.join(", ")})`
+                        : ""}
+                    </option>
+                  )}
+                </For>
+              </select>
+            </div>
+          )}
           <div style={styles.settingHint}>{localFontStatus()}</div>
         </div>
+      ),
+    },
+    {
+      label: "Вес текста",
+      hint: "Толщина текста сообщений. 800 — текущий стандарт.",
+      control: (
+        <SetupNumberField
+          value={fontWeight()}
+          onChange={setFontWeight}
+          min={100}
+          max={1000}
+          step={100}
+        />
+      ),
+    },
+    {
+      label: "Вес ника",
+      hint: "Толщина имени автора и двоеточия. 800 — текущий стандарт.",
+      control: (
+        <SetupNumberField
+          value={nickFontWeight()}
+          onChange={setNickFontWeight}
+          min={100}
+          max={1000}
+          step={100}
+        />
       ),
     },
     {
@@ -1530,16 +1619,22 @@ export default function ChatSetup() {
       <style>
         {`
           .setup-main-grid {
-            grid-template-columns: minmax(0, 1.15fr) minmax(360px, 440px);
+            grid-template-columns: minmax(640px, 1.4fr) minmax(420px, 560px);
           }
 
-          @media (max-width: 1100px) {
+          @media (max-width: 1200px) {
             .setup-main-grid {
               grid-template-columns: 1fr;
             }
 
             .setup-preview-sticky {
               position: static !important;
+            }
+          }
+
+          @media (max-width: 900px) {
+            .setup-channel-row {
+              grid-template-columns: 1fr !important;
             }
           }
 
@@ -1561,22 +1656,28 @@ export default function ChatSetup() {
             .setup-preview-controls {
               grid-template-columns: 1fr !important;
             }
+
+            .setup-page {
+              padding-left: 12px !important;
+              padding-right: 12px !important;
+            }
           }
 
         `}
       </style>
 
-      <div style={styles.page}>
+      <div class="setup-page" style={styles.page}>
         <div style={styles.shell}>
           <div style={styles.title}>Настройка чат-оверлея</div>
 
           <div style={styles.channelCard}>
-            <div style={styles.channelRow}>
+            <div class="setup-channel-row" style={styles.channelRow}>
+              <TwitchChannelField value={channel()} onChange={setChannel} />
               <input
                 type="text"
-                value={channel()}
-                onInput={(e) => setChannel(e.currentTarget.value)}
-                placeholder="Ник Twitch-канала, например linaryx"
+                value={youtubeChannel()}
+                onInput={(e) => setYoutubeChannel(e.currentTarget.value)}
+                placeholder="YouTube handle или ID, например @linaryx"
                 style={styles.channelInput}
               />
             </div>
@@ -1784,7 +1885,12 @@ export default function ChatSetup() {
                   <div style={styles.speedCard}>
                     <div
                       class="setup-preview-controls"
-                      style={styles.previewControlsGrid}
+                      style={{
+                        ...styles.previewControlsGrid,
+                        "grid-template-columns": isYouTubeOnly()
+                          ? "1fr"
+                          : styles.previewControlsGrid["grid-template-columns"],
+                      }}
                     >
                       <div style={styles.previewControlStack}>
                         <div style={styles.settingLabel}>Режим превью</div>
@@ -1792,42 +1898,48 @@ export default function ChatSetup() {
                           value={previewMode()}
                           onChange={(event) =>
                             setPreviewMode(
-                              event.currentTarget.value === "live"
+                              isYouTubeOnly() ||
+                                event.currentTarget.value === "live"
                                 ? "live"
                                 : "demo",
                             )
                           }
                           style={styles.input}
                         >
-                          <option value="demo">Демонстрация</option>
                           <option value="live">Лайв режим</option>
+                          {!isYouTubeOnly() && (
+                            <option value="demo">Демонстрация</option>
+                          )}
                         </select>
                       </div>
-                      <div style={styles.previewControlStack}>
-                        <div style={styles.settingLabel}>Сценарий</div>
-                        <select
-                          value={previewDemoKind()}
-                          onChange={(event) =>
-                            setPreviewDemoKind(
-                              event.currentTarget.value === "emote"
-                                ? "emote"
-                                : "pasta",
-                            )
-                          }
-                          disabled={previewMode() !== "demo"}
-                          style={{
-                            ...styles.input,
-                            opacity: previewMode() === "demo" ? "1" : "0.5",
-                          }}
-                        >
-                          <option value="pasta">Паста</option>
-                          <option value="emote">Обычный</option>
-                        </select>
-                      </div>
+                      {!isYouTubeOnly() && (
+                        <div style={styles.previewControlStack}>
+                          <div style={styles.settingLabel}>Сценарий</div>
+                          <select
+                            value={previewDemoKind()}
+                            onChange={(event) =>
+                              setPreviewDemoKind(
+                                event.currentTarget.value === "emote"
+                                  ? "emote"
+                                  : "pasta",
+                              )
+                            }
+                            disabled={previewMode() !== "demo"}
+                            style={{
+                              ...styles.input,
+                              opacity: previewMode() === "demo" ? "1" : "0.5",
+                            }}
+                          >
+                            <option value="pasta">Паста</option>
+                            <option value="emote">Обычный</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
                     <div style={styles.settingHint}>
-                      Лайв режим берёт реальный чат канала. Демонстрация
-                      использует тестовые сообщения.
+                      {isYouTubeOnly()
+                        ? "Для YouTube-only превью доступен только лайв режим."
+                        : "Лайв режим берёт реальный чат канала. Демонстрация использует тестовые сообщения."}
                     </div>
                   </div>
                   {previewMode() === "demo" && (
@@ -1841,15 +1953,20 @@ export default function ChatSetup() {
                         </div>
                       </div>
                       <input
+                        class="setup-number-slider"
                         type="range"
                         min={MIN_MESSAGE_SPEED}
                         max={MAX_MESSAGE_SPEED}
                         step="1"
-                        value={messageSpeed()}
+                        value={messageSpeedValue()}
                         onInput={(event) =>
                           setMessageSpeed(event.currentTarget.value)
                         }
-                        style={styles.speedSlider}
+                        style={
+                          {
+                            "--setup-number-slider-fill": `${messageSpeedValue()}%`,
+                          } as JSX.CSSProperties
+                        }
                         aria-label="Скорость появления сообщений"
                       />
                       <div style={styles.speedScale}>

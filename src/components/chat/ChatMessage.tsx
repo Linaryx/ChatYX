@@ -1,9 +1,10 @@
 import { createMemo, onCleanup, onMount, type JSX } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
+import { normalizeFontWeight } from "~/config/chatUrlParams";
 import {
-  colorService,
+  sevenTVCosmeticsService,
   type TwitchMessage,
-  type ChatISIntegrationService,
+  type ChatPresentationService,
 } from "~/services/chat";
 import { getFontFamily } from "~/styles/chatStyles";
 import { ChatBadges } from "~/components/chat/ChatBadges";
@@ -17,7 +18,7 @@ import {
 type ChatMessageProps = {
   message: TwitchMessage;
   config: ChatConfig;
-  service: ChatISIntegrationService;
+  service: ChatPresentationService;
   animationDurationMs: number;
   onExpired?: (messageId: string) => void;
 };
@@ -87,21 +88,24 @@ export const ChatMessage = (props: ChatMessageProps) => {
     : null;
 
   const paintCSS =
-    integrationPaint || colorService.calculatePaintCSS(message.username);
+    integrationPaint || sevenTVCosmeticsService.calculatePaintCSS(message.username);
   const userColor = safeCssColor(message.color || "#e6eef7");
+  const fontWeight = String(normalizeFontWeight(config.fontWeight));
+  const nickFontWeight = String(normalizeFontWeight(config.nickFontWeight));
 
   const messageStyle: JSX.CSSProperties = {
     "font-family": getFontFamily(config),
+    "font-weight": fontWeight,
     "word-wrap": "break-word",
     "--chat-message-enter-duration": `${props.animationDurationMs}ms`,
   };
 
-  let nickStyle = "font-weight: 800;";
+  let nickStyle = "";
   let paintClasses = "";
   let paintAttributes: Record<string, string> = {};
 
   if (paintCSS && typeof paintCSS === "object" && paintCSS.useGlobalCSS) {
-    paintClasses = "chatis-seventv-paint";
+    paintClasses = "chatyx-seventv-paint";
     paintAttributes["data-seventv-paint-id"] = (paintCSS as { paintId: string }).paintId;
   } else if (integrationPaint) {
     nickStyle += ` ${integrationPaint}`;
@@ -118,6 +122,9 @@ export const ChatMessage = (props: ChatMessageProps) => {
 
   const messageTextColor = isAction ? userColor : "white";
   const replyText = createMemo(() => getReplyText(message));
+  const showPlatformMarker = Boolean(
+    config.channel.trim() && config.youtubeChannel.trim(),
+  );
 
   onMount(() => {
     if (!rootRef) return;
@@ -154,11 +161,14 @@ export const ChatMessage = (props: ChatMessageProps) => {
       class="chat_line"
       classList={{
         "gigantified-emote": message.isGigantifiedEmote,
+        "platform-marked": showPlatformMarker,
       }}
       style={messageStyle}
       data-nick={message.username}
+      data-user-id={message.userId || ""}
       data-time={message.timestamp.getTime()}
       data-id={message.id}
+      data-platform={message.platform || "twitch"}
     >
       {replyText() && (
         <div class="reply_line" title={replyText() || undefined}>
@@ -181,6 +191,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
       <ChatNick
         message={message}
         nickStyle={nickStyle}
+        fontWeight={nickFontWeight}
         paintClasses={paintClasses}
         paintAttributes={paintAttributes}
         colonColor={has7tvPaint ? "#fff" : userColor}
@@ -192,6 +203,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
         config={config}
         service={service}
         color={messageTextColor}
+        fontWeight={fontWeight}
       />
     </div>
   );

@@ -34,6 +34,27 @@ body {
   padding: 0 !important;
 }
 
+.chat_line.platform-marked {
+  position: relative;
+  box-sizing: border-box;
+  padding-left: 10px !important;
+}
+
+.chat_line.platform-marked::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.18em;
+  bottom: 0.18em;
+  width: 2px;
+  border-radius: 999px;
+  background: #9146ff;
+}
+
+.chat_line.platform-marked[data-platform="youtube"]::before {
+  background: #ff0033;
+}
+
 .user_info {
   display: inline-block;
 }
@@ -91,17 +112,33 @@ img.badge {
   vertical-align: middle;
 }
 
+.youtube-emote {
+  box-sizing: border-box;
+  padding: 2px;
+}
+
 .emote-container {
   display: inline-block;
   position: relative;
 }
 
-.emote-container[data-zw-group] {
+.emoji-container {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  padding: 0 2px;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.emote-container[data-zw-group],
+.emoji-container[data-zw-group] {
   display: inline-grid;
   vertical-align: middle;
 }
 
-.emote-container[data-zw-group] > img {
+.emote-container[data-zw-group] > img,
+.emoji-container[data-zw-group] > img {
   grid-area: 1 / 1;
   place-self: center;
 }
@@ -114,7 +151,7 @@ img.badge {
   font-weight: inherit;
 }
 
-.mention.chatis-seventv-paint[data-seventv-paint-id] {
+.mention.chatyx-seventv-paint[data-seventv-paint-id] {
   line-height: inherit !important;
 }
 
@@ -153,7 +190,7 @@ img.badge {
 }
 
 /* 7TV Paint стили */
-.chatis-seventv-paint[data-seventv-paint-id] {
+.chatyx-seventv-paint[data-seventv-paint-id] {
   -webkit-text-stroke-width: 0px !important;
   -webkit-text-stroke-color: transparent !important;
   text-shadow: none !important;
