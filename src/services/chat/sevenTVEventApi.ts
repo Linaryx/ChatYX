@@ -639,6 +639,39 @@ export class SevenTVEventApiService {
     return null;
   }
 
+  public replacePaintCosmetics(
+    paints: Record<string, any>,
+    userPaints: Record<string, string[]>,
+  ): void {
+    const previousPaintIds = new Set<string>();
+    for (const [id, cosmetic] of this.cosmetics) {
+      if (cosmetic?._kind === "PAINT" || cosmetic?.kind === "PAINT") {
+        previousPaintIds.add(id);
+        this.cosmetics.delete(id);
+      }
+    }
+
+    for (const [username, cosmeticIds] of this.userCosmetics) {
+      this.userCosmetics.set(
+        username,
+        cosmeticIds.filter((id) => !previousPaintIds.has(id)),
+      );
+    }
+
+    for (const [id, paint] of Object.entries(paints)) {
+      this.cosmetics.set(id, { ...paint, _kind: "PAINT" });
+    }
+
+    for (const [username, paintIds] of Object.entries(userPaints)) {
+      const normalizedUsername = username.toLowerCase();
+      const existing = this.userCosmetics.get(normalizedUsername) || [];
+      this.userCosmetics.set(
+        normalizedUsername,
+        [...existing, ...paintIds.filter((id) => !existing.includes(id))],
+      );
+    }
+  }
+
   /**
    * Get username from 7TV actor_id (cached, like v2)
    */

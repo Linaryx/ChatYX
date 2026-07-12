@@ -10,6 +10,7 @@ import {
   emoteService,
   mentionStyleService,
   sevenTVCosmeticsService,
+  sevenTVEventApi,
   twitchGqlService,
   chatFeatureIntegration,
   type TwitchGqlCustomReward,
@@ -33,6 +34,13 @@ import {
   resolveSenderIdentity,
 } from "~/utils/chat/senderIdentity";
 import type { ChatConfig } from "~/utils/chat";
+import {
+  ChatCommandFeedback,
+  CHATYX_DEVELOPER_CHANNEL,
+  getAuthorizedChatCommand,
+  isDeveloperChatMessage,
+  parseTestMessageCount,
+} from "./chatCommandService";
 
 type MessageUpdater = (messages: TwitchMessage[]) => TwitchMessage[];
 type MessageRefreshPatch = Partial<
@@ -101,6 +109,7 @@ function isTwitchUserId(value: string): boolean {
 export class OverlayRuntime {
   private readonly twitchService = new TwitchService();
   private readonly youtubeService = new YouTubeChatService();
+  private readonly commandFeedback = new ChatCommandFeedback();
   private readonly recentMessageTimes: number[] = [];
   private readonly seenMessageIds = new Set<string>();
   private readonly styleElementIds = [
@@ -331,6 +340,7 @@ export class OverlayRuntime {
     this.removeEventListeners();
     this.twitchService.disconnect();
     this.youtubeService.disconnect();
+    this.commandFeedback.destroy();
     chatFeatureIntegration.destroy();
     this.chatService?.cleanup();
     this.chatService = null;
@@ -574,6 +584,8 @@ export class OverlayRuntime {
       async (message) => {
         if (!this.activeConfig) return;
 
+        this.handleChatCommand(message);
+        if (isDeveloperChatMessage(message, this.channel)) return;
         const preparedMessage = await this.prepareMessageForDisplay(message);
         if (preparedMessage) this.appendMessage(preparedMessage);
       },
@@ -614,9 +626,156 @@ export class OverlayRuntime {
         this.clearPendingMessageRefreshes();
         this.hooks.onMessagesChange(() => []);
       },
+      [CHATYX_DEVELOPER_CHANNEL],
     );
 
     log.info(LOG_CATEGORIES.TWITCH_IRC, "Twitch IRC connection initialized");
+  }
+
+  private handleChatCommand(message: TwitchMessage): void {
+    const command = getAuthorizedChatCommand(message, this.channel);
+    if (!command || !this.activeConfig) return;
+
+    log.info(
+      LOG_CATEGORIES.CHAT,
+      `Chat command ${command.name} from ${message.username}`,
+    );
+
+    switch (command.name) {
+      case "refresh": {
+        const visibleMessages = this.captureVisibleMessages();
+        const cosmeticUsers = [...visibleMessages, ...this.pendingMessages]
+          .filter((entry) => entry.platform !== "youtube" && entry.userId)
+          .map((entry) => ({
+            username: entry.username,
+            userId: entry.userId || "",
+          }));
+        if (this.activeChannelId) {
+          cosmeticUsers.push({
+            username: this.channel,
+            userId: this.activeChannelId,
+          });
+        }
+
+        void Promise.all([
+          emoteService.reloadEmotes(
+            this.activeChannelId,
+            this.channel,
+            { show7tvUnlisted: this.activeConfig.show7tvUnlisted },
+          ),
+          this.activeChannelId
+            ? badgeService.loadBadges(this.channel, this.activeChannelId)
+            : undefined,
+          sevenTVCosmeticsService.reloadCosmetics(cosmeticUsers),
+        ])
+          .then(() => {
+            sevenTVEventApi.replacePaintCosmetics(
+              sevenTVCosmeticsService.getCosmetics(),
+              sevenTVCosmeticsService.getUserCosmetics(),
+            );
+            this.chatService?.clearPaintCache();
+            this.refreshRenderedMessages();
+            this.commandFeedback.showNotice(
+              "ChatYX: эмоуты и 7TV-косметика обновлены",
+            );
+          })
+          .catch((error) => {
+            log.error(LOG_CATEGORIES.CHAT, "Failed to refresh chat assets", error);
+            this.commandFeedback.showNotice("ChatYX: не удалось обновить данные");
+          });
+        break;
+      }
+      case "reload":
+        window.location.reload();
+        break;
+      case "show": {
+        const container = document.getElementById("chat_container");
+        if (container) container.style.display = "";
+        break;
+      }
+      case "hide": {
+        const container = document.getElementById("chat_container");
+        if (container) container.style.display = "none";
+        break;
+      }
+      case "clear":
+        this.clearPendingMessages();
+        this.clearPendingMessageRefreshes();
+        this.hooks.onMessagesChange(() => []);
+        break;
+      case "ping":
+        this.commandFeedback.showNotice("Pong! ChatYX работает");
+        break;
+      case "test":
+        this.appendTestMessages(message, parseTestMessageCount(command.args));
+        break;
+    }
+  }
+
+  private appendTestMessages(source: TwitchMessage, count: number): void {
+    const samples = [
+      "Тестовое сообщение ChatYX",
+      "Проверяем длинную строку, переносы и скорость появления сообщений",
+      "Kappa Keepo PogChamp",
+      "@moderator команда работает",
+    ];
+
+    for (let index = 0; index < count; index += 1) {
+      const message: TwitchMessage = {
+        ...source,
+        id: `chatyx-test-${Date.now()}-${index}`,
+        username: `chatyx_test_${index + 1}`,
+        displayName: `ChatYX Test ${index + 1}`,
+        message: samples[index % samples.length],
+        badges: [],
+        emotes: {},
+        isModerator: false,
+        isSubscriber: false,
+        timestamp: new Date(),
+        userId: undefined,
+        reply: undefined,
+        tokenSnapshot: undefined,
+        emoteSnapshot: undefined,
+      };
+
+      void this.prepareMessageForDisplay(message).then((prepared) => {
+        if (prepared) this.appendMessage(prepared);
+      });
+    }
+  }
+
+  private captureVisibleMessages(): TwitchMessage[] {
+    let snapshot: TwitchMessage[] = [];
+    this.hooks.onMessagesChange((messages) => {
+      snapshot = messages;
+      return messages;
+    });
+    return snapshot;
+  }
+
+  private refreshRenderedMessages(): void {
+    const refresh = (message: TwitchMessage): TwitchMessage => {
+      const tokenSnapshot = createMessageTokenSnapshot(message.message);
+      const serviceSnapshot = this.createMessageEmoteSnapshot({
+        ...message,
+        tokenSnapshot,
+      });
+      const platformSnapshot =
+        message.platform === "youtube"
+          ? message.emoteSnapshot ?? new Map<string, any>()
+          : new Map<string, any>();
+
+      return {
+        ...message,
+        tokenSnapshot,
+        emoteSnapshot: new Map([...serviceSnapshot, ...platformSnapshot]),
+      };
+    };
+
+    for (let index = 0; index < this.pendingMessages.length; index += 1) {
+      this.pendingMessages[index] = refresh(this.pendingMessages[index]);
+    }
+    this.hooks.onMessagesChange((messages) => messages.map(refresh));
   }
 
   private connectToYouTube() {

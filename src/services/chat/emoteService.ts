@@ -127,6 +127,19 @@ class EmoteService {
     }
   }
 
+  async reloadEmotes(
+    channelId = this.currentChannelId,
+    channelName = this.currentChannelName,
+    options: LoadEmoteOptions = { show7tvUnlisted: this.show7tvUnlisted },
+  ): Promise<void> {
+    this.emoteData.emotes = {};
+    if (channelId) this.emoteData.channelEmotes[channelId] = {};
+    this.globalEmotesLoaded = false;
+    this.globalEmotesPromise = null;
+    this.channelLoadPromises.delete(channelId);
+    await this.loadEmotes(channelId, channelName, options);
+  }
+
   private async loadGlobalEmotes(): Promise<void> {
     if (this.globalEmotesLoaded) return;
 

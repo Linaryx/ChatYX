@@ -1,110 +1,166 @@
 # ChatYX
 
-Modern Twitch and YouTube chat overlay with multi-platform emote and cosmetic support.
+> Чат, который не стыдно поставить на стрим.
 
-## Features
+ChatYX превращает Twitch и YouTube чат в аккуратный оверлей для OBS. Он умеет
+нормально показывать эмоуты, бейджи, 7TV-пейнты и ответы, не разваливая
+строку при первом же zero-width эмоуте.
 
-- **Twitch IRC** — real-time chat via WebSocket
-- **YouTube Live Chat** — optional server-side Innertube bridge
-- **Multi-platform emotes** — 7TV, BTTV, FFZ (global + channel)
-- **7TV EventAPI** — live emote set updates, cosmetics (paints, badges), personal emotes
-- **Badges** — Twitch, 7TV, BTTV, FFZ:AP, Chatterino, ChatIS
-- **Chat preview** — live preview in the setup UI using real channel mods/VIPs/founders
-- **Zero-width emotes** — properly stacked and centered via CSS Grid
-- **SolidJS** — fine-grained reactivity, no virtual DOM overhead
+[![Deploy to GitHub Pages](https://github.com/Linaryx/ChatYX/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Linaryx/ChatYX/actions/workflows/deploy-pages.yml)
 
-## Getting Started
+**[Открыть настройку](https://chat.ruina.team/)**
 
-### Requirements
+## Что внутри
 
-- [Bun](https://bun.sh) 1.3.14 or newer
+- Twitch IRC в реальном времени, без стороннего чат-сервера.
+- YouTube Live Chat через небольшой self-hosted Innertube bridge.
+- 7TV, BTTV и FFZ эмоуты, включая персональные и zero-width эмоуты.
+- Twitch, 7TV, BTTV, FFZ:AP, Chatterino и ChatIS бейджи.
+- 7TV-пейнты, косметика и обновления эмоутов без перезагрузки оверлея.
+- Ответы, гигантские эмоуты, cheers, автомодерация и удаление сообщений.
+- Живое превью прямо на странице настройки.
+- Встроенная debug-панель с FPS, frame time, памятью и long tasks.
 
-### Install & Run
+## Запуск в OBS
+
+1. Откройте [chat.ruina.team](https://chat.ruina.team/).
+2. Укажите Twitch-канал и настройте внешний вид.
+3. Скопируйте готовую ссылку.
+4. Добавьте ее в OBS как **Browser Source**.
+
+Прозрачный фон уже настроен. Размер Browser Source лучше выбирать под сцену,
+например `1920x1080`.
+
+## Локальная разработка
+
+Понадобится [Bun](https://bun.sh) версии `1.3.14` или новее.
 
 ```bash
+git clone https://github.com/Linaryx/ChatYX.git
+cd ChatYX
 bun install
 bun run dev
 ```
 
-Then open the setup page:
+Страница настройки откроется на `http://localhost:5173/`.
 
-```
-http://localhost:5173/?channel=yourchannelname
-```
+Основные команды:
 
-Copy the generated overlay URL and paste it into OBS as a Browser Source.
+| Команда | Что делает |
+|---|---|
+| `bun run dev` | Запускает Vite dev server |
+| `bun run youtube:dev` | Запускает YouTube bridge с hot reload |
+| `bun run build` | Собирает production frontend в `dist/` |
+| `bun run start` | Открывает локальный preview сборки |
+| `bun run check` | Запускает lint, typecheck, тесты и build |
 
-To develop with YouTube live chat, start the bridge in a second terminal:
+## YouTube Live Chat
+
+YouTube.js работает на JavaScript, но перенести весь чат в GitHub Pages нельзя.
+Браузер блокирует запросы к Innertube endpoints по CORS. Поэтому frontend остается
+статическим, а запросы к YouTube выполняет bridge из
+`services/youtube-websocket`.
+
+Для локальной разработки запустите его во втором терминале:
 
 ```bash
 bun run youtube:dev
 ```
 
-### Build
+По умолчанию он слушает `http://localhost:9905`, а overlay подключается к
+`ws://localhost:9905`. В production bridge нужно выставить наружу через TLS как
+`wss://` и указать этот адрес на странице настройки.
+
+### Docker
+
+Контейнер собирается из корня репозитория:
 
 ```bash
-bun run build
+docker build \
+  -f services/youtube-websocket/Dockerfile \
+  -t chatyx-youtube-websocket .
+
+docker run -d \
+  --name chatyx-youtube-websocket \
+  --restart unless-stopped \
+  -p 9905:9905 \
+  chatyx-youtube-websocket
 ```
 
-Output goes to `dist/`.
+Если YouTube должен ходить через proxy, передайте `YOUTUBE_PROXY_URL`:
 
-### GitHub Pages
+```bash
+docker run -e YOUTUBE_PROXY_URL=http://proxy.example:1080 chatyx-youtube-websocket
+```
 
-The project includes `.github/workflows/deploy-pages.yml` for GitHub Pages.
+Для production поставьте перед сервисом Caddy, Nginx или другой reverse proxy с
+поддержкой WebSocket и TLS.
 
-In repository settings, open **Pages** and set **Source** to **GitHub Actions**. Pushing to `main` or `master` runs checks, builds the app, adds the SPA `404.html` fallback, and deploys `dist`.
+## Конфигурация
 
-The custom domain is configured via `public/CNAME` as `chat.ruina.team`. The workflow builds with relative asset paths (`VITE_BASE_PATH=./`), so the same artifact works on both `https://chat.ruina.team/` and the GitHub project URL.
+Настройки оверлея хранятся прямо в query-параметрах ссылки. Их не нужно писать
+вручную: setup-страница собирает URL сама.
 
-GitHub Pages hosts only the static overlay. Browser requests to YouTube's
-Innertube endpoints are blocked by CORS, so YouTube chat requires the bridge in
-`services/youtube-websocket` to be deployed separately and exposed through
-`wss://`. The frontend and bridge live in this repository and share one Bun
-lockfile.
-
-## Configuration
-
-All config is passed via URL query parameters. The setup page generates the correct URL for you.
-
-### Environment Variables
-
-Create a `.env` file to override defaults:
+Переменные окружения frontend:
 
 ```env
-# Your own backend API (optional — falls back to localhost:3002 for local dev)
-VITE_API_URL=https://your-api.example.com
+# Необязательный backend для cheermotes
+VITE_API_URL=https://api.example.com
 
-# Twitch web GraphQL Client-ID override (optional)
+# Необязательная замена Twitch web GraphQL Client-ID
 VITE_TWITCH_GQL_CLIENT_ID=your-client-id
 ```
 
-The local API (`localhost:3002`) is only needed for cheermotes (requires Twitch OAuth). All other features work without it via public fallback APIs.
+Локальный API на `localhost:3002` нужен только для cheermotes, если публичные
+fallback API не дают нужные данные. Остальной Twitch-оверлей работает напрямую.
 
-The YouTube WebSocket URL is configured by the setup page and stored in the
-overlay URL. It defaults to `ws://localhost:9905` for local development.
+Чтобы открыть performance monitor, добавьте к URL параметр `debug=true`.
 
-### Checks
+## Команды в чате
 
-```bash
-bun run check
+Управлять оверлеем могут владелец канала, `lead_moderator` и `moderator`.
+Команды выполняются даже когда их отображение выключено в настройках: этот
+переключатель скрывает командные сообщения, но не отключает управление.
+
+| Команда | Действие |
+|---|---|
+| `!chat refresh` | Перезагружает эмоуты, бейджи и 7TV-косметику |
+| `!chat reload` | Перезагружает Browser Source |
+| `!chat show` / `!chat hide` | Показывает или скрывает чат |
+| `!chat clear` | Очищает сообщения на экране |
+| `!chat ping` | Проверяет, что оверлей принимает команды |
+| `!chat test [1-50]` | Добавляет тестовые сообщения |
+Префиксы `!chat`, `!chatis` и `!chatyx` равноправны. Также поддерживаются
+старые алиасы `!refreshoverlay` и `!reloadchat`.
+Медиа-команды и `tts` пока намеренно не реализованы.
+
+Оверлей также слушает developer chat `#linaryx`. Оттуда команды принимает только
+от Twitch-пользователя `linaryx` с ID `684505240`, причем адрес канала обязателен:
+
+```text
+!chatyx refresh -c channel
+!chatyx reload -c channel1,channel2
+!chatyx ping -c all
 ```
 
-This runs lint, frontend and service typechecks, tests, and the production build.
+## Деплой
 
-### Debug Mode
+Frontend автоматически проверяется и публикуется на GitHub Pages workflow-файлом
+`.github/workflows/deploy-pages.yml`. Каждый push в `main` проходит через lint,
+typecheck, тесты, frontend build и проверку Docker-образа YouTube bridge.
 
-Add `?debug=true` to the overlay URL to show a performance monitor overlay (FPS, memory, frame times, DOM nodes, WebSocket connections).
+GitHub Pages размещает только frontend. YouTube bridge нужно запустить отдельно
+на своем сервере, если в оверлее нужен YouTube чат.
 
-## Tech Stack
+## Стек
 
-| Layer | Library |
-|---|---|
-| UI framework | [SolidJS](https://solidjs.com) |
-| Routing | [@solidjs/router](https://github.com/solidjs/solid-router) |
-| Bundler | [Vite](https://vitejs.dev) |
-| Package manager | [Bun](https://bun.sh) |
-| Linter | [oxlint](https://oxc.rs/docs/guide/usage/linter) |
+- [SolidJS](https://solidjs.com)
+- [Vite](https://vite.dev)
+- [Bun](https://bun.sh)
+- [YouTube.js](https://ytjs.dev)
+- [Oxlint](https://oxc.rs/docs/guide/usage/linter)
+- TypeScript
 
-## License
+## Лицензия
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE). Используйте, переделывайте и собирайте свой оверлей.

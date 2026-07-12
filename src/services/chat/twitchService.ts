@@ -39,6 +39,7 @@ export interface TwitchMessage {
   // Snapshot of emotes at message creation time (to prevent updates when emote sets change)
   emoteSnapshot?: Map<string, any>;
   tokenSnapshot?: MessageTokenSnapshot;
+  sourceChannel?: string;
 }
 
 export class TwitchService {
@@ -64,6 +65,7 @@ export class TwitchService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private channel: string = "";
+  private additionalChannels: string[] = [];
   private nick: string = "justinfan12345";
   private onMessageCallback: ((message: TwitchMessage) => void) | null = null;
   private onConnectCallback: (() => void) | null = null;
@@ -92,6 +94,7 @@ export class TwitchService {
     onMessageDelete?: (messageId: string) => void,
     onUserBan?: (username: string) => void,
     onChatClear?: () => void,
+    additionalChannels: string[] = [],
   ) {
     // Проверяем, не подключены ли уже
     if (
@@ -105,6 +108,9 @@ export class TwitchService {
     this.intentionallyDisconnected = false;
     this.clearReconnectTimer();
     this.channel = channel.toLowerCase();
+    this.additionalChannels = additionalChannels
+      .map((value) => value.trim().replace(/^#/, "").toLowerCase())
+      .filter((value) => value && value !== this.channel);
     this.onMessageCallback = onMessage;
     this.onConnectCallback = onConnect || null;
     this.onDisconnectCallback = onDisconnect || null;
@@ -168,6 +174,9 @@ export class TwitchService {
 
     // Присоединяемся к каналу
     this.ws.send(`JOIN #${this.channel}`);
+    for (const additionalChannel of this.additionalChannels) {
+      this.ws.send(`JOIN #${additionalChannel}`);
+    }
   }
 
   private handleMessage(data: string) {
@@ -181,6 +190,18 @@ export class TwitchService {
       // Обрабатываем PING
       if (line.startsWith("PING")) {
         this.ws?.send("PONG :tmi.twitch.tv");
+        continue;
+      }
+
+      const sourceChannel = this.parseSourceChannel(line);
+      if (sourceChannel && sourceChannel !== this.channel) {
+        if (
+          this.additionalChannels.includes(sourceChannel) &&
+          line.includes("PRIVMSG")
+        ) {
+          const message = this.parsePrivMsg(line);
+          if (message) this.onMessageCallback?.(message);
+        }
         continue;
       }
 
@@ -343,13 +364,14 @@ export class TwitchService {
     try {
       // Парсим IRC сообщение с правильным regex
       const match = line.match(
-        /^@([^ ]+) (?:[^ ]+ )?PRIVMSG #[A-Za-z0-9_]+ :?(.+)$/,
+        /^@([^ ]+) (?:[^ ]+ )?PRIVMSG #([A-Za-z0-9_]+) :?(.+)$/,
       );
       if (!match) return null;
 
       const tags = this.parseTags(match[1]);
       const tagMap = new Map(Object.entries(tags));
-      const message = match[2];
+      const sourceChannel = match[2].toLowerCase();
+      const message = match[3];
 
       // Извлекаем username из IRC формата
       const usernameMatch = line.match(/:([^!]+)!/);
@@ -389,6 +411,7 @@ export class TwitchService {
         customRewardId: tags["custom-reward-id"] || undefined,
         platform: "twitch",
         isGigantifiedEmote: tags["msg-id"] === "gigantified-emote-message",
+        sourceChannel,
       };
     } catch (error) {
       log.error(LOG_CATEGORIES.IRC, "Error parsing PRIVMSG", error);
@@ -400,12 +423,13 @@ export class TwitchService {
     try {
       // Парсим USERNOTICE сообщения (включая Cheer события)
       const match = line.match(
-        /^@([^ ]+) (?:[^ ]+ )?USERNOTICE #[A-Za-z0-9_]+(?: :(.+))?$/,
+        /^@([^ ]+) (?:[^ ]+ )?USERNOTICE #([A-Za-z0-9_]+)(?: :(.+))?$/,
       );
       if (!match) return null;
 
       const tags = this.parseTags(match[1]);
-      const message = match[2] || "";
+      const sourceChannel = match[2].toLowerCase();
+      const message = match[3] || "";
 
       // Извлекаем username из IRC формата
       const usernameMatch = line.match(/:([^!]+)!/);
@@ -456,6 +480,7 @@ export class TwitchService {
         isGigantifiedEmote: msgId === "gigantified-emote-message",
         bits: bits,
         cheerPrefix: cheerPrefix,
+        sourceChannel,
       };
     } catch (error) {
       log.error(LOG_CATEGORIES.IRC, "Error parsing USERNOTICE", error);
@@ -511,6 +536,13 @@ export class TwitchService {
     const match = line.match(/^@([^ ]+)/);
     if (!match) return {};
     return this.parseTags(match[1]);
+  }
+
+  private parseSourceChannel(line: string): string {
+    return (
+      line.match(/\b(?:PRIVMSG|USERNOTICE|CLEARMSG|CLEARCHAT|ROOMSTATE|JOIN) #([A-Za-z0-9_]+)/i)?.[1]?.toLowerCase() ||
+      ""
+    );
   }
 
   private parseBadges(badgesString: string): string[] {

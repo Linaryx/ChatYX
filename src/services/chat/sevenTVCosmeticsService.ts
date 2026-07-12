@@ -62,7 +62,12 @@ export interface Cosmetics {
     [id: string]: Paint; // paint ID -> paint object
 }
 
-class SevenTVCosmeticsService {
+export type CosmeticRefreshUser = {
+    username: string;
+    userId: string;
+};
+
+export class SevenTVCosmeticsService {
     private cosmetics: Cosmetics = {};
     private userCosmetics: UserCosmetics = {};
     private paintCSSCache: Map<string, any> = new Map();
@@ -107,6 +112,7 @@ class SevenTVCosmeticsService {
     }
 
     addUserCosmetic(username: string, paintId: string): void {
+        username = username.toLowerCase();
         if (!this.userCosmetics[username]) {
             this.userCosmetics[username] = [];
         }
@@ -125,6 +131,7 @@ class SevenTVCosmeticsService {
 
     async loadUserPaints(username: string, userId?: string): Promise<void> {
         if (!userId) return;
+        username = username.toLowerCase();
         
         try {
             const response = await fetch(`https://7tv.io/v3/users/twitch/${userId}`);
@@ -144,6 +151,69 @@ class SevenTVCosmeticsService {
             }
         } catch (error) {
             log.error(LOG_CATEGORIES.PAINTS, `Failed to load user paints for ${username}`, error);
+        }
+    }
+
+    async reloadCosmetics(users: CosmeticRefreshUser[]): Promise<void> {
+        this.cosmetics = {};
+        this.userCosmetics = {};
+        this.clearAllCaches();
+
+        await this.loadPaintCatalog();
+
+        const uniqueUsers = new Map<string, CosmeticRefreshUser>();
+        for (const user of users) {
+            if (!user.userId) continue;
+            uniqueUsers.set(user.userId, {
+                username: user.username.toLowerCase(),
+                userId: user.userId,
+            });
+        }
+
+        await Promise.all(
+            Array.from(uniqueUsers.values()).map((user) =>
+                this.loadUserPaints(user.username, user.userId),
+            ),
+        );
+    }
+
+    private async loadPaintCatalog(): Promise<void> {
+        const response = await fetch("https://7tv.io/v3/gql", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                query: `
+                    query GetPaintCatalog {
+                        cosmetics {
+                            paints {
+                                id
+                                name
+                                function
+                                color
+                                angle
+                                repeat
+                                shape
+                                image_url
+                                stops { at color }
+                                shadows { x_offset y_offset radius color }
+                            }
+                        }
+                    }
+                `,
+            }),
+        });
+        if (!response.ok) {
+            throw new Error(`7TV paint catalog HTTP ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const paints = payload.data?.cosmetics?.paints;
+        if (!Array.isArray(paints)) {
+            throw new Error("7TV paint catalog response is invalid");
+        }
+
+        for (const paint of paints) {
+            if (paint?.id) this.addCosmetic(paint.id, paint);
         }
     }
 
