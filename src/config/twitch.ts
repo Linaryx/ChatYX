@@ -1,9 +1,11 @@
-// API base URL — set VITE_API_URL in .env to point to your own backend.
-// Falls back to localhost:3002 for local development.
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3002";
+// Production only uses a backend when explicitly configured.
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:3002" : "")
+).replace(/\/+$/, "");
 
 export const TWITCH_CONFIG = {
-  API_BASE_URL: `${API_BASE}/api/twitch`,
+  API_BASE_URL: API_BASE ? `${API_BASE}/api/twitch` : "",
 
   TWITCH_API_BASE: "https://api.twitch.tv/helix",
   TWITCH_OAUTH_URL: "https://id.twitch.tv/oauth2/token",
@@ -19,23 +21,23 @@ export const FALLBACK_APIS = {
   cheermotes: null,
 };
 
-// Cache the local API availability so we only probe once per session
-let localApiAvailable: boolean | null = null;
+// Cache backend availability so we only probe once per session.
+let backendApiAvailable: boolean | null = null;
 
-async function checkLocalApi(): Promise<boolean> {
-  if (localApiAvailable !== null) return localApiAvailable;
+async function checkBackendApi(): Promise<boolean> {
+  if (backendApiAvailable !== null) return backendApiAvailable;
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2000);
     const response = await fetch(`${API_BASE}/api/health`, { signal: controller.signal });
     clearTimeout(timeout);
-    localApiAvailable = response.ok;
+    backendApiAvailable = response.ok;
   } catch {
-    localApiAvailable = false;
+    backendApiAvailable = false;
   }
 
-  return localApiAvailable;
+  return backendApiAvailable;
 }
 
 export async function fetchWithFallback(
@@ -43,10 +45,18 @@ export async function fetchWithFallback(
   fallbackUrl: string | null = null,
   options?: RequestInit,
 ): Promise<Response> {
-  const isLocalRequest = primaryUrl.startsWith(API_BASE);
+  if (!API_BASE && primaryUrl.startsWith("/")) {
+    if (fallbackUrl) return fetch(fallbackUrl, options);
+    return new Response(JSON.stringify({ error: "API unavailable" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
-  if (isLocalRequest) {
-    const available = await checkLocalApi();
+  const isBackendRequest = Boolean(API_BASE) && primaryUrl.startsWith(API_BASE);
+
+  if (isBackendRequest) {
+    const available = await checkBackendApi();
     if (!available) {
       if (fallbackUrl) return fetch(fallbackUrl, options);
       return new Response(JSON.stringify({ error: "API unavailable" }), {
