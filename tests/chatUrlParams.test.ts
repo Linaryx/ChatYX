@@ -8,6 +8,12 @@ import {
 } from "../src/config/chatUrlParams";
 
 describe("chat URL params", () => {
+  test("uses the hosted YouTube websocket by default", () => {
+    expect(DEFAULT_CHAT_CONFIG.youtubeWebSocketUrl).toBe(
+      "wss://ytwss.ruina.team",
+    );
+  });
+
   test("parses aliases and typed values", () => {
     const params = new URLSearchParams(
       "channel=forsen&yt=@someyt&ytws=ws://localhost:9905&s=2&fw=700&nfw=900&sh=0&fd=0&a=false&ms=91&rm=false&b=false&cmd=false&es=1.5&sg=someuser&u7=false",

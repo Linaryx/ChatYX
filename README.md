@@ -67,9 +67,9 @@ YouTube.js работает на JavaScript, но перенести весь ч
 bun run youtube:dev
 ```
 
-По умолчанию он слушает `http://localhost:9905`, а overlay подключается к
-`ws://localhost:9905`. В production bridge нужно выставить наружу через TLS как
-`wss://` и указать этот адрес на странице настройки.
+По умолчанию локальный bridge слушает `http://localhost:9905`, а production
+overlay подключается к `wss://ytwss.ruina.team`. Для локальной разработки адрес
+можно переопределить на странице настройки или параметром `ytws=ws://localhost:9905`.
 
 ### Docker
 

@@ -50,7 +50,7 @@ export const DEFAULT_FONT_WEIGHT = 800;
 export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   channel: "",
   youtubeChannel: "",
-  youtubeWebSocketUrl: "",
+  youtubeWebSocketUrl: "wss://ytwss.ruina.team",
   size: 1,
   font: 2,
   fontWeight: DEFAULT_FONT_WEIGHT,

@@ -59,7 +59,7 @@ function normalizeHandle(value: string) {
 function normalizeWebSocketBase(value: string) {
   const trimmed = value.trim().replace(/\/+$/, "");
   if (trimmed) return trimmed;
-  return "ws://localhost:9905";
+  return "wss://ytwss.ruina.team";
 }
 
 function fallbackColor(seed: string) {
