@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import { createMemo, type JSX } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
 import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { badgeService } from "~/services/badges";
@@ -18,9 +18,10 @@ type ChatBadgesProps = {
   service: ChatPresentationService;
 };
 
-export const ChatBadges = (props: ChatBadgesProps): JSX.Element[] => {
-  const { message, config, service } = props;
-  const badges: JSX.Element[] = [];
+export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
+  const renderedBadges = createMemo(() => {
+    const { message, config, service } = props;
+    const badges: JSX.Element[] = [];
 
   if (message.badges?.length) {
     const roleBadgeMap = new Map<string, JSX.Element>();
@@ -215,5 +216,8 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element[] => {
       );
     });
 
-  return badges;
+    return badges;
+  });
+
+  return <>{renderedBadges()}</>;
 };

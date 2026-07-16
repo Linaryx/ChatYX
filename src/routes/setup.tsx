@@ -17,7 +17,9 @@ import {
   DEFAULT_CHAT_CONFIG,
   chatConfigToSearchParams,
   normalizeBotNames,
+  type ChatAnimationMode,
   type ChatConfig,
+  type LinkDisplayMode,
 } from "~/config/chatUrlParams";
 import { getAppBaseUrl, getPublicAssetUrl } from "~/utils/appBase";
 import {
@@ -25,6 +27,10 @@ import {
   MIN_MESSAGE_SPEED,
   messageSpeedToIntervalMs,
 } from "~/utils/ui/animationUtils";
+import {
+  createChatPreviewConfigMessage,
+  getChatPreviewSessionKey,
+} from "~/services/chat/preview";
 
 type ControlRow = {
   label: string;
@@ -305,7 +311,9 @@ export default function ChatSetup() {
   const [fade, setFade] = createSignal(
     DEFAULT_CHAT_CONFIG.fade === false ? "0" : String(DEFAULT_CHAT_CONFIG.fade),
   );
-  const [animate, setAnimate] = createSignal(DEFAULT_CHAT_CONFIG.animate);
+  const [animation, setAnimation] = createSignal<ChatAnimationMode>(
+    DEFAULT_CHAT_CONFIG.animation,
+  );
   const [messageSpeed, setMessageSpeed] = createSignal(
     String(DEFAULT_CHAT_CONFIG.messageSpeed),
   );
@@ -371,11 +379,50 @@ export default function ChatSetup() {
   const [overlayBorderOpacity, setOverlayBorderOpacity] = createSignal(
     String(DEFAULT_CHAT_CONFIG.overlayBorderOpacity),
   );
+  const [highlightTwitchEvents, setHighlightTwitchEvents] = createSignal(
+    DEFAULT_CHAT_CONFIG.highlightTwitchEvents,
+  );
+  const [twitchEventColor, setTwitchEventColor] = createSignal(
+    DEFAULT_CHAT_CONFIG.twitchEventColor,
+  );
+  const [twitchEventBackgroundOpacity, setTwitchEventBackgroundOpacity] =
+    createSignal(String(DEFAULT_CHAT_CONFIG.twitchEventBackgroundOpacity));
+  const [twitchEventBold, setTwitchEventBold] = createSignal(
+    DEFAULT_CHAT_CONFIG.twitchEventBold,
+  );
+  const [twitchEventItalic, setTwitchEventItalic] = createSignal(
+    DEFAULT_CHAT_CONFIG.twitchEventItalic,
+  );
+  const [showHighlightedMessages, setShowHighlightedMessages] = createSignal(
+    DEFAULT_CHAT_CONFIG.showHighlightedMessages,
+  );
+  const [showChannelPointRewards, setShowChannelPointRewards] = createSignal(
+    DEFAULT_CHAT_CONFIG.showChannelPointRewards,
+  );
+  const [showGigantifiedEmotes, setShowGigantifiedEmotes] = createSignal(
+    DEFAULT_CHAT_CONFIG.showGigantifiedEmotes,
+  );
+  const [linkMode, setLinkMode] = createSignal<LinkDisplayMode>(
+    DEFAULT_CHAT_CONFIG.linkMode,
+  );
+  const [linkColor, setLinkColor] = createSignal(DEFAULT_CHAT_CONFIG.linkColor);
+  const [hideLinkRewards, setHideLinkRewards] = createSignal(
+    DEFAULT_CHAT_CONFIG.hideLinkRewards,
+  );
 
   const [generatedUrl, setGeneratedUrl] = createSignal("");
   const [previewUrl, setPreviewUrl] = createSignal("");
   // eslint-disable-next-line no-unassigned-vars -- assigned by SolidJS ref={}
   let iframeRef: HTMLIFrameElement | undefined;
+  let activePreviewSessionKey = "";
+  let previewNavigationTimer: number | undefined;
+
+  const postPreviewConfig = (config = previewConfig()) => {
+    iframeRef?.contentWindow?.postMessage(
+      createChatPreviewConfigMessage(config),
+      window.location.origin,
+    );
+  };
 
   onMount(() => {
     const previousHtmlBackground = document.documentElement.style.background;
@@ -1006,7 +1053,7 @@ export default function ChatSetup() {
     shadow: toIntOrFalse(shadow()),
     stroke: toIntOrFalse(stroke()),
     fade: toSecondsOrFalse(fade()),
-    animate: animate(),
+    animation: animation(),
     messageSpeed: toClampedInt(
       messageSpeed(),
       DEFAULT_CHAT_CONFIG.messageSpeed,
@@ -1047,6 +1094,23 @@ export default function ChatSetup() {
       overlayBorderOpacity(),
       DEFAULT_CHAT_CONFIG.overlayBorderOpacity,
     ),
+    highlightTwitchEvents: highlightTwitchEvents(),
+    twitchEventColor: normalizeHexColor(
+      twitchEventColor(),
+      DEFAULT_CHAT_CONFIG.twitchEventColor,
+    ),
+    twitchEventBackgroundOpacity: toInt(
+      twitchEventBackgroundOpacity(),
+      DEFAULT_CHAT_CONFIG.twitchEventBackgroundOpacity,
+    ),
+    twitchEventBold: twitchEventBold(),
+    twitchEventItalic: twitchEventItalic(),
+    showHighlightedMessages: showHighlightedMessages(),
+    showChannelPointRewards: showChannelPointRewards(),
+    showGigantifiedEmotes: showGigantifiedEmotes(),
+    linkMode: linkMode(),
+    linkColor: normalizeHexColor(linkColor(), DEFAULT_CHAT_CONFIG.linkColor),
+    hideLinkRewards: hideLinkRewards(),
   });
 
   const buildChatUrl = (
@@ -1189,18 +1253,24 @@ export default function ChatSetup() {
     const cfg = previewConfig(); // read synchronously so SolidJS tracks the dependency
     const mode = previewMode();
     const demoKind = previewDemoKind();
-    const timer = window.setTimeout(() => {
+    const sessionKey = getChatPreviewSessionKey(cfg, mode, demoKind);
+    if (sessionKey === activePreviewSessionKey) return;
+
+    activePreviewSessionKey = sessionKey;
+    if (previewNavigationTimer !== undefined) {
+      window.clearTimeout(previewNavigationTimer);
+    }
+    previewNavigationTimer = window.setTimeout(() => {
+      previewNavigationTimer = undefined;
       const nextPreviewUrl = buildChatUrl(
         cfg,
         mode === "demo"
           ? {
               preview: "true",
               demo: demoKind,
-              refresh: String(Date.now()),
             }
           : {
               preview: "false",
-              refresh: String(Date.now()),
             },
       );
 
@@ -1211,10 +1281,16 @@ export default function ChatSetup() {
         setPreviewUrl(nextPreviewUrl);
       }
     }, 180);
+  });
 
-    onCleanup(() => {
-      window.clearTimeout(timer);
-    });
+  onCleanup(() => {
+    if (previewNavigationTimer !== undefined) {
+      window.clearTimeout(previewNavigationTimer);
+    }
+  });
+
+  createEffect(() => {
+    postPreviewConfig(previewConfig());
   });
 
   const copyToClipboard = async () => {
@@ -1483,13 +1559,89 @@ export default function ChatSetup() {
         />
       ),
     },
+    {
+      label: "Подсветка событий Twitch",
+      hint: "Цвет первых сообщений, рейдов, подписок, наград и Twitch Power-ups.",
+      control: (
+        <ColorPickerField
+          color={twitchEventColor()}
+          opacity={toInt(
+            twitchEventBackgroundOpacity(),
+            DEFAULT_CHAT_CONFIG.twitchEventBackgroundOpacity,
+          )}
+          onChange={({ color, opacity }) => {
+            setTwitchEventColor(color);
+            setTwitchEventBackgroundOpacity(String(opacity));
+          }}
+        />
+      ),
+    },
+    {
+      label: "Цвет ссылок",
+      hint: "Используется, когда для ссылок выбран режим выделения.",
+      control: (
+        <ColorPickerField
+          color={linkColor()}
+          opacity={100}
+          showOpacity={false}
+          onChange={({ color }) => setLinkColor(color)}
+        />
+      ),
+    },
+  ];
+
+  const behaviorRows: ControlRow[] = [
+    {
+      label: "Анимация сообщений",
+      hint: "Плавный поток двигает существующие строки, остальные режимы анимируют только новое сообщение.",
+      control: (
+        <select
+          value={animation()}
+          onChange={(event) =>
+            setAnimation(event.currentTarget.value as ChatAnimationMode)
+          }
+          style={styles.input}
+        >
+          <option value="fade">Появление</option>
+          <option value="flow">Плавный поток</option>
+          <option value="scroll">Плавный скролл</option>
+          <option value="none">Без анимации</option>
+        </select>
+      ),
+    },
+    {
+      label: "Ссылки в сообщениях",
+      control: (
+        <select
+          value={linkMode()}
+          onChange={(event) =>
+            setLinkMode(event.currentTarget.value as LinkDisplayMode)
+          }
+          style={styles.input}
+        >
+          <option value="normal">Обычный текст</option>
+          <option value="highlight">Выделять цветом</option>
+          <option value="hide">Скрывать</option>
+        </select>
+      ),
+    },
   ];
 
   const behaviorToggles: ToggleRow[] = [
     {
-      label: "Анимировать новые сообщения",
-      checked: animate,
-      onChange: setAnimate,
+      label: "Подсвечивать события Twitch",
+      checked: highlightTwitchEvents,
+      onChange: setHighlightTwitchEvents,
+    },
+    {
+      label: "Жирный текст событий",
+      checked: twitchEventBold,
+      onChange: setTwitchEventBold,
+    },
+    {
+      label: "Курсив для событий",
+      checked: twitchEventItalic,
+      onChange: setTwitchEventItalic,
     },
     {
       label: "Загружать последние сообщения",
@@ -1521,6 +1673,27 @@ export default function ChatSetup() {
   ];
 
   const contentToggles: ToggleRow[] = [
+    {
+      label: "Показывать выделенные сообщения",
+      checked: showHighlightedMessages,
+      onChange: setShowHighlightedMessages,
+    },
+    {
+      label: "Показывать покупки за баллы",
+      checked: showChannelPointRewards,
+      onChange: setShowChannelPointRewards,
+    },
+    {
+      label: "Скрывать награды со ссылками",
+      checked: hideLinkRewards,
+      onChange: setHideLinkRewards,
+      hint: "Включено по умолчанию. Скрывает всю покупку за баллы, если в сообщении, названии или описании награды есть ссылка.",
+    },
+    {
+      label: "Показывать гигантские эмоуты",
+      checked: showGigantifiedEmotes,
+      onChange: setShowGigantifiedEmotes,
+    },
     {
       label: "Показывать команды с !",
       checked: commands,
@@ -1719,6 +1892,13 @@ export default function ChatSetup() {
                   Управляет анимацией, переносами, порядком и форматом
                   сообщений.
                 </div>
+                {renderControlRows(behaviorRows, {
+                  controlRow: { ...styles.controlRow },
+                  controlLabelWrap: styles.controlLabelWrap,
+                  controlSlot: styles.controlSlot,
+                  settingLabel: styles.settingLabel,
+                  settingHint: styles.settingHint,
+                })}
                 {renderToggleRows(behaviorToggles, {
                   toggleRow: { ...styles.toggleRow },
                   toggleLabelWrap: styles.toggleLabelWrap,
@@ -1930,7 +2110,7 @@ export default function ChatSetup() {
                               opacity: previewMode() === "demo" ? "1" : "0.5",
                             }}
                           >
-                            <option value="pasta">Паста</option>
+                            <option value="pasta">Сообщения</option>
                             <option value="emote">Обычный</option>
                           </select>
                         </div>
@@ -1980,6 +2160,7 @@ export default function ChatSetup() {
                     <iframe
                       ref={iframeRef}
                       src={previewUrl()}
+                      onLoad={() => postPreviewConfig()}
                       style={styles.previewFrame}
                       title="Chat preview"
                       scrolling="no"

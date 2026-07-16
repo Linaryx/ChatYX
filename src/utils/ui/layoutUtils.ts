@@ -14,7 +14,7 @@ export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
  * Generate CSS for layout options
  */
 export function getLayoutStyles(options: LayoutOptions): string {
-  const { horizontal, reverse } = options;
+  const { horizontal } = options;
 
   let styles = "";
 
@@ -25,7 +25,7 @@ export function getLayoutStyles(options: LayoutOptions): string {
         display: flex;
         flex-direction: row;
         align-items: flex-end;
-        justify-content: flex-end;
+        justify-content: flex-start;
         gap: 1rem;
         overflow-x: hidden;
         overflow-y: hidden;
@@ -40,7 +40,7 @@ export function getLayoutStyles(options: LayoutOptions): string {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        justify-content: flex-end;
+        justify-content: flex-start;
         overflow-y: hidden;
         overflow-x: hidden;
       }
@@ -48,25 +48,6 @@ export function getLayoutStyles(options: LayoutOptions): string {
         flex: 0 0 auto;
       }
     `;
-  }
-
-  // Reverse order (newest first)
-  if (reverse) {
-    if (horizontal) {
-      styles += `
-        #chat_container {
-          flex-direction: row-reverse;
-        }
-      `;
-    } else {
-      styles += `
-        #chat_container {
-          display: flex;
-          flex-direction: column-reverse;
-          justify-content: flex-end;
-        }
-      `;
-    }
   }
 
   return styles;
@@ -135,11 +116,13 @@ export function getScrollPosition(
   container: HTMLElement,
   options: LayoutOptions,
 ): number {
+  if (options.reverse) return 0;
+
   if (options.horizontal) {
-    return options.reverse ? 0 : container.scrollWidth;
-  } else {
-    return options.reverse ? 0 : container.scrollHeight;
+    return Math.max(0, container.scrollWidth - container.clientWidth);
   }
+
+  return Math.max(0, container.scrollHeight - container.clientHeight);
 }
 
 /**
@@ -148,13 +131,15 @@ export function getScrollPosition(
 export function scrollToLatest(
   container: HTMLElement,
   options: LayoutOptions,
-  smooth: boolean = true,
+  behavior: ScrollBehavior = "auto",
 ): void {
-  void container;
-  void options;
-  void smooth;
-  // The overlay is bottom/right anchored with overflow clipping. New messages
-  // shift old content out of view, so runtime must not depend on scroll state.
+  const position = getScrollPosition(container, options);
+
+  if (options.horizontal) {
+    container.scrollTo({ left: position, behavior });
+  } else {
+    container.scrollTo({ top: position, behavior });
+  }
 }
 
 /**
@@ -165,10 +150,10 @@ export function isScrolledToEnd(
   options: LayoutOptions,
   threshold: number = 50,
 ): boolean {
-  void container;
-  void options;
-  void threshold;
-  return true;
+  const current = options.horizontal ? container.scrollLeft : container.scrollTop;
+  if (options.reverse) return Math.abs(current) <= threshold;
+
+  return getScrollPosition(container, options) - current <= threshold;
 }
 
 /**
@@ -214,12 +199,12 @@ export class LayoutManager {
   /**
    * Scroll to latest message if auto-scroll enabled
    */
-  scrollIfNeeded(smooth: boolean = true): void {
+  scrollIfNeeded(behavior: ScrollBehavior = "auto"): void {
     const shouldScroll =
       this.autoScroll || isScrolledToEnd(this.container, this.options);
     if (!shouldScroll) return;
 
-    const scroll = () => scrollToLatest(this.container, this.options, smooth);
+    const scroll = () => scrollToLatest(this.container, this.options, behavior);
     scroll();
 
     if (typeof window === "undefined") return;

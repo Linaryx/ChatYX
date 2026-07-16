@@ -1,4 +1,12 @@
-import { createMemo, onCleanup, onMount, type JSX } from "solid-js";
+import {
+  createMemo,
+  Match,
+  onCleanup,
+  onMount,
+  Show,
+  Switch,
+  type JSX,
+} from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
 import { normalizeFontWeight } from "~/config/chatUrlParams";
 import {
@@ -7,6 +15,7 @@ import {
   type ChatPresentationService,
 } from "~/services/chat";
 import { getFontFamily } from "~/styles/chatStyles";
+import { hasMessageEntryAnimation } from "~/utils/ui/animationUtils";
 import { ChatBadges } from "~/components/chat/ChatBadges";
 import { ChatNick } from "~/components/chat/ChatNick";
 import { ChatText } from "~/components/chat/ChatText";
@@ -28,6 +37,35 @@ const CSS_COLOR_PATTERN =
 
 function safeCssColor(color: string, fallback = "#e6eef7") {
   return CSS_COLOR_PATTERN.test(color) ? color : fallback;
+}
+
+function hexToRgba(color: string, opacity: number): string {
+  const normalized = color.trim().replace(/^#/, "");
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return "rgba(145, 70, 255, 0.22)";
+
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  const alpha = Math.min(Math.max(opacity, 0), 100) / 100;
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function formatEventCount(value: number | undefined): string {
+  if (!Number.isFinite(value)) return "";
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function EventStar() {
+  return (
+    <svg
+      class="chat-event-icon chat-event-star"
+      viewBox="0 0 20 20"
+      aria-label="Событие"
+      role="img"
+    >
+      <path d="m10 1.5 2.47 5.01 5.53.8-4 3.9.94 5.49L10 14.27 5.06 16.7 6 11.21l-4-3.9 5.53-.8L10 1.5Z" />
+    </svg>
+  );
 }
 
 function stripLeadingMention(text: string) {
@@ -66,7 +104,7 @@ function stripReplyMention(message: TwitchMessage, text: string) {
 }
 
 export const ChatMessage = (props: ChatMessageProps) => {
-  const { message, config, service } = props;
+  const { message, service } = props;
   let rootRef: HTMLDivElement | undefined;
   let animationTimer: number | undefined;
 
@@ -90,15 +128,60 @@ export const ChatMessage = (props: ChatMessageProps) => {
   const paintCSS =
     integrationPaint || sevenTVCosmeticsService.calculatePaintCSS(message.username);
   const userColor = safeCssColor(message.color || "#e6eef7");
-  const fontWeight = String(normalizeFontWeight(config.fontWeight));
-  const nickFontWeight = String(normalizeFontWeight(config.nickFontWeight));
+  const visibleTwitchEvent = createMemo(() => {
+    const event = message.twitchEvent;
+    if (!event) return undefined;
+    if (
+      event.type === "highlighted-message" &&
+      !props.config.showHighlightedMessages
+    ) {
+      return undefined;
+    }
+    if (event.type === "reward" && !props.config.showChannelPointRewards) {
+      return undefined;
+    }
+    if (event.type === "power-up" && !props.config.showGigantifiedEmotes) {
+      return undefined;
+    }
+    return event;
+  });
+  const styledTwitchEvent = createMemo(() => {
+    const event = visibleTwitchEvent();
+    return event?.type === "highlighted-message" ? undefined : event;
+  });
+  const fontWeight = createMemo(() => {
+    const weight = normalizeFontWeight(props.config.fontWeight);
+    return String(styledTwitchEvent() && props.config.twitchEventBold ? 900 : weight);
+  });
+  const nickFontWeight = createMemo(() =>
+    String(
+      styledTwitchEvent() && props.config.twitchEventBold
+        ? 900
+        : normalizeFontWeight(props.config.nickFontWeight),
+    ),
+  );
+  const eventColor = createMemo(() =>
+    safeCssColor(
+      visibleTwitchEvent()?.color || props.config.twitchEventColor,
+      "#9146ff",
+    ),
+  );
 
-  const messageStyle: JSX.CSSProperties = {
-    "font-family": getFontFamily(config),
-    "font-weight": fontWeight,
+  const messageStyle = createMemo<JSX.CSSProperties>(() => ({
+    "font-family": getFontFamily(props.config),
+    "font-weight": fontWeight(),
     "word-wrap": "break-word",
     "--chat-message-enter-duration": `${props.animationDurationMs}ms`,
-  };
+    "--chat-event-color": eventColor(),
+    "--chat-event-background": hexToRgba(
+      eventColor(),
+      props.config.twitchEventBackgroundOpacity,
+    ),
+    "--chat-link-color": safeCssColor(props.config.linkColor, "#53b7ff"),
+    "font-style": styledTwitchEvent() && props.config.twitchEventItalic
+      ? "italic"
+      : "normal",
+  }));
 
   let nickStyle = "";
   let paintClasses = "";
@@ -122,8 +205,8 @@ export const ChatMessage = (props: ChatMessageProps) => {
 
   const messageTextColor = isAction ? userColor : "white";
   const replyText = createMemo(() => getReplyText(message));
-  const showPlatformMarker = Boolean(
-    config.channel.trim() && config.youtubeChannel.trim(),
+  const showPlatformMarker = createMemo(() =>
+    Boolean(props.config.channel.trim() && props.config.youtubeChannel.trim()),
   );
 
   onMount(() => {
@@ -139,7 +222,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
       });
     }
 
-    if (props.config.animate) {
+    if (hasMessageEntryAnimation(props.config.animation)) {
       rootRef.classList.add("message-enter");
       animationTimer = window.setTimeout(() => {
         rootRef?.classList.remove("message-enter");
@@ -160,15 +243,23 @@ export const ChatMessage = (props: ChatMessageProps) => {
       }}
       class="chat_line"
       classList={{
-        "gigantified-emote": message.isGigantifiedEmote,
-        "platform-marked": showPlatformMarker,
+        "gigantified-emote": Boolean(
+          message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
+        ),
+        "platform-marked": showPlatformMarker(),
+        "chat-event": Boolean(visibleTwitchEvent()),
+        "chat-event-highlight": Boolean(
+          visibleTwitchEvent() && props.config.highlightTwitchEvents,
+        ),
+        [`chat-event-${visibleTwitchEvent()?.type}`]: Boolean(visibleTwitchEvent()),
       }}
-      style={messageStyle}
+      style={messageStyle()}
       data-nick={message.username}
       data-user-id={message.userId || ""}
       data-time={message.timestamp.getTime()}
       data-id={message.id}
       data-platform={message.platform || "twitch"}
+      data-event={visibleTwitchEvent()?.type || undefined}
     >
       {replyText() && (
         <div class="reply_line" title={replyText() || undefined}>
@@ -187,24 +278,97 @@ export const ChatMessage = (props: ChatMessageProps) => {
           <span class="reply_text">{replyText()}</span>
         </div>
       )}
-      <ChatBadges message={message} config={config} service={service} />
-      <ChatNick
-        message={message}
-        nickStyle={nickStyle}
-        fontWeight={nickFontWeight}
-        paintClasses={paintClasses}
-        paintAttributes={paintAttributes}
-        colonColor={has7tvPaint ? "#fff" : userColor}
-        isAction={isAction}
-        uppercase={config.smallCaps}
-      />
-      <ChatText
-        message={{ ...message, message: processedMessage }}
-        config={config}
-        service={service}
-        color={messageTextColor}
-        fontWeight={fontWeight}
-      />
+      <Show
+        when={
+          visibleTwitchEvent()?.type === "first-message" ||
+          visibleTwitchEvent()?.type === "highlighted-message" ||
+          visibleTwitchEvent()?.type === "power-up" ||
+          visibleTwitchEvent()?.type === "announcement"
+            ? undefined
+            : visibleTwitchEvent()
+        }
+      >
+        {(event) => (
+          <span class="chat-event-summary">
+            <Switch
+              fallback={
+                <>
+                  <EventStar />
+                  <span class="chat-event-label">{event().label}</span>
+                  <Show when={event().detail}>
+                    <span class="chat-event-detail">{event().detail}</span>
+                  </Show>
+                </>
+              }
+            >
+              <Match when={event().type === "subscription"}>
+                <EventStar />
+              </Match>
+              <Match when={event().type === "raid"}>
+                <img
+                  class="chat-event-icon"
+                  src="https://static-cdn.jtvnw.net/emoticons/v2/62836/default/dark/3.0"
+                  alt="Рейд"
+                />
+                <span class="chat-event-label">
+                  {event().detail || event().label}
+                </span>
+                <span class="chat-event-detail">
+                  проводит рейд
+                  {event().count !== undefined
+                    ? ` в компании ${formatEventCount(event().count)}`
+                    : ""}
+                  .
+                </span>
+              </Match>
+              <Match when={event().type === "reward"}>
+                <svg
+                  class="chat-event-icon"
+                  viewBox="0 0 24 24"
+                  aria-label="Награда за баллы"
+                  role="img"
+                >
+                  <path d="M12 7.2a4.8 4.8 0 0 1 4.8 4.8h-2.4a2.4 2.4 0 0 0-2.4-2.4V7.2Z" />
+                  <path fill-rule="evenodd" d="M21.6 12A9.6 9.6 0 1 1 2.4 12a9.6 9.6 0 0 1 19.2 0Zm-2.4 0a7.2 7.2 0 1 1-14.4 0 7.2 7.2 0 0 1 14.4 0Z" clip-rule="evenodd" />
+                </svg>
+                <Show when={event().count !== undefined}>
+                  <span class="chat-event-detail">
+                    {formatEventCount(event().count)}
+                  </span>
+                </Show>
+                <span class="chat-event-label">
+                  {event().detail || event().label}
+                </span>
+              </Match>
+            </Switch>
+          </span>
+        )}
+      </Show>
+      <Show when={!visibleTwitchEvent() || processedMessage.trim()}>
+        <ChatBadges message={message} config={props.config} service={service} />
+        <ChatNick
+          message={message}
+          nickStyle={nickStyle}
+          fontWeight={nickFontWeight()}
+          paintClasses={paintClasses}
+          paintAttributes={paintAttributes}
+          colonColor={has7tvPaint ? "#fff" : userColor}
+          isAction={isAction}
+          uppercase={props.config.smallCaps}
+        />
+        <ChatText
+          message={{
+            ...message,
+            message: processedMessage,
+            isGigantifiedEmote:
+              message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
+          }}
+          config={props.config}
+          service={service}
+          color={messageTextColor}
+          fontWeight={fontWeight()}
+        />
+      </Show>
     </div>
   );
 };

@@ -1,10 +1,11 @@
 import type { LucidColorPicker } from "lucid-color-picker";
 import "lucid-color-picker";
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 
 type ColorPickerFieldProps = {
   color: string;
   opacity: number;
+  showOpacity?: boolean;
   onChange: (value: { color: string; opacity: number }) => void;
 };
 
@@ -72,7 +73,8 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
   const [draftOpacity, setDraftOpacity] = createSignal(String(props.opacity));
   const [open, setOpen] = createSignal(false);
 
-  const currentValue = () => joinHexAlpha(props.color, props.opacity);
+  const currentValue = () =>
+    joinHexAlpha(props.color, props.showOpacity === false ? 100 : props.opacity);
 
   const styles = {
     root: {
@@ -171,7 +173,11 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
     if (!picker) return;
 
     const handleChange = () => {
-      const next = splitHexAlpha(picker.value, props.color, props.opacity);
+      const parsed = splitHexAlpha(picker.value, props.color, props.opacity);
+      const next =
+        props.showOpacity === false
+          ? { color: parsed.color, opacity: props.opacity }
+          : parsed;
       setDraft(next.color);
       setDraftOpacity(String(next.opacity));
       props.onChange(next);
@@ -219,7 +225,10 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
             <div
               style={{
                 ...styles.swatchOverlay,
-                background: hexToRgba(props.color, props.opacity),
+                background: hexToRgba(
+                  props.color,
+                  props.showOpacity === false ? 100 : props.opacity,
+                ),
               }}
             />
           </div>
@@ -239,22 +248,24 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
           style={styles.input}
         />
 
-        <input
-          type="number"
-          min="0"
-          max="100"
-          value={draftOpacity()}
-          onInput={(event) => setDraftOpacity(event.currentTarget.value)}
-          onBlur={commitOpacityDraft}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              commitOpacityDraft();
-            }
-          }}
-          placeholder="50"
-          style={styles.opacityInput}
-        />
+        <Show when={props.showOpacity !== false}>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={draftOpacity()}
+            onInput={(event) => setDraftOpacity(event.currentTarget.value)}
+            onBlur={commitOpacityDraft}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commitOpacityDraft();
+              }
+            }}
+            placeholder="50"
+            style={styles.opacityInput}
+          />
+        </Show>
       </div>
 
       <div

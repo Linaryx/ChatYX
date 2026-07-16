@@ -18,11 +18,38 @@ const PREVIEW_COLORS = [
 
 const IVR_CHUNK = 50;
 const PREVIEW_FETCH_TIMEOUT_MS = 3500;
+const MAX_ACTIVE_PREVIEW_VIEWERS = 40;
+
+export type PreviewChatters = {
+  broadcasters: string[];
+  moderators: string[];
+  vips: string[];
+  staff: string[];
+  viewers: string[];
+  chatbots: string[];
+};
 
 export let previewRealUsers: PreviewRealUser[] = [];
 
 export function resetUserPool() {
   previewRealUsers = [];
+}
+
+export function parsePreviewChatters(payload: any): PreviewChatters {
+  const source = payload?.chatters ?? payload;
+  const stringList = (value: unknown) =>
+    Array.isArray(value)
+      ? value.filter((entry): entry is string => typeof entry === "string")
+      : [];
+
+  return {
+    broadcasters: stringList(source?.broadcasters),
+    moderators: stringList(source?.moderators),
+    vips: stringList(source?.vips),
+    staff: stringList(source?.staff),
+    viewers: stringList(source?.viewers),
+    chatbots: stringList(source?.chatbots),
+  };
 }
 
 function fetchWithTimeout(
@@ -36,6 +63,33 @@ function fetchWithTimeout(
   return fetch(input, { ...init, signal: controller.signal }).finally(() => {
     window.clearTimeout(timeout);
   });
+}
+
+async function fetchActiveChatters(channel: string): Promise<PreviewChatters> {
+  const urls = [
+    `https://api.markzynk.com/twitch/chatters/${encodeURIComponent(channel)}`,
+    `https://api.tackling.cc/twitch/Chatters?login=${encodeURIComponent(channel)}&limit=500`,
+  ];
+
+  for (const url of urls) {
+    try {
+      const response = await fetchWithTimeout(url);
+      if (!response.ok) continue;
+
+      const chatters = parsePreviewChatters(await response.json());
+      const count =
+        chatters.broadcasters.length +
+        chatters.moderators.length +
+        chatters.vips.length +
+        chatters.staff.length +
+        chatters.viewers.length;
+      if (count > 0) return chatters;
+    } catch {
+      // Try the next mirror.
+    }
+  }
+
+  return parsePreviewChatters(null);
 }
 
 export async function resolveChannelId(channel: string): Promise<string> {
@@ -97,12 +151,19 @@ export async function fetchChannelUsers(
   previewRealUsers = [];
   previewRealUsers.push({ username: channel, displayName: channel, role: "broadcaster" });
 
-  // Phase 1: mods, vips, founders
+  // Phase 1: mods, VIPs, founders, and public leaderboard users
   try {
-    const [modvipResult, foundersResult] = await Promise.allSettled([
-      fetchWithTimeout(`https://api.ivr.fi/v2/twitch/modvip/${encodeURIComponent(channel)}`),
-      fetchWithTimeout(`https://api.ivr.fi/v2/twitch/founders/${encodeURIComponent(channel)}`),
-    ]);
+    const [modvipResult, foundersResult, leaderboardResult, chattersResult] =
+      await Promise.allSettled([
+        fetchWithTimeout(
+          `https://api.ivr.fi/v2/twitch/modvip/${encodeURIComponent(channel)}`,
+        ),
+        fetchWithTimeout(
+          `https://api.ivr.fi/v2/twitch/founders/${encodeURIComponent(channel)}`,
+        ),
+        twitchGqlService.loadChannelLeaderboardUsers(channelId),
+        fetchActiveChatters(channel),
+      ]);
 
     if (modvipResult.status === "fulfilled" && modvipResult.value.ok) {
       const data = await modvipResult.value.json();
@@ -122,6 +183,44 @@ export async function fetchChannelUsers(
       for (const founder of founders) {
         const login: string = founder.login ?? founder.name ?? "";
         if (login) previewRealUsers.push({ username: login, displayName: founder.displayName ?? login, role: "founder" });
+      }
+    }
+
+    if (chattersResult.status === "fulfilled") {
+      const chatters = chattersResult.value;
+      const addChatters = (
+        usernames: string[],
+        role: PreviewRealUser["role"],
+      ) => {
+        for (const username of usernames) {
+          previewRealUsers.push({ username, displayName: username, role });
+        }
+      };
+
+      addChatters(chatters.broadcasters, "broadcaster");
+      addChatters(chatters.moderators, "moderator");
+      addChatters(chatters.vips, "vip");
+      addChatters(chatters.staff, "");
+
+      const chatbotNames = new Set(
+        chatters.chatbots.map((username) => username.toLowerCase()),
+      );
+      addChatters(
+        chatters.viewers
+          .filter((username) => !chatbotNames.has(username.toLowerCase()))
+          .slice(0, MAX_ACTIVE_PREVIEW_VIEWERS),
+        "",
+      );
+    }
+
+    if (leaderboardResult.status === "fulfilled") {
+      for (const user of leaderboardResult.value) {
+        previewRealUsers.push({
+          username: user.login,
+          displayName: user.displayName,
+          role: "",
+          userId: user.id,
+        });
       }
     }
   } catch {
@@ -188,26 +287,28 @@ export async function fetchChannelUsers(
     }
   }
 
-  // Phase 2b: per-user Twitch badges from GQL (fire and forget)
-  // Use username as key instead of array index to avoid race if pool is rebuilt
-  void Promise.allSettled(
-    previewRealUsers.map((u) => {
+  // Resolve Twitch and third-party badges before rendering preview messages.
+  // Use username as key instead of array index to avoid races if the pool is rebuilt.
+  const senders = await twitchGqlService.loadSenders(
+    channelId,
+    previewRealUsers.flatMap((user) => (user.userId ? [user.userId] : [])),
+  );
+  await Promise.allSettled(
+    previewRealUsers.map(async (u) => {
       const login = u.username;
-      if (!u.userId) return Promise.resolve();
+      if (!u.userId) return;
 
-      return twitchGqlService
-        .loadSender(channelId, u.userId)
-        .then((sender) => {
-          if (!sender) return;
-          const user = previewRealUsers.find((x) => x.username === login);
-          if (!user) return;
+      const sender = senders.get(u.userId);
+      await badgeService.loadUserBadges(login, u.userId, true);
+      if (!sender) return;
 
-          user.displayName = sender.displayName || user.displayName;
-          user.color = sender.chatColor || user.color;
-          const badges = pickPreviewBadges(sender.displayBadges);
-          if (badges.length > 0) user.badges = badges;
-        })
-        .catch(() => {});
+      const user = previewRealUsers.find((x) => x.username === login);
+      if (!user) return;
+
+      user.displayName = sender.displayName || user.displayName;
+      user.color = sender.chatColor || user.color;
+      const badges = pickPreviewBadges(sender.displayBadges);
+      if (badges.length > 0) user.badges = badges;
     }),
   );
 }

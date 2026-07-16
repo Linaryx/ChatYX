@@ -29,7 +29,7 @@ describe("chat URL params", () => {
     expect(cfg.nickFontWeight).toBe(900);
     expect(cfg.shadow).toBe(false);
     expect(cfg.fade).toBe(false);
-    expect(cfg.animate).toBe(false);
+    expect(cfg.animation).toBe("none");
     expect(cfg.messageSpeed).toBe(91);
     expect(cfg.recentMessages).toBe(false);
     expect(cfg.bots).toBe(false);
@@ -52,7 +52,18 @@ describe("chat URL params", () => {
       fontWeight: 700,
       nickFontWeight: 900,
       messageSpeed: 72,
+      animation: "scroll",
       emoteScale: 1.25,
+      twitchEventColor: "#ff00ff",
+      twitchEventBackgroundOpacity: 35,
+      twitchEventBold: false,
+      twitchEventItalic: true,
+      showHighlightedMessages: false,
+      showChannelPointRewards: false,
+      showGigantifiedEmotes: false,
+      linkMode: "highlight",
+      linkColor: "#00ccff",
+      hideLinkRewards: false,
       botNames: normalizeBotNames("Nightbot, StreamElements"),
     };
 
@@ -68,7 +79,18 @@ describe("chat URL params", () => {
     expect(params.get("fw")).toBe("700");
     expect(params.get("nfw")).toBe("900");
     expect(params.get("ms")).toBe("72");
+    expect(params.get("an")).toBe("scroll");
     expect(params.get("es")).toBe("1.25");
+    expect(params.get("tec")).toBe("#ff00ff");
+    expect(params.get("teo")).toBe("35");
+    expect(params.get("teb")).toBe("false");
+    expect(params.get("tei")).toBe("true");
+    expect(params.get("hl")).toBe("false");
+    expect(params.get("rewards")).toBe("false");
+    expect(params.get("gigantify")).toBe("false");
+    expect(params.get("links")).toBe("highlight");
+    expect(params.get("linkcolor")).toBe("#00ccff");
+    expect(params.get("hidelinkrewards")).toBe("false");
     expect(params.get("bn")).toBe("nightbot,streamelements");
 
     expect(parseChatConfigFromSearchParams(params)).toEqual(cfg);
@@ -89,5 +111,27 @@ describe("chat URL params", () => {
     );
 
     expect(cfg.bots).toBe(true);
+  });
+
+  test("supports animation modes and legacy animate links", () => {
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams("an=flow")).animation,
+    ).toBe("flow");
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams("a=true")).animation,
+    ).toBe("fade");
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams("a=false")).animation,
+    ).toBe("none");
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams("an=unknown")).animation,
+    ).toBe("fade");
+  });
+
+  test("falls back from unsupported link modes", () => {
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams("links=invalid"))
+        .linkMode,
+    ).toBe("normal");
   });
 });

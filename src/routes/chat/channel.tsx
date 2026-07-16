@@ -30,10 +30,13 @@ import {
   createPreviewMessages,
   injectPreviewStyles,
   cleanupPreviewStyles,
+  isChatPreviewConfigMessage,
   type PreviewDemoKind,
 } from "~/services/chat/preview";
 import {
   DEFAULT_ANIMATION_OPTIONS,
+  getAnimationScrollBehavior,
+  hasMessageEntryAnimation,
   messageSpeedToIntervalMs,
 } from "~/utils/ui/animationUtils";
 
@@ -94,6 +97,13 @@ export default function ChatOverlay() {
   const [loadingProgress, setLoadingProgress] = createSignal(0);
   const [loadingStatus, setLoadingStatus] = createSignal("Initializing...");
   const [isLoading, setIsLoading] = createSignal(true);
+  let previewService: ChatPresentationService | null = null;
+  let previewInterval: number | undefined;
+  let previewChannelId = "0";
+  let previewReady = false;
+  let previewDestroyed = false;
+  let activePreviewConfig = initialConfig;
+  const previewDemoKind = parsePreviewDemoKind(urlParams.get("demo"));
 
   const runtime =
     hasChannel && !isPreview
@@ -124,6 +134,89 @@ export default function ChatOverlay() {
     );
   };
 
+  const clearPreviewInterval = () => {
+    if (previewInterval === undefined) return;
+    window.clearInterval(previewInterval);
+    previewInterval = undefined;
+  };
+
+  const appendPreviewMessage = () => {
+    if (!previewService || previewDestroyed) return;
+
+    const nextMsg = nextPreviewMessage(
+      channel,
+      previewService,
+      previewChannelId,
+      previewDemoKind,
+    );
+    mentionStyleService.registerMessageAuthor(nextMsg);
+    setMessages((current) => {
+      const next = [...current, nextMsg];
+      return next.length > 30 ? next.slice(-30) : next;
+    });
+    previewService.scrollToLatest(
+      getAnimationScrollBehavior(activePreviewConfig.animation),
+    );
+  };
+
+  const restartPreviewInterval = () => {
+    clearPreviewInterval();
+    if (!previewReady) return;
+
+    const intervalMs = messageSpeedToIntervalMs(
+      activePreviewConfig.messageSpeed,
+    );
+    if (intervalMs !== null) {
+      previewInterval = window.setInterval(appendPreviewMessage, intervalMs);
+    }
+  };
+
+  const hasSameDataSource = (nextConfig: ChatConfig) =>
+    nextConfig.channel === activePreviewConfig.channel &&
+    nextConfig.youtubeChannel === activePreviewConfig.youtubeChannel &&
+    nextConfig.youtubeWebSocketUrl === activePreviewConfig.youtubeWebSocketUrl &&
+    nextConfig.show7tvUnlisted === activePreviewConfig.show7tvUnlisted;
+
+  const handlePreviewConfigMessage = (event: MessageEvent<unknown>) => {
+    if (
+      window.parent === window ||
+      event.source !== window.parent ||
+      event.origin !== window.location.origin ||
+      !isChatPreviewConfigMessage(event.data) ||
+      !hasSameDataSource(event.data.config)
+    ) {
+      return;
+    }
+
+    const nextConfig = event.data.config;
+    if (!isPreview) {
+      runtime?.updateConfig(nextConfig);
+      return;
+    }
+
+    const speedChanged =
+      activePreviewConfig.messageSpeed !== nextConfig.messageSpeed;
+    activePreviewConfig = nextConfig;
+    setConfig(nextConfig);
+    injectPreviewStyles(nextConfig);
+
+    if (previewService) {
+      const presentationConfig = createChatPresentationConfig(nextConfig);
+      presentationConfig.userId = previewChannelId;
+      previewService.updateConfig(presentationConfig);
+      setAnimationDurationMs(
+        hasMessageEntryAnimation(nextConfig.animation)
+          ? presentationConfig.animation.duration
+          : 0,
+      );
+      previewService.scrollToLatest(
+        getAnimationScrollBehavior(nextConfig.animation),
+      );
+    }
+
+    if (speedChanged) restartPreviewInterval();
+  };
+
   const chromeStyle = createMemo(() => {
     const cfg = config() ?? initialConfig;
     const chromeVisible = hasMessages();
@@ -142,7 +235,8 @@ export default function ChatOverlay() {
       display: "flex",
       "flex-direction": "column",
       "align-items": "flex-start",
-      "justify-content": "flex-end",
+      "justify-content":
+        cfg.reverseLineOrder && !cfg.horizontal ? "flex-start" : "flex-end",
       padding: "10px",
       "box-sizing": "border-box",
       "z-index": "10000",
@@ -166,7 +260,7 @@ export default function ChatOverlay() {
     position: "relative",
     width: "fit-content",
     "max-width": "100%",
-    "max-height": isPreview ? "none" : "calc(100vh - 20px)",
+    "max-height": "calc(100vh - 20px)",
     "flex-shrink": "0",
     padding: "0",
     "box-sizing": "border-box",
@@ -178,20 +272,22 @@ export default function ChatOverlay() {
   });
 
   onMount(() => {
+    window.addEventListener("message", handlePreviewConfigMessage);
+
     if (isPreview) {
       const previewConfig = parseChatConfigFromSearchParams(urlParams, { channel });
-      const previewService = new ChatPresentationService(
+      activePreviewConfig = previewConfig;
+      previewService = new ChatPresentationService(
         createChatPresentationConfig(previewConfig),
       );
-      const previewDemoKind = parsePreviewDemoKind(urlParams.get("demo"));
-      let previewInterval: number | undefined;
-      let previewDestroyed = false;
 
       mentionStyleService.reset();
       previewService.updateConfig({ userId: "0" });
 
       setConfig(previewConfig);
-      const previewAnimationDuration = previewConfig.animate
+      const previewAnimationDuration = hasMessageEntryAnimation(
+        previewConfig.animation,
+      )
         ? previewService.getConfig().animation.duration
         : 0;
       const previewIntervalMs = messageSpeedToIntervalMs(
@@ -213,7 +309,7 @@ export default function ChatOverlay() {
         setLoadingStatus("Preparing preview...");
         setLoadingProgress(25);
 
-        const previewChannelId = isRealChannel
+        previewChannelId = isRealChannel
           ? await withTimeout(resolveChannelId(channel), 2500, "0")
           : "0";
 
@@ -259,36 +355,26 @@ export default function ChatOverlay() {
 
         window.setTimeout(() => {
           if (previewDestroyed) return;
+          const service = previewService;
+          if (!service) return;
 
           const previewMessages = createPreviewMessages(
             channel,
-            previewService,
+            service,
             previewChannelId,
             previewDemoKind,
           );
           previewMessages.forEach((msg) => mentionStyleService.registerMessageAuthor(msg));
 
           setMessages(previewMessages);
+          service.scrollToLatest(
+            getAnimationScrollBehavior(previewConfig.animation),
+          );
           setLoadingProgress(100);
           setLoadingStatus("Preview ready");
           setIsLoading(false);
-
-          if (previewIntervalMs === null) return;
-
-          previewInterval = window.setInterval(() => {
-            const nextMsg = nextPreviewMessage(
-              channel,
-              previewService,
-              previewChannelId,
-              previewDemoKind,
-            );
-            mentionStyleService.registerMessageAuthor(nextMsg);
-
-            setMessages((current) => {
-              const next = [...current, nextMsg];
-              return next.length > 30 ? next.slice(-30) : next;
-            });
-          }, previewIntervalMs);
+          previewReady = true;
+          if (previewIntervalMs !== null) restartPreviewInterval();
         }, 700);
       })().catch((error) => {
         console.error("[Preview] Initialization failed:", error);
@@ -299,7 +385,7 @@ export default function ChatOverlay() {
 
       onCleanup(() => {
         previewDestroyed = true;
-        if (previewInterval !== undefined) window.clearInterval(previewInterval);
+        clearPreviewInterval();
         cleanupPreviewStyles();
       });
 
@@ -315,6 +401,7 @@ export default function ChatOverlay() {
   });
 
   onCleanup(() => {
+    window.removeEventListener("message", handlePreviewConfigMessage);
     runtime?.destroy();
     if (isPreview) chatService()?.cleanup();
   });

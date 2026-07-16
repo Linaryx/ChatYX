@@ -13,33 +13,23 @@ type ChatNickProps = {
 };
 
 export const ChatNick = (props: ChatNickProps): JSX.Element => {
-  const {
-    message,
-    nickStyle,
-    fontWeight,
-    paintClasses,
-    paintAttributes,
-    colonColor,
-    isAction,
-    uppercase,
-  } = props;
-  const displayName = message.displayName || message.username;
+  const displayName = () => props.message.displayName || props.message.username;
 
   return (
     <span class="user_info">
       <span
-        class={`nick ${paintClasses}`}
-        style={`${nickStyle} font-weight: ${fontWeight};`}
-        {...paintAttributes}
+        class={`nick ${props.paintClasses}`}
+        style={`${props.nickStyle} font-weight: ${props.fontWeight};`}
+        {...props.paintAttributes}
       >
-        {uppercase ? displayName.toUpperCase() : displayName}
+        {props.uppercase ? displayName().toUpperCase() : displayName()}
       </span>
-      {isAction ? (
+      {props.isAction ? (
         <span>&nbsp;</span>
       ) : (
         <span
           class="colon"
-          style={{ color: colonColor, "font-weight": fontWeight }}
+          style={{ color: props.colonColor, "font-weight": props.fontWeight }}
         >
           :
         </span>

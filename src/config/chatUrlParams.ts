@@ -2,7 +2,13 @@ import { DEFAULT_BOT_NAMES } from "./botNames";
 import {
   DEFAULT_MESSAGE_SPEED,
   clampMessageSpeed,
+  normalizeChatAnimationMode,
+  type ChatAnimationMode,
 } from "../utils/ui/animationUtils";
+
+export type { ChatAnimationMode } from "../utils/ui/animationUtils";
+
+export type LinkDisplayMode = "normal" | "hide" | "highlight";
 
 export interface ChatConfig {
   // Required query param: `?c=...` (alias: `channel`)
@@ -10,7 +16,7 @@ export interface ChatConfig {
   youtubeChannel: string;
   youtubeWebSocketUrl: string;
 
-  animate: boolean;
+  animation: ChatAnimationMode;
   messageSpeed: number;
   bots: boolean;
   commands: boolean;
@@ -43,6 +49,17 @@ export interface ChatConfig {
   overlayBackgroundOpacity: number;
   overlayBackgroundRadius: number;
   overlayBorderOpacity: number;
+  highlightTwitchEvents: boolean;
+  twitchEventColor: string;
+  twitchEventBackgroundOpacity: number;
+  twitchEventBold: boolean;
+  twitchEventItalic: boolean;
+  showHighlightedMessages: boolean;
+  showChannelPointRewards: boolean;
+  showGigantifiedEmotes: boolean;
+  linkMode: LinkDisplayMode;
+  linkColor: string;
+  hideLinkRewards: boolean;
 }
 
 export const DEFAULT_FONT_WEIGHT = 800;
@@ -59,7 +76,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   shadow: 1,
   stroke: false,
   fade: 60,
-  animate: true,
+  animation: "fade",
   messageSpeed: DEFAULT_MESSAGE_SPEED,
   showHomies: true,
   recentMessages: true,
@@ -84,6 +101,17 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   overlayBackgroundOpacity: 50,
   overlayBackgroundRadius: 20,
   overlayBorderOpacity: 0,
+  highlightTwitchEvents: true,
+  twitchEventColor: "#9146ff",
+  twitchEventBackgroundOpacity: 22,
+  twitchEventBold: true,
+  twitchEventItalic: false,
+  showHighlightedMessages: true,
+  showChannelPointRewards: true,
+  showGigantifiedEmotes: true,
+  linkMode: "normal",
+  linkColor: "#53b7ff",
+  hideLinkRewards: true,
 });
 
 export function normalizeFontWeight(
@@ -166,7 +194,7 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
   shadow: { query: "sh", kind: "intOrFalse", aliases: ["shadow"] },
   stroke: { query: "st", kind: "intOrFalse", aliases: ["stroke"] },
   fade: { query: "fd", kind: "secondsOrFalse", aliases: ["fade"] },
-  animate: { query: "a", kind: "bool", aliases: ["animate"] },
+  animation: { query: "an", kind: "string", aliases: ["animation"] },
   messageSpeed: {
     query: "ms",
     kind: "int",
@@ -250,6 +278,61 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     query: "bgb",
     kind: "int",
     aliases: ["overlay_border_opacity"],
+  },
+  highlightTwitchEvents: {
+    query: "teh",
+    kind: "bool",
+    aliases: ["highlight_twitch_events"],
+  },
+  twitchEventColor: {
+    query: "tec",
+    kind: "string",
+    aliases: ["twitch_event_color"],
+  },
+  twitchEventBackgroundOpacity: {
+    query: "teo",
+    kind: "int",
+    aliases: ["twitch_event_background_opacity"],
+  },
+  twitchEventBold: {
+    query: "teb",
+    kind: "bool",
+    aliases: ["twitch_event_bold"],
+  },
+  twitchEventItalic: {
+    query: "tei",
+    kind: "bool",
+    aliases: ["twitch_event_italic"],
+  },
+  showHighlightedMessages: {
+    query: "hl",
+    kind: "bool",
+    aliases: ["show_highlighted_messages"],
+  },
+  showChannelPointRewards: {
+    query: "rewards",
+    kind: "bool",
+    aliases: ["show_redeems"],
+  },
+  showGigantifiedEmotes: {
+    query: "gigantify",
+    kind: "bool",
+    aliases: ["show_gigantified_emotes"],
+  },
+  linkMode: {
+    query: "links",
+    kind: "string",
+    aliases: ["link_mode"],
+  },
+  linkColor: {
+    query: "linkcolor",
+    kind: "string",
+    aliases: ["link_color"],
+  },
+  hideLinkRewards: {
+    query: "hidelinkrewards",
+    kind: "bool",
+    aliases: ["hide_link_rewards"],
   },
 };
 
@@ -362,9 +445,28 @@ export function parseChatConfigFromSearchParams(
     cfg.bots = false;
   }
 
+  const animationDef = PARAMS.animation;
+  const hasExplicitAnimationParam = animationDef
+    ? hasAnyParam(searchParams, [
+        animationDef.query,
+        ...(animationDef.aliases ?? []),
+      ])
+    : false;
+  if (!hasExplicitAnimationParam) {
+    const legacyAnimate = getFirstParam(searchParams, ["a", "animate"]);
+    const parsedLegacyAnimate = legacyAnimate === null ? null : parseBool(legacyAnimate);
+    if (parsedLegacyAnimate !== null) {
+      cfg.animation = parsedLegacyAnimate ? "fade" : "none";
+    }
+  }
+
   cfg.messageSpeed = clampMessageSpeed(cfg.messageSpeed);
   cfg.fontWeight = normalizeFontWeight(cfg.fontWeight);
   cfg.nickFontWeight = normalizeFontWeight(cfg.nickFontWeight);
+  cfg.animation = normalizeChatAnimationMode(cfg.animation);
+  if (!["normal", "hide", "highlight"].includes(cfg.linkMode)) {
+    cfg.linkMode = DEFAULT_CHAT_CONFIG.linkMode;
+  }
 
   return cfg;
 }

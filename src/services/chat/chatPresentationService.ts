@@ -19,6 +19,7 @@ import {
 import type { LayoutOptions } from "../../utils/ui/layoutUtils";
 import {
   DEFAULT_ANIMATION_OPTIONS,
+  hasMessageEntryAnimation,
   injectAnimationStyles,
 } from "../../utils/ui/animationUtils";
 import type { AnimationOptions } from "../../utils/ui/animationUtils";
@@ -475,9 +476,9 @@ export class ChatPresentationService {
   /**
    * Scroll to latest message
    */
-  scrollToLatest(smooth: boolean = true): void {
+  scrollToLatest(behavior: ScrollBehavior = "auto"): void {
     if (this.layoutManager) {
-      this.layoutManager.scrollIfNeeded(smooth);
+      this.layoutManager.scrollIfNeeded(behavior);
     }
   }
 
@@ -581,10 +582,10 @@ export function createChatPresentationConfig(
     channel: params.channel,
     userId: "",
     animation: {
-      enabled: params.animate,
+      enabled: hasMessageEntryAnimation(params.animation),
       duration: DEFAULT_ANIMATION_OPTIONS.duration,
       easing: "ease-in-out",
-      type: "fade",
+      type: params.animation,
     },
     fade: {
       enabled: params.fade !== false,

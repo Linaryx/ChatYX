@@ -26,13 +26,12 @@ import {
 import { createMessageTokenSnapshot } from "~/utils/chat/emojiUtils";
 import {
   DEFAULT_ANIMATION_OPTIONS,
+  getAnimationScrollBehavior,
+  hasMessageEntryAnimation,
   updateAnimationStyles,
 } from "~/utils/ui/animationUtils";
 import { log, LOG_CATEGORIES } from "~/utils/logger";
-import {
-  mergeBadgesBySetId,
-  resolveSenderIdentity,
-} from "~/utils/chat/senderIdentity";
+import { mergeBadgesBySetId } from "~/utils/chat/senderIdentity";
 import type { ChatConfig } from "~/utils/chat";
 import {
   ChatCommandFeedback,
@@ -129,8 +128,6 @@ export class OverlayRuntime {
   >();
   private pendingMessageFrame: number | null = null;
   private pendingMessageRefreshFrame: number | null = null;
-  private scrollContainer: HTMLElement | null = null;
-  private scrollHandler: (() => void) | null = null;
   private initialized = false;
   private connected = false;
   private activeChannelId = "";
@@ -201,6 +198,26 @@ export class OverlayRuntime {
 
   getService() {
     return this.chatService;
+  }
+
+  updateConfig(config: ChatConfig) {
+    this.activeConfig = config;
+    this.hooks.onConfigResolved(config);
+    this.injectStyles(config);
+
+    if (this.chatService) {
+      const presentationConfig = createChatPresentationConfig(config);
+      presentationConfig.userId = this.activeChannelId;
+      this.chatService.updateConfig(presentationConfig);
+      this.hooks.onAnimationDurationChange(
+        hasMessageEntryAnimation(config.animation)
+          ? presentationConfig.animation.duration
+          : 0,
+      );
+      this.chatService.scrollToLatest(
+        getAnimationScrollBehavior(config.animation),
+      );
+    }
   }
 
   async initialize(): Promise<void> {
@@ -328,9 +345,6 @@ export class OverlayRuntime {
   }
 
   destroy() {
-    if (this.scrollContainer && this.scrollHandler) {
-      this.scrollContainer.removeEventListener("scroll", this.scrollHandler);
-    }
     for (const id of this.pendingTimers) window.clearTimeout(id);
     this.pendingTimers.length = 0;
     this.clearPendingMessages();
@@ -386,12 +400,12 @@ export class OverlayRuntime {
       document.head.appendChild(variantStyleElement);
     }
 
-    if (config.animate) {
+    if (hasMessageEntryAnimation(config.animation)) {
       updateAnimationStyles({
         enabled: true,
         duration: DEFAULT_ANIMATION_OPTIONS.duration,
         easing: "ease-out",
-        type: "fade",
+        type: config.animation,
       });
     }
   }
@@ -404,9 +418,6 @@ export class OverlayRuntime {
     const container = document.getElementById("chat_container");
     if (!container) return;
 
-    this.scrollContainer = container;
-    this.scrollHandler = () => service.handleUserScroll();
-    container.addEventListener("scroll", this.scrollHandler, { passive: true });
     service.initializeLayout(container);
   }
 
@@ -445,7 +456,9 @@ export class OverlayRuntime {
       );
 
       if (this.chatService && this.activeConfig) {
-        this.chatService.scrollToLatest(this.activeConfig.animate);
+        this.chatService.scrollToLatest(
+          getAnimationScrollBehavior(this.activeConfig.animation),
+        );
       }
     });
   }
@@ -878,8 +891,25 @@ export class OverlayRuntime {
       const reward = await this.resolveChannelPointReward(message.customRewardId);
       if (reward) {
         message.channelPointReward = reward;
-        if (reward.prompt.toUpperCase().includes("FFZ:GE")) {
+        const isGigantifiedReward = reward.prompt.toUpperCase().includes("FFZ:GE");
+        if (
+          isGigantifiedReward ||
+          message.twitchEvent?.type === "power-up"
+        ) {
           message.isGigantifiedEmote = true;
+          if (message.twitchEvent?.type !== "power-up") {
+            message.twitchEvent = {
+              type: "power-up",
+              label: "Гигантский эмоут",
+            };
+          }
+        } else {
+          message.twitchEvent = {
+            type: "reward",
+            label: "Награда",
+            detail: reward.title,
+            count: reward.cost,
+          };
         }
       }
     }
@@ -895,65 +925,10 @@ export class OverlayRuntime {
     this.rememberMessage(message);
 
     if (message.platform !== "youtube") {
-      this.loadGqlSenderAndRefresh(message, userId);
       this.loadUserBadgesAndRefresh(message, userId);
     }
 
     return message;
-  }
-
-  private loadGqlSenderAndRefresh(message: TwitchMessage, userId: string) {
-    if (!this.activeChannelId || !userId || userId === "0" || !message.id) {
-      return;
-    }
-
-    const channelId = this.activeChannelId;
-    const messageId = message.id;
-
-    void twitchGqlService
-      .loadSender(channelId, userId)
-      .then((gqlSender) => {
-        if (
-          !gqlSender ||
-          !this.chatService ||
-          !this.seenMessageIds.has(messageId)
-        ) {
-          return;
-        }
-
-        const identity = resolveSenderIdentity(
-          message.displayName,
-          message.color,
-          gqlSender.displayName,
-          gqlSender.chatColor,
-        );
-        const badges = mergeBadgesBySetId(
-          message.badges,
-          gqlSender.displayBadges,
-        );
-        const badgesChanged =
-          badges.length !== message.badges.length ||
-          badges.some((badge, index) => badge !== message.badges[index]);
-
-        if (
-          identity.displayName === message.displayName &&
-          identity.color === message.color &&
-          !badgesChanged
-        ) {
-          return;
-        }
-
-        message.displayName = identity.displayName;
-        message.color = identity.color;
-        message.badges = badges;
-        mentionStyleService.registerMessageAuthor(message);
-        this.queueMessageRefresh(messageId, {
-          displayName: identity.displayName,
-          color: identity.color,
-          badges,
-        });
-      })
-      .catch(() => {});
   }
 
   private loadUserBadgesAndRefresh(message: TwitchMessage, userId: string) {

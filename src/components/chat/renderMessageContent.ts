@@ -9,6 +9,7 @@ import {
   restoreEmojis,
 } from "~/utils/chat/emojiUtils";
 import { SIZE_CONFIGS } from "~/styles/chatStyles";
+import { tokenizeLinks } from "~/utils/chat/linkUtils";
 
 export function escapeHtml(message: string): string {
   return message
@@ -300,8 +301,21 @@ export function renderMessageWithEmotes(
       return;
     }
 
-    const escapedText = escapeHtml(restoredText);
-    const withEmojiImages = parseGoogleEmoji(escapedText, size.emojiHeight);
+    const withEmojiImages = tokenizeLinks(restoredText)
+      .map((segment) => {
+        if (segment.kind === "text") {
+          return parseGoogleEmoji(escapeHtml(segment.value), size.emojiHeight);
+        }
+        if (config.linkMode === "hide") {
+          return '<span class="chat-link-hidden">[ссылка скрыта]</span>';
+        }
+
+        const escapedLink = escapeHtml(segment.value);
+        return config.linkMode === "highlight"
+          ? `<span class="chat-link">${escapedLink}</span>`
+          : escapedLink;
+      })
+      .join("");
     const cleanText = textWithPlaceholders.replace(/__EMOJI\d+__/g, "");
     const isEmojiOnlyToken = cleanText.length === 0 && emojis.length > 0;
 
@@ -401,17 +415,13 @@ export function renderMessageWithEmotes(
     if (target) {
       const line = document.createElement("span");
       const giant = target.cloneNode(true) as HTMLImageElement;
-      const emoteContainer = target.closest(".emote-container, .emoji-container");
-      const sourceNode =
-        emoteContainer instanceof HTMLElement ? emoteContainer : target;
 
       line.className = "gigantified-emote-line";
       giant.removeAttribute("style");
       applyImageSizeAttrsFromData(giant);
       giant.classList.add("gigantified");
       line.append(giant);
-      sourceNode.remove();
-      element.append(line);
+      element.replaceChildren(line);
     }
   }
 

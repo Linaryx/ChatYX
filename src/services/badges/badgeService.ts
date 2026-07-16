@@ -527,7 +527,11 @@ class BadgeService {
     this.thirdPartyBadgeIndex = buildThirdPartyBadgeIndex(this.badgeData);
   }
 
-  async loadUserBadges(username: string, userId: string): Promise<Badge[]> {
+  async loadUserBadges(
+    username: string,
+    userId: string,
+    includeTwitchSender = false,
+  ): Promise<Badge[]> {
     // Проверяем кэш
     if (this.badgeData.userBadges[username]) {
       return this.badgeData.userBadges[username];
@@ -540,12 +544,14 @@ class BadgeService {
 
       const normalizedUsername = username.toLowerCase();
 
-      const gqlSender = await twitchGqlService.loadSender(
-        this.currentChannelId,
-        userId,
-      );
-      if (gqlSender) {
-        this.applyGqlBadgesToCache(gqlSender.displayBadges);
+      if (includeTwitchSender) {
+        const gqlSender = await twitchGqlService.loadSender(
+          this.currentChannelId,
+          userId,
+        );
+        if (gqlSender) {
+          this.applyGqlBadgesToCache(gqlSender.displayBadges);
+        }
       }
 
       // FFZ badges from global list (e.g., bot badge)

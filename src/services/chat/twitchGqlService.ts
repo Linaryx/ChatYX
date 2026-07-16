@@ -3,6 +3,7 @@ import { log, LOG_CATEGORIES } from "~/utils/logger";
 const GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_WEB_CLIENT_ID =
   import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
+const GQL_BATCH_SIZE = 25;
 
 const PERSISTED_QUERIES = {
   BadgeSetsByChannel:
@@ -11,6 +12,8 @@ const PERSISTED_QUERIES = {
     "87b94ec5116e7d29af7531eccb5c058ed3ae6cc893eda79c1168dd3db7606461",
   ChannelPointsContext:
     "7fe050e3761eb2cf258d70ee1a21cbd76fa8cf3d7e7b12fc437e7029d446b5e3",
+  ChannelLeaderboards:
+    "d21bd002e4855f9bcd597732f8e3cd817192b8583b2ca1a6176b8550b6f50771",
 } as const;
 
 export type TwitchGqlBadge = {
@@ -38,6 +41,47 @@ export type TwitchGqlCustomReward = {
   cost: number;
 };
 
+export type TwitchGqlLeaderboardUser = {
+  id: string;
+  login: string;
+  displayName: string;
+};
+
+export function parseLeaderboardUsers(data: any): TwitchGqlLeaderboardUser[] {
+  const leaderboardSet = data?.user?.channel?.leaderboardSet;
+  if (!leaderboardSet || typeof leaderboardSet !== "object") return [];
+
+  const users = new Map<string, TwitchGqlLeaderboardUser>();
+  const addUser = (user: any) => {
+    const id = String(user?.id || "");
+    const login = String(user?.login || "");
+    if (!id || !login) return;
+
+    users.set(id, {
+      id,
+      login,
+      displayName: String(user.displayName || login),
+    });
+  };
+
+  for (const leaderboardName of ["bits", "subGift"] as const) {
+    const edges = leaderboardSet[leaderboardName]?.items?.edges;
+    if (!Array.isArray(edges)) continue;
+    for (const edge of edges) addUser(edge?.node?.user);
+  }
+
+  const clipEdges = leaderboardSet.clip?.items?.edges;
+  if (Array.isArray(clipEdges)) {
+    for (const edge of clipEdges) {
+      const assets = edge?.node?.clip?.assets;
+      if (!Array.isArray(assets)) continue;
+      for (const asset of assets) addUser(asset?.curator);
+    }
+  }
+
+  return Array.from(users.values());
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => {
@@ -58,12 +102,29 @@ function isTwitchUserId(value: string): boolean {
   return /^\d+$/.test(value) && value !== "0";
 }
 
+function parseSender(data: any): TwitchGqlSender | null {
+  const user = data?.user;
+  if (!user?.id || !user?.login) return null;
+
+  return {
+    id: String(user.id),
+    login: String(user.login),
+    displayName: String(user.displayName || user.login),
+    chatColor: String(user.chatColor || ""),
+    displayBadges: Array.isArray(user.displayBadges) ? user.displayBadges : [],
+  };
+}
+
 class TwitchGqlService {
   private senderCache = new Map<string, Promise<TwitchGqlSender | null>>();
   private badgeSetCache = new Map<string, Promise<TwitchGqlBadge[]>>();
   private channelPointRewardsCache = new Map<
     string,
     Promise<Map<string, TwitchGqlCustomReward>>
+  >();
+  private leaderboardUsersCache = new Map<
+    string,
+    Promise<TwitchGqlLeaderboardUser[]>
   >();
 
   async loadBadgeSets(channelId: string): Promise<TwitchGqlBadge[]> {
@@ -104,19 +165,7 @@ class TwitchGqlService {
       channelID: channelId,
       senderID: senderId,
     })
-      .then((data) => {
-        const user = data?.user;
-        if (!user?.id || !user?.login) return null;
-        return {
-          id: String(user.id),
-          login: String(user.login),
-          displayName: String(user.displayName || user.login),
-          chatColor: String(user.chatColor || ""),
-          displayBadges: Array.isArray(user.displayBadges)
-            ? user.displayBadges
-            : [],
-        };
-      })
+      .then(parseSender)
       .catch((error) => {
         log.warn(LOG_CATEGORIES.BADGE, "Twitch GQL sender unavailable", error);
         this.senderCache.delete(cacheKey);
@@ -125,6 +174,67 @@ class TwitchGqlService {
 
     this.senderCache.set(cacheKey, promise);
     return promise;
+  }
+
+  async loadSenders(
+    channelId: string,
+    senderIds: string[],
+  ): Promise<Map<string, TwitchGqlSender>> {
+    const senders = new Map<string, TwitchGqlSender>();
+    if (!isTwitchUserId(channelId)) return senders;
+
+    const uniqueIds = Array.from(new Set(senderIds.filter(isTwitchUserId)));
+    const uncachedIds: string[] = [];
+    const cachedRequests: Promise<void>[] = [];
+
+    for (const senderId of uniqueIds) {
+      const cached = this.senderCache.get(`${channelId}:${senderId}`);
+      if (!cached) {
+        uncachedIds.push(senderId);
+        continue;
+      }
+
+      cachedRequests.push(
+        cached.then((sender) => {
+          if (sender) senders.set(senderId, sender);
+        }),
+      );
+    }
+
+    await Promise.all(cachedRequests);
+
+    const chunks: string[][] = [];
+    for (let index = 0; index < uncachedIds.length; index += GQL_BATCH_SIZE) {
+      chunks.push(uncachedIds.slice(index, index + GQL_BATCH_SIZE));
+    }
+
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        try {
+          const data = await this.requestBatch(
+            "AutoModSender",
+            chunk.map((senderId) => ({
+              channelID: channelId,
+              senderID: senderId,
+            })),
+          );
+
+          data.forEach((entry, index) => {
+            const senderId = chunk[index];
+            const sender = parseSender(entry);
+            this.senderCache.set(
+              `${channelId}:${senderId}`,
+              Promise.resolve(sender),
+            );
+            if (sender) senders.set(senderId, sender);
+          });
+        } catch (error) {
+          log.warn(LOG_CATEGORIES.BADGE, "Twitch GQL sender batch unavailable", error);
+        }
+      }),
+    );
+
+    return senders;
   }
 
   async loadChannelPointRewards(
@@ -175,6 +285,32 @@ class TwitchGqlService {
     return promise;
   }
 
+  async loadChannelLeaderboardUsers(
+    channelId: string,
+    first = 10,
+  ): Promise<TwitchGqlLeaderboardUser[]> {
+    if (!isTwitchUserId(channelId)) return [];
+
+    const normalizedFirst = Math.min(Math.max(Math.round(first), 1), 25);
+    const cacheKey = `${channelId}:${normalizedFirst}`;
+    const cached = this.leaderboardUsersCache.get(cacheKey);
+    if (cached) return cached;
+
+    const promise = this.request("ChannelLeaderboards", {
+      first: normalizedFirst,
+      channelID: channelId,
+    })
+      .then(parseLeaderboardUsers)
+      .catch((error) => {
+        log.warn(LOG_CATEGORIES.CHAT, "Twitch leaderboards unavailable", error);
+        this.leaderboardUsersCache.delete(cacheKey);
+        return [];
+      });
+
+    this.leaderboardUsersCache.set(cacheKey, promise);
+    return promise;
+  }
+
   getBadgeUrl(badge: TwitchGqlBadge): string {
     return normalizeBadgeUrl(badge);
   }
@@ -210,6 +346,47 @@ class TwitchGqlService {
 
     const payload = await response.json();
     return payload?.data ?? null;
+  }
+
+  private async requestBatch(
+    operationName: keyof typeof PERSISTED_QUERIES,
+    variables: Record<string, unknown>[],
+  ): Promise<any[]> {
+    if (variables.length === 0) return [];
+
+    const response = await withTimeout(
+      fetch(GQL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Client-ID": TWITCH_WEB_CLIENT_ID,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(
+          variables.map((operationVariables) => ({
+            operationName,
+            variables: operationVariables,
+            extensions: {
+              persistedQuery: {
+                version: 1,
+                sha256Hash: PERSISTED_QUERIES[operationName],
+              },
+            },
+          })),
+        ),
+      }),
+      3000,
+    );
+
+    if (!response.ok) {
+      throw new Error(`Twitch GQL HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (!Array.isArray(payload)) {
+      throw new Error("Twitch GQL batch returned a non-array response");
+    }
+
+    return payload.map((entry) => entry?.data ?? null);
   }
 }
 

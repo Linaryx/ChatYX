@@ -4,7 +4,10 @@ import {
   generateStrokeStyles,
   generateVariantStyles,
 } from "~/styles/chatStyles";
-import { injectAnimationStyles } from "~/utils/ui/animationUtils";
+import {
+  hasMessageEntryAnimation,
+  injectAnimationStyles,
+} from "~/utils/ui/animationUtils";
 import type { ChatConfig } from "~/utils/chat";
 
 const PREVIEW_STYLE_IDS = [
@@ -50,8 +53,13 @@ export function injectPreviewStyles(config: ChatConfig) {
     document.head.appendChild(el);
   }
 
-  if (config.animate) {
-    injectAnimationStyles({ enabled: true, duration: 200, easing: "ease-out", type: "fade" });
+  if (hasMessageEntryAnimation(config.animation)) {
+    injectAnimationStyles({
+      enabled: true,
+      duration: 200,
+      easing: "ease-out",
+      type: config.animation,
+    });
   }
 
   const layoutEl = document.createElement("style");

@@ -5,6 +5,32 @@ import type { ReplyThread } from "../../types/replyThread";
 import { parseReplyThread } from "../../utils/chat/replyParser";
 import type { MessageTokenSnapshot } from "../../utils/chat/emojiUtils";
 
+export type TwitchEventType =
+  | "first-message"
+  | "raid"
+  | "subscription"
+  | "highlighted-message"
+  | "reward"
+  | "power-up"
+  | "announcement";
+
+export type TwitchEvent = {
+  type: TwitchEventType;
+  label: string;
+  detail?: string;
+  level?: string;
+  count?: number;
+  color?: string;
+};
+
+const ANNOUNCEMENT_COLORS: Record<string, string> = {
+  PRIMARY: "#9147ff",
+  BLUE: "#1f69ff",
+  GREEN: "#00c800",
+  ORANGE: "#ff7621",
+  PURPLE: "#9900fe",
+};
+
 export interface TwitchMessage {
   id: string;
   username: string;
@@ -40,6 +66,114 @@ export interface TwitchMessage {
   emoteSnapshot?: Map<string, any>;
   tokenSnapshot?: MessageTokenSnapshot;
   sourceChannel?: string;
+  twitchEvent?: TwitchEvent;
+}
+
+function getPrivMsgEvent(tags: Record<string, string>): TwitchEvent | undefined {
+  if (tags["msg-id"] === "highlighted-message") {
+    return {
+      type: "highlighted-message",
+      label: "Выделенное сообщение",
+    };
+  }
+
+  if (tags["msg-id"] === "gigantified-emote-message") {
+    const bits = Number.parseInt(tags.bits || "", 10);
+    return {
+      type: "power-up",
+      label: "Гигантский эмоут",
+      count: Number.isFinite(bits) ? bits : undefined,
+    };
+  }
+
+  if (tags["custom-reward-id"]) {
+    return { type: "reward", label: "Награда" };
+  }
+
+  if (tags["first-msg"] === "1") {
+    return { type: "first-message", label: "Впервые в чате" };
+  }
+
+  return undefined;
+}
+
+function getUserNoticeEvent(
+  msgId: string | undefined,
+  tags: Record<string, string>,
+  displayName: string,
+): TwitchEvent | undefined {
+  if (!msgId) return undefined;
+
+  if (msgId === "raid") {
+    const raider = tags["msg-param-displayName"] || displayName;
+    const viewers = Number.parseInt(tags["msg-param-viewerCount"] || "", 10);
+    return {
+      type: "raid",
+      label: "Рейд",
+      detail: raider,
+      count: Number.isFinite(viewers) ? viewers : undefined,
+    };
+  }
+
+  if (msgId === "sub") {
+    return {
+      type: "subscription",
+      label: "Новая подписка",
+      detail: `${displayName} оформил(а) подписку`,
+    };
+  }
+
+  if (msgId === "resub") {
+    const months = tags["msg-param-cumulative-months"] || tags["msg-param-months"];
+    return {
+      type: "subscription",
+      label: "Продление подписки",
+      detail: months
+        ? `${displayName} подписан(а) уже ${months} мес.`
+        : `${displayName} продлил(а) подписку`,
+    };
+  }
+
+  if (msgId === "subgift" || msgId === "anonsubgift") {
+    const sender = msgId === "anonsubgift" ? "Аноним" : displayName;
+    const recipient = tags["msg-param-recipient-display-name"];
+    return {
+      type: "subscription",
+      label: "Подарочная подписка",
+      detail: recipient
+        ? `${sender} подарил(а) подписку для ${recipient}`
+        : `${sender} подарил(а) подписку`,
+    };
+  }
+
+  if (msgId === "submysterygift") {
+    const count = tags["msg-param-mass-gift-count"] || "несколько";
+    return {
+      type: "subscription",
+      label: "Подарки подписок",
+      detail: `${displayName} подарил(а) ${count} подписок`,
+    };
+  }
+
+  if (msgId === "giftpaidupgrade" || msgId === "rewardgift") {
+    return {
+      type: "subscription",
+      label: "Подарочная подписка",
+      detail: `${displayName} продолжил(а) подарочную подписку`,
+    };
+  }
+
+  if (msgId === "announcement") {
+    const level = (tags["msg-param-color"] || "PRIMARY").toUpperCase();
+    return {
+      type: "announcement",
+      label: "Объявление",
+      level,
+      color: ANNOUNCEMENT_COLORS[level] || ANNOUNCEMENT_COLORS.PRIMARY,
+    };
+  }
+
+  return undefined;
 }
 
 export class TwitchService {
@@ -392,6 +526,7 @@ export class TwitchService {
         tags.color && tags.color.length > 0
           ? tags.color
           : this.getFallbackColor(finalUsername);
+      const badges = this.parseBadges(tags.badges || "");
 
       return {
         id: tags.id || Date.now().toString(),
@@ -399,7 +534,7 @@ export class TwitchService {
         displayName: tags["display-name"] || finalUsername,
         message: message,
         color,
-        badges: this.parseBadges(tags.badges || ""),
+        badges,
         emotes: this.parseEmotes(tags.emotes || ""),
         userType: tags["user-type"] || "",
         isModerator: tags.mod === "1",
@@ -412,6 +547,7 @@ export class TwitchService {
         platform: "twitch",
         isGigantifiedEmote: tags["msg-id"] === "gigantified-emote-message",
         sourceChannel,
+        twitchEvent: getPrivMsgEvent(tags),
       };
     } catch (error) {
       log.error(LOG_CATEGORIES.IRC, "Error parsing PRIVMSG", error);
@@ -435,7 +571,7 @@ export class TwitchService {
       const usernameMatch = line.match(/:([^!]+)!/);
       const username = usernameMatch
         ? usernameMatch[1]
-        : tags.username || tags["display-name"] || "unknown";
+        : tags.login || tags["display-name"] || "twitch";
 
       // Очищаем username от лишних символов
       const cleanUsername = username.replace(/[^\w]/g, "");
@@ -460,11 +596,12 @@ export class TwitchService {
         tags.color && tags.color.length > 0
           ? tags.color
           : this.getFallbackColor(finalUsername);
+      const displayName = tags["display-name"] || finalUsername;
 
       return {
         id: tags.id || Date.now().toString(),
         username: finalUsername,
-        displayName: tags["display-name"] || finalUsername,
+        displayName,
         message: message,
         color,
         badges: this.parseBadges(tags.badges || ""),
@@ -481,6 +618,7 @@ export class TwitchService {
         bits: bits,
         cheerPrefix: cheerPrefix,
         sourceChannel,
+        twitchEvent: getUserNoticeEvent(msgId, tags, displayName),
       };
     } catch (error) {
       log.error(LOG_CATEGORIES.IRC, "Error parsing USERNOTICE", error);

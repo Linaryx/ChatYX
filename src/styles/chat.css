@@ -32,6 +32,96 @@ body {
   max-width: 100%;
   margin: 0 !important;
   padding: 0 !important;
+  overflow-wrap: anywhere;
+}
+
+.chat_line.chat-event-highlight {
+  width: 100%;
+  background: var(--chat-event-background, rgba(145, 70, 255, 0.22));
+}
+
+.chat-event-summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+  margin-right: 0.45em;
+  color: white;
+}
+
+.chat-event-reward .chat-event-summary {
+  display: flex;
+  width: 100%;
+}
+
+.chat_line.chat-event-raid.chat-event-highlight {
+  box-sizing: border-box;
+  padding: 0.12em 0.45em !important;
+  border-left: 0.18em solid var(--chat-event-color, #9146ff);
+  background: rgba(24, 24, 27, 0.94);
+}
+
+.chat-event-raid .chat-event-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.28em;
+  width: 100%;
+  margin-right: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: clamp(10px, 4vw, 1em);
+}
+
+.chat-event-raid .chat-event-icon {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.chat-event-raid .chat-event-label {
+  flex: 0 0 auto;
+  color: white;
+}
+
+.chat-event-raid .chat-event-detail {
+  flex: 0 0 auto;
+}
+
+#chat_container.layout-horizontal .chat_line.chat-event-highlight {
+  width: auto;
+}
+
+#chat_container.layout-horizontal .chat_line:not(.gigantified-emote) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#chat_container.layout-horizontal .chat-event-reward .chat-event-summary {
+  display: inline-flex;
+  width: auto;
+}
+
+#chat_container.layout-horizontal .chat-event-raid .chat-event-summary {
+  width: auto;
+}
+
+.chat-event-label {
+  color: var(--chat-event-color, #9146ff);
+  font-weight: 900;
+}
+
+.chat-event-icon {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  fill: var(--chat-event-color, #9146ff);
+}
+
+.chat-event-star {
+  fill: white;
+}
+
+.chat-event-detail {
+  opacity: 0.9;
 }
 
 .chat_line.platform-marked {
@@ -149,6 +239,15 @@ img.badge {
 
 .mention {
   font-weight: inherit;
+}
+
+.chat-link {
+  color: var(--chat-link-color, #53b7ff);
+}
+
+.chat-link-hidden {
+  opacity: 0.65;
+  font-style: italic;
 }
 
 .mention.chatyx-seventv-paint[data-seventv-paint-id] {

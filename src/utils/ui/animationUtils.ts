@@ -1,10 +1,18 @@
 // Animation utilities for chat messages
 
+export const CHAT_ANIMATION_MODES = [
+  "fade",
+  "flow",
+  "scroll",
+  "none",
+] as const;
+export type ChatAnimationMode = (typeof CHAT_ANIMATION_MODES)[number];
+
 export interface AnimationOptions {
   enabled: boolean;
   duration: number;
   easing: string;
-  type: "fade" | "scale";
+  type: ChatAnimationMode;
 }
 
 export const MIN_MESSAGE_SPEED = 0;
@@ -19,6 +27,25 @@ export const DEFAULT_ANIMATION_OPTIONS: AnimationOptions = {
   easing: "ease-in-out",
   type: "fade",
 };
+
+export function normalizeChatAnimationMode(
+  value: unknown,
+  fallback: ChatAnimationMode = "fade",
+): ChatAnimationMode {
+  return CHAT_ANIMATION_MODES.includes(value as ChatAnimationMode)
+    ? (value as ChatAnimationMode)
+    : fallback;
+}
+
+export function hasMessageEntryAnimation(mode: ChatAnimationMode): boolean {
+  return mode === "fade" || mode === "flow";
+}
+
+export function getAnimationScrollBehavior(
+  mode: ChatAnimationMode,
+): ScrollBehavior {
+  return mode === "scroll" ? "smooth" : "auto";
+}
 
 export function clampMessageSpeed(speed: number): number {
   if (!Number.isFinite(speed)) return DEFAULT_MESSAGE_SPEED;
@@ -66,20 +93,18 @@ export function getAnimationStyles(options: AnimationOptions): string {
         }
       `;
 
-    case "scale":
+    case "flow":
       return `
-        @keyframes scaleIn {
+        @keyframes flowIn {
           from {
             opacity: 0;
-            transform: scale(0.9);
           }
           to {
             opacity: 1;
-            transform: scale(1);
           }
         }
         .message-enter {
-          animation: scaleIn var(--chat-message-enter-duration, ${duration}ms) ${easing};
+          animation: flowIn var(--chat-message-enter-duration, ${duration}ms) ${easing} both;
         }
       `;
 
