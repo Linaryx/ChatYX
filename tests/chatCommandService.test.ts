@@ -66,6 +66,18 @@ describe("chat commands", () => {
     ).toEqual({ name: "reload", args: "", targetChannels: [] });
   });
 
+  test("uses target-channel badges for Shared Chat command permissions", () => {
+    const sharedBroadcaster = message(
+      "!chat reload",
+      ["broadcaster/1"],
+      false,
+      { targetBadges: [] },
+    );
+
+    expect(resolveChatCommandRole(sharedBroadcaster)).toBe("viewer");
+    expect(getAuthorizedChatCommand(sharedBroadcaster, "target")).toBeNull();
+  });
+
   test("accepts targeted developer commands only from the verified account", () => {
     const developer = message("!chatyx refresh -c target", [], false, {
       username: "linaryx",

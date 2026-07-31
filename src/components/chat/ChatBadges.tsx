@@ -27,6 +27,22 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
     const subBadgeMap = new Map<string, JSX.Element>();
     const predictionBadges: JSX.Element[] = [];
 
+    if (message.showSourceChannelBadge && message.sourceChannelAvatarUrl) {
+      const sourceChannelName =
+        message.sourceChannelDisplayName ||
+        message.sourceChannelLogin ||
+        "Shared Chat";
+      badges.push(
+        <img
+          class="badge shared-chat-source-badge"
+          src={message.sourceChannelAvatarUrl}
+          title={`Канал: ${sourceChannelName}`}
+          alt={`Канал ${sourceChannelName}`}
+          loading="lazy"
+        />,
+      );
+    }
+
     const isFfzBotBadge = (badge: any) => {
       if (badge?.source !== "ffz") return false;
       const label = String(

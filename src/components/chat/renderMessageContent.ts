@@ -421,7 +421,11 @@ export function renderMessageWithEmotes(
       : undefined;
     const emote = isPlainLookupToken
       ? message.emoteSnapshot?.get(cleanText) ||
-        service.getEmote(cleanText, message.username)
+        service.getEmote(
+          cleanText,
+          message.username,
+          message.sourceChannelId,
+        )
       : null;
     const activeReplacement =
       replacement || createEmoteReplacement(cleanText, emote);

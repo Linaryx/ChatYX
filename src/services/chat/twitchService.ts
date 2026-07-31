@@ -68,6 +68,14 @@ export interface TwitchMessage {
   emoteSnapshot?: Map<string, any>;
   tokenSnapshot?: MessageTokenSnapshot;
   sourceChannel?: string;
+  sourceMessageId?: string;
+  sourceChannelId?: string;
+  targetChannelId?: string;
+  targetBadges?: string[];
+  sourceChannelLogin?: string;
+  sourceChannelDisplayName?: string;
+  sourceChannelAvatarUrl?: string;
+  showSourceChannelBadge?: boolean;
   twitchEvent?: TwitchEvent;
 }
 
@@ -549,7 +557,17 @@ export class TwitchService {
         tags.color && tags.color.length > 0
           ? tags.color
           : this.getFallbackColor(finalUsername);
-      const badges = this.parseBadges(tags.badges || "");
+      const targetBadges = this.parseBadges(tags.badges || "");
+      const sourceChannelId = tags["source-room-id"] || undefined;
+      const targetChannelId = tags["room-id"] || undefined;
+      const isSharedMessage = Boolean(
+        sourceChannelId &&
+          targetChannelId &&
+          sourceChannelId !== targetChannelId,
+      );
+      const badges = isSharedMessage
+        ? this.parseBadges(tags["source-badges"] || "")
+        : targetBadges;
 
       return {
         id: tags.id || Date.now().toString(),
@@ -570,6 +588,10 @@ export class TwitchService {
         platform: "twitch",
         isGigantifiedEmote: tags["msg-id"] === "gigantified-emote-message",
         sourceChannel,
+        sourceMessageId: tags["source-id"] || undefined,
+        sourceChannelId,
+        targetChannelId,
+        targetBadges,
         twitchEvent: getPrivMsgEvent(tags),
       };
     } catch (error) {
@@ -620,6 +642,14 @@ export class TwitchService {
           ? tags.color
           : this.getFallbackColor(finalUsername);
       const displayName = tags["display-name"] || finalUsername;
+      const targetBadges = this.parseBadges(tags.badges || "");
+      const sourceChannelId = tags["source-room-id"] || undefined;
+      const targetChannelId = tags["room-id"] || undefined;
+      const isSharedMessage = Boolean(
+        sourceChannelId &&
+          targetChannelId &&
+          sourceChannelId !== targetChannelId,
+      );
 
       return {
         id: tags.id || Date.now().toString(),
@@ -627,7 +657,9 @@ export class TwitchService {
         displayName,
         message: message,
         color,
-        badges: this.parseBadges(tags.badges || ""),
+        badges: isSharedMessage
+          ? this.parseBadges(tags["source-badges"] || "")
+          : targetBadges,
         emotes: this.parseEmotes(tags.emotes || ""),
         userType: tags["user-type"] || "",
         isModerator: tags.mod === "1",
@@ -641,6 +673,10 @@ export class TwitchService {
         bits: bits,
         cheerPrefix: cheerPrefix,
         sourceChannel,
+        sourceMessageId: tags["source-id"] || undefined,
+        sourceChannelId,
+        targetChannelId,
+        targetBadges,
         twitchEvent: getUserNoticeEvent(msgId, tags, displayName),
       };
     } catch (error) {

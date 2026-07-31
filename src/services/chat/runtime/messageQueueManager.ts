@@ -6,7 +6,16 @@ import type { TwitchMessage } from "../twitchService";
 export type MessageUpdater = (messages: TwitchMessage[]) => TwitchMessage[];
 
 type MessageRefreshPatch = Partial<
-  Pick<TwitchMessage, "displayName" | "color" | "badges">
+  Pick<
+    TwitchMessage,
+    | "displayName"
+    | "color"
+    | "badges"
+    | "sourceChannelLogin"
+    | "sourceChannelDisplayName"
+    | "sourceChannelAvatarUrl"
+    | "showSourceChannelBadge"
+  >
 >;
 
 type MessageQueueManagerOptions = {

@@ -44,7 +44,9 @@ export type TwitchGqlCustomReward = {
 export type TwitchGqlChannelProfile = {
   id: string;
   login: string;
-  primaryColorHex: string;
+  displayName: string;
+  profileImageUrl: string;
+  primaryColorHex?: string;
 };
 
 export type TwitchGqlLeaderboardUser = {
@@ -135,6 +137,10 @@ class TwitchGqlService {
     Promise<Map<string, TwitchGqlCustomReward>>
   >();
   private channelPrimaryColorCache = new Map<string, Promise<string>>();
+  private channelProfileCache = new Map<
+    string,
+    Promise<TwitchGqlChannelProfile | null>
+  >();
   private leaderboardUsersCache = new Map<
     string,
     Promise<TwitchGqlLeaderboardUser[]>
@@ -334,6 +340,56 @@ class TwitchGqlService {
       });
 
     this.channelPrimaryColorCache.set(normalizedLogin, promise);
+    return promise;
+  }
+
+  async loadChannelProfile(
+    channelId: string,
+  ): Promise<TwitchGqlChannelProfile | null> {
+    if (!isTwitchUserId(channelId)) return null;
+
+    const cached = this.channelProfileCache.get(channelId);
+    if (cached) return cached;
+
+    const promise = this.requestQuery(
+      "ChatYXChannelProfile",
+      `
+        query ChatYXChannelProfile($id: ID!) {
+          user(id: $id) {
+            id
+            login
+            displayName
+            profileImageURL(width: 70)
+          }
+        }
+      `,
+      { id: channelId },
+    )
+      .then((data) => {
+        const user = data?.user;
+        if (!user?.id || !user?.login) {
+          this.channelProfileCache.delete(channelId);
+          return null;
+        }
+
+        return {
+          id: String(user.id),
+          login: String(user.login),
+          displayName: String(user.displayName || user.login),
+          profileImageUrl: String(user.profileImageURL || ""),
+        };
+      })
+      .catch((error) => {
+        log.warn(
+          LOG_CATEGORIES.CHAT,
+          "Twitch GQL channel profile unavailable",
+          error,
+        );
+        this.channelProfileCache.delete(channelId);
+        return null;
+      });
+
+    this.channelProfileCache.set(channelId, promise);
     return promise;
   }
 

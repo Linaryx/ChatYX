@@ -8,18 +8,34 @@ import type { TwitchMessage } from "../twitchService";
 import type { AnnouncementColorResolver } from "./announcementColorResolver";
 import type { ChatAssetLoader } from "./chatAssetLoader";
 
+type MessageRefreshPatch = Partial<
+  Pick<
+    TwitchMessage,
+    | "sourceChannelLogin"
+    | "sourceChannelDisplayName"
+    | "sourceChannelAvatarUrl"
+    | "showSourceChannelBadge"
+  >
+>;
+
 type MessagePreparationPipelineOptions = {
   announcementColorResolver: AnnouncementColorResolver;
   assetLoader: ChatAssetLoader;
   getConfig: () => ChatConfig | null;
   getService: () => ChatPresentationService | null;
-  onMessageRefresh: (messageId: string) => void;
+  onMessageRefresh: (
+    messageId: string,
+    patch?: MessageRefreshPatch,
+  ) => void;
 };
 
 export class MessagePreparationPipeline {
   private readonly seenMessageIds = new Set<string>();
   private readonly inFlightMessages = new Set<TwitchMessage>();
   private readonly canceledMessages = new WeakSet<TwitchMessage>();
+  private readonly channelMessages = new Map<string, TwitchMessage>();
+  private readonly observedChannelIds = new Set<string>();
+  private channelBadgesVisible = false;
   private preparationGeneration = 0;
 
   constructor(private readonly options: MessagePreparationPipelineOptions) {}
@@ -84,6 +100,7 @@ export class MessagePreparationPipeline {
 
       if (message.platform !== "youtube") {
         this.loadUserBadges(message, userId);
+        this.registerChannelMessage(message);
       }
 
       return message;
@@ -113,6 +130,9 @@ export class MessagePreparationPipeline {
   clear() {
     this.cancelPending();
     this.seenMessageIds.clear();
+    this.channelMessages.clear();
+    this.observedChannelIds.clear();
+    this.channelBadgesVisible = false;
   }
 
   cancelMessage(messageId: string) {
@@ -154,6 +174,47 @@ export class MessagePreparationPipeline {
       .catch(() => {});
   }
 
+  private registerChannelMessage(message: TwitchMessage) {
+    const channelId = message.sourceChannelId || message.targetChannelId;
+    if (!message.id || !channelId) return;
+
+    this.channelMessages.set(message.id, message);
+    this.observedChannelIds.add(channelId);
+
+    if (!this.channelBadgesVisible && this.observedChannelIds.size > 1) {
+      this.channelBadgesVisible = true;
+      for (const trackedMessage of this.channelMessages.values()) {
+        trackedMessage.showSourceChannelBadge = true;
+        this.options.onMessageRefresh(trackedMessage.id, {
+          showSourceChannelBadge: true,
+        });
+      }
+    } else if (this.channelBadgesVisible) {
+      message.showSourceChannelBadge = true;
+    }
+
+    const messageId = message.id;
+    void this.options.assetLoader
+      .loadSharedChannel(channelId)
+      .then((profile) => {
+        if (!this.options.getService() || !this.seenMessageIds.has(messageId)) {
+          return;
+        }
+
+        const patch: MessageRefreshPatch = {};
+        if (profile) {
+          message.sourceChannelLogin = profile.login;
+          message.sourceChannelDisplayName = profile.displayName;
+          message.sourceChannelAvatarUrl = profile.profileImageUrl;
+          patch.sourceChannelLogin = profile.login;
+          patch.sourceChannelDisplayName = profile.displayName;
+          patch.sourceChannelAvatarUrl = profile.profileImageUrl;
+        }
+        this.options.onMessageRefresh(messageId, patch);
+      })
+      .catch(() => {});
+  }
+
   private isDuplicate(message: TwitchMessage) {
     return Boolean(message.id && this.seenMessageIds.has(message.id));
   }
@@ -179,7 +240,10 @@ export class MessagePreparationPipeline {
     if (this.seenMessageIds.size <= 300) return;
 
     const oldest = this.seenMessageIds.values().next().value as string | undefined;
-    if (oldest) this.seenMessageIds.delete(oldest);
+    if (oldest) {
+      this.seenMessageIds.delete(oldest);
+      this.channelMessages.delete(oldest);
+    }
   }
 
   private createEmoteSnapshot(
@@ -198,7 +262,11 @@ export class MessagePreparationPipeline {
       const emoteName = token.cleanText;
       if (!emoteName) continue;
 
-      const emote = service.getEmote(emoteName, message.username);
+      const emote = service.getEmote(
+        emoteName,
+        message.username,
+        message.sourceChannelId,
+      );
       if (emote) snapshot.set(emoteName, { ...emote });
     }
 

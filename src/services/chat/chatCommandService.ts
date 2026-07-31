@@ -34,7 +34,9 @@ const COMMAND_ALIASES: Record<string, ChatCommandName> = {
 
 function badgeNames(message: TwitchMessage): Set<string> {
   return new Set(
-    message.badges.map((badge) => badge.split("/", 1)[0].toLowerCase()),
+    (message.targetBadges ?? message.badges).map((badge) =>
+      badge.split("/", 1)[0].toLowerCase(),
+    ),
   );
 }
 

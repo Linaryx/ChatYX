@@ -102,6 +102,36 @@ class EmoteService {
     }
   }
 
+  async loadAdditionalChannelEmotes(channelId: string): Promise<void> {
+    if (!isTwitchUserId(channelId)) return;
+
+    if (!this.globalEmotesPromise) {
+      this.globalEmotesPromise = this.loadGlobalEmotes().catch((error) => {
+        log.error(LOG_CATEGORIES.EMOTES, "Failed to load global emotes", error);
+        this.globalEmotesPromise = null;
+      });
+    }
+
+    if (!this.channelLoadPromises.has(channelId)) {
+      this.channelLoadPromises.set(
+        channelId,
+        this.loadChannelEmotes(channelId).catch((error) => {
+          log.error(
+            LOG_CATEGORIES.EMOTES,
+            "Failed to load shared channel emotes",
+            error,
+          );
+          this.channelLoadPromises.delete(channelId);
+        }),
+      );
+    }
+
+    await Promise.all([
+      this.globalEmotesPromise,
+      this.channelLoadPromises.get(channelId),
+    ]);
+  }
+
   async reload7TVEmotes(newEmoteSetId?: string): Promise<void> {
     if (this.currentChannelId) {
       // Clear old 7TV emotes before reloading (keep other emotes)

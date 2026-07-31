@@ -180,8 +180,8 @@ export class OverlayRuntime {
       assetLoader: this.assetLoader,
       getConfig: () => this.activeConfig,
       getService: () => this.chatService,
-      onMessageRefresh: (messageId) =>
-        this.messageQueue.queueRefresh(messageId),
+      onMessageRefresh: (messageId, patch) =>
+        this.messageQueue.queueRefresh(messageId, patch),
     });
     this.connectionManager = new ChatConnectionManager({
       onChatClear: () => this.clearMessages(),

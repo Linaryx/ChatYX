@@ -9,6 +9,7 @@ import {
 import { sevenTVEventApi } from "../sevenTVEventApi";
 import {
   twitchGqlService,
+  type TwitchGqlChannelProfile,
   type TwitchGqlCustomReward,
 } from "../twitchGqlService";
 
@@ -20,6 +21,11 @@ type ChatAssetOptions = {
 };
 
 export class ChatAssetLoader {
+  private readonly sharedChannelLoads = new Map<
+    string,
+    Promise<TwitchGqlChannelProfile | null>
+  >();
+
   constructor(private readonly channel: string) {}
 
   preloadChannelRewards() {
@@ -35,6 +41,34 @@ export class ChatAssetLoader {
       .catch((error) =>
         log.error(LOG_CATEGORIES.EMOTES, "Failed to load emotes", error),
       );
+  }
+
+  loadSharedChannel(
+    channelId: string,
+  ): Promise<TwitchGqlChannelProfile | null> {
+    const cached = this.sharedChannelLoads.get(channelId);
+    if (cached) return cached;
+
+    const promise = Promise.all([
+      twitchGqlService.loadChannelProfile(channelId),
+      emoteService.loadAdditionalChannelEmotes(channelId),
+    ])
+      .then(([profile]) => {
+        if (!profile) this.sharedChannelLoads.delete(channelId);
+        return profile;
+      })
+      .catch((error) => {
+        log.warn(
+          LOG_CATEGORIES.CHAT,
+          "Failed to load shared channel assets",
+          error,
+        );
+        this.sharedChannelLoads.delete(channelId);
+        return null;
+      });
+
+    this.sharedChannelLoads.set(channelId, promise);
+    return promise;
   }
 
   loadDeferredAssets(channelId: string, includeChannelRoles: boolean) {

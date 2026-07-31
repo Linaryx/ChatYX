@@ -157,3 +157,44 @@ describe("Twitch GQL channel colors", () => {
     expect(requestCount).toBe(2);
   });
 });
+
+describe("Twitch GQL channel profiles", () => {
+  test("loads and caches a profile by channel ID", async () => {
+    (globalThis as any).window = { setTimeout, clearTimeout };
+    let requestCount = 0;
+    globalThis.fetch = (async (_input, init) => {
+      requestCount += 1;
+      const operation = JSON.parse(String(init?.body));
+      expect(operation.operationName).toBe("ChatYXChannelProfile");
+      expect(operation.variables).toEqual({ id: "99887766" });
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            user: {
+              id: "99887766",
+              login: "source_channel",
+              displayName: "Source Channel",
+              profileImageURL: "https://example.com/avatar.png",
+            },
+          },
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const expected = {
+      id: "99887766",
+      login: "source_channel",
+      displayName: "Source Channel",
+      profileImageUrl: "https://example.com/avatar.png",
+    };
+    expect(await twitchGqlService.loadChannelProfile("99887766")).toEqual(
+      expected,
+    );
+    expect(await twitchGqlService.loadChannelProfile("99887766")).toEqual(
+      expected,
+    );
+    expect(requestCount).toBe(1);
+  });
+});

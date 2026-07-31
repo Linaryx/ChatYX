@@ -172,4 +172,35 @@ describe("Twitch IRC event classification", () => {
       color: "#00c800",
     });
   });
+
+  test("parses Shared Chat metadata from PRIVMSG", () => {
+    const message = service.parseMessageLine(
+      "@badges=moderator/1;color=#00ff00;display-name=SharedViewer;id=delivered-1;mod=1;room-id=100;source-badges=subscriber/12;source-id=original-1;source-room-id=200;subscriber=0;user-id=7 :sharedviewer!sharedviewer@sharedviewer.tmi.twitch.tv PRIVMSG #target :hello from shared chat",
+    );
+
+    expect(message).toMatchObject({
+      id: "delivered-1",
+      sourceMessageId: "original-1",
+      sourceChannelId: "200",
+      targetChannelId: "100",
+      sourceChannel: "target",
+      badges: ["subscriber/12"],
+      targetBadges: ["moderator/1"],
+    });
+  });
+
+  test("parses Shared Chat metadata from USERNOTICE", () => {
+    const message = service.parseMessageLine(
+      "@badges=;color=#9146ff;display-name=SharedSub;id=delivered-notice;login=sharedsub;mod=0;msg-id=sub;room-id=100;source-badges=subscriber/3;source-id=original-notice;source-room-id=200;subscriber=0;user-id=8 :tmi.twitch.tv USERNOTICE #target :shared subscription",
+    );
+
+    expect(message).toMatchObject({
+      id: "delivered-notice",
+      sourceMessageId: "original-notice",
+      sourceChannelId: "200",
+      targetChannelId: "100",
+      badges: ["subscriber/3"],
+      targetBadges: [],
+    });
+  });
 });

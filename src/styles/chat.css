@@ -395,6 +395,11 @@ img.badge {
   display: inline-block;
 }
 
+.badge.shared-chat-source-badge {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .badge:last-of-type {
   margin-right: 3px;
 }

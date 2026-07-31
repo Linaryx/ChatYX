@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { ChatConfig } from "../src/config/chatUrlParams";
+import { badgeService } from "../src/services/badges";
 import { OverlayRuntime } from "../src/services/chat/overlayRuntime";
 import { MessagePreparationPipeline } from "../src/services/chat/runtime/messagePreparationPipeline";
 import type { TwitchMessage } from "../src/services/chat/twitchService";
@@ -33,10 +34,13 @@ function message(overrides: Partial<TwitchMessage> = {}): TwitchMessage {
 function createPipeline(options: {
   resolveReward?: () => Promise<null>;
   apply?: () => Promise<void>;
+  getEmote?: (...args: any[]) => any;
+  loadSharedChannel?: (...args: any[]) => Promise<any>;
+  onMessageRefresh?: (messageId: string) => void;
 }) {
   const service = {
     shouldDisplayMessage: () => true,
-    getEmote: () => undefined,
+    getEmote: options.getEmote ?? (() => undefined),
   };
 
   return new MessagePreparationPipeline({
@@ -45,10 +49,11 @@ function createPipeline(options: {
     } as any,
     assetLoader: {
       resolveReward: options.resolveReward ?? (async () => null),
+      loadSharedChannel: options.loadSharedChannel ?? (async () => null),
     } as any,
     getConfig: () => ({}) as ChatConfig,
     getService: () => service as any,
-    onMessageRefresh: () => {},
+    onMessageRefresh: options.onMessageRefresh ?? (() => {}),
   });
 }
 
@@ -84,6 +89,115 @@ describe("chat message preparation cancellation", () => {
     announcement.resolve();
 
     expect(await pending).toBeNull();
+  });
+
+  test("resolves third-party emotes against the Shared Chat source channel", async () => {
+    const lookups: any[][] = [];
+    const pipeline = createPipeline({
+      getEmote: (...args) => {
+        lookups.push(args);
+        return { name: args[0] };
+      },
+    });
+
+    await pipeline.prepare(
+      message({ message: "SourceEmote", sourceChannelId: "200" }),
+    );
+
+    expect(lookups).toContainEqual(["SourceEmote", "viewer", "200"]);
+  });
+
+  test("loads Shared Chat assets without delaying the message", async () => {
+    const originalLoadUserBadges = badgeService.loadUserBadges;
+    badgeService.loadUserBadges = async () => [];
+    const sourceAssets = deferred<{
+      login: string;
+      displayName: string;
+      profileImageUrl: string;
+    }>();
+    const refreshed: string[] = [];
+    const pipeline = createPipeline({
+      loadSharedChannel: () => sourceAssets.promise,
+      onMessageRefresh: (messageId) => refreshed.push(messageId),
+    });
+
+    try {
+      const prepared = await pipeline.prepare(
+        message({
+          platform: "twitch",
+          sourceChannelId: "200",
+          targetChannelId: "100",
+        }),
+      );
+
+      expect(prepared).not.toBeNull();
+      expect(prepared?.sourceChannelAvatarUrl).toBeUndefined();
+
+      sourceAssets.resolve({
+        login: "source",
+        displayName: "Source Channel",
+        profileImageUrl: "https://example.com/source.png",
+      });
+      await sourceAssets.promise;
+      await Promise.resolve();
+
+      expect(prepared).toMatchObject({
+        sourceChannelLogin: "source",
+        sourceChannelDisplayName: "Source Channel",
+        sourceChannelAvatarUrl: "https://example.com/source.png",
+      });
+      expect(refreshed).toEqual(["message-1"]);
+    } finally {
+      badgeService.loadUserBadges = originalLoadUserBadges;
+    }
+  });
+
+  test("shows channel avatars on every message after multiple channels appear", async () => {
+    const originalLoadUserBadges = badgeService.loadUserBadges;
+    badgeService.loadUserBadges = async () => [];
+    const refreshed: string[] = [];
+    const pipeline = createPipeline({
+      loadSharedChannel: async (channelId: string) => ({
+        login: `channel_${channelId}`,
+        displayName: `Channel ${channelId}`,
+        profileImageUrl: `https://example.com/${channelId}.png`,
+      }),
+      onMessageRefresh: (messageId) => refreshed.push(messageId),
+    });
+
+    try {
+      const primary = await pipeline.prepare(
+        message({
+          id: "primary-message",
+          platform: "twitch",
+          targetChannelId: "100",
+        }),
+      );
+      expect(primary?.showSourceChannelBadge).toBeUndefined();
+
+      const shared = await pipeline.prepare(
+        message({
+          id: "shared-message",
+          platform: "twitch",
+          sourceChannelId: "200",
+          targetChannelId: "100",
+        }),
+      );
+      await Promise.resolve();
+
+      expect(primary).toMatchObject({
+        showSourceChannelBadge: true,
+        sourceChannelAvatarUrl: "https://example.com/100.png",
+      });
+      expect(shared).toMatchObject({
+        showSourceChannelBadge: true,
+        sourceChannelAvatarUrl: "https://example.com/200.png",
+      });
+      expect(refreshed).toContain("primary-message");
+      expect(refreshed).toContain("shared-message");
+    } finally {
+      badgeService.loadUserBadges = originalLoadUserBadges;
+    }
   });
 });
 

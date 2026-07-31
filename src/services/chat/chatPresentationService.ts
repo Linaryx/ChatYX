@@ -411,18 +411,22 @@ export class ChatPresentationService {
   /**
    * Get emote for message rendering
    */
-  getEmote(code: string, username?: string): any {
+  getEmote(
+    code: string,
+    username?: string,
+    channelId = this.config.userId,
+  ): any {
     // Check personal emotes first if enabled
     if (this.config.features.personalEmotes && username) {
       const emote = emoteService.getEmoteForUser(
         code,
         username,
-        this.config.userId,
+        channelId,
       );
       if (emote) return emote;
     }
 
-    return emoteService.getEmote(code, this.config.userId);
+    return emoteService.getEmote(code, channelId);
   }
 
   /**
