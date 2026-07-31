@@ -294,7 +294,10 @@ export const ChatMessage = (props: ChatMessageProps) => {
         "platform-marked": showPlatformMarker(),
 	        "chat-event": Boolean(visibleTwitchEvent()),
 	        "chat-event-highlight": Boolean(
-	          visibleTwitchEvent() && props.config.highlightTwitchEvents,
+	          visibleTwitchEvent() &&
+	            (props.config.highlightTwitchEvents ||
+	              visibleTwitchEvent()?.type === "first-message") &&
+	            !(message.isGigantifiedEmote && props.config.showGigantifiedEmotes),
 	        ),
 	        "chat-event-with-message": hasEventMessageText(),
 	        [`chat-event-${visibleTwitchEvent()?.type}`]: Boolean(visibleTwitchEvent()),
