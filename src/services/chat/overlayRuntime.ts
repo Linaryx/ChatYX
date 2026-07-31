@@ -585,6 +585,16 @@ export class OverlayRuntime {
     this.messageQueue.refreshMessages((message) =>
       this.messagePipeline.refresh(message),
     );
+    this.scrollToLatestAfterRender();
+  }
+
+  private scrollToLatestAfterRender(): void {
+    window.requestAnimationFrame(() => {
+      if (!this.chatService || !this.activeConfig) return;
+      this.chatService.scrollToLatest(
+        getAnimationScrollBehavior(this.activeConfig.animation),
+      );
+    });
   }
 
   private async loadRecentMessages(): Promise<number> {
@@ -615,9 +625,7 @@ export class OverlayRuntime {
           ? nextMessages.slice(-100)
           : nextMessages;
       });
-      this.chatService.scrollToLatest(
-        getAnimationScrollBehavior(this.activeConfig.animation),
-      );
+      this.scrollToLatestAfterRender();
 
       return preparedMessages.length;
     } catch (error) {

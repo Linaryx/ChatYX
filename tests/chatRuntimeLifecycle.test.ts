@@ -212,6 +212,41 @@ afterEach(() => {
 });
 
 describe("overlay runtime lifecycle", () => {
+  test("scrolls restored messages after the DOM render frame", () => {
+    const frames: FrameRequestCallback[] = [];
+    (globalThis as any).window = {
+      requestAnimationFrame: (callback: FrameRequestCallback) => {
+        frames.push(callback);
+        return frames.length;
+      },
+    };
+
+    const scrollBehaviors: ScrollBehavior[] = [];
+    const runtime = new OverlayRuntime("channel", {
+      onConfigResolved: () => {},
+      onServiceReady: () => {},
+      onLoadingChange: () => {},
+      onCommandStatusChange: () => {},
+      onConnectionChange: () => {},
+      onMessagesChange: () => {},
+      onAnimationDurationChange: () => {},
+      onChannelResolved: () => {},
+    });
+    (runtime as any).activeConfig = { animation: "none" } as ChatConfig;
+    (runtime as any).chatService = {
+      scrollToLatest: (behavior: ScrollBehavior) => {
+        scrollBehaviors.push(behavior);
+      },
+    };
+
+    (runtime as any).scrollToLatestAfterRender();
+
+    expect(scrollBehaviors).toEqual([]);
+    expect(frames).toHaveLength(1);
+    frames[0](0);
+    expect(scrollBehaviors).toEqual(["auto"]);
+  });
+
   test("destroy invalidates an initialization waiting for channel identity", async () => {
     let listenerAdds = 0;
     (globalThis as any).window = {
