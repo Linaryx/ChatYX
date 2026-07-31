@@ -333,7 +333,7 @@ export default function ChatOverlay() {
 
     return {
       position: "relative",
-      width: withPrediction ? "100%" : "fit-content",
+      width: "100%",
       "max-width": "100%",
       "max-height": "calc(100vh - 20px)",
       display: "block",
@@ -357,7 +357,7 @@ export default function ChatOverlay() {
 
   const containerStyle = createMemo(() => ({
     position: "relative",
-    width: hasPredictionBar() ? "100%" : "fit-content",
+    width: "100%",
     "max-width": "100%",
     "max-height": "100%",
     padding: "0",
