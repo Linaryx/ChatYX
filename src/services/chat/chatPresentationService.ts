@@ -23,7 +23,6 @@ import {
   injectAnimationStyles,
 } from "../../utils/ui/animationUtils";
 import type { AnimationOptions } from "../../utils/ui/animationUtils";
-import { injectZeroWidthStyles } from "../../utils/chat/zeroWidthEmotes";
 import { parseBotNames, type ChatConfig } from "../../config/chatUrlParams";
 import { log, LOG_CATEGORIES } from "../../utils/logger";
 
@@ -44,7 +43,6 @@ export interface ChatPresentationConfig {
     badges: boolean;
     paints: boolean;
     personalEmotes: boolean;
-    zeroWidthEmotes: boolean;
   };
 }
 
@@ -65,7 +63,6 @@ export const DEFAULT_CHAT_PRESENTATION_CONFIG: ChatPresentationConfig = {
     badges: true,
     paints: true,
     personalEmotes: true,
-    zeroWidthEmotes: true,
   },
 };
 
@@ -126,10 +123,6 @@ export class ChatPresentationService {
 
     // Inject styles
     injectAnimationStyles(this.config.animation);
-
-    if (this.config.features.zeroWidthEmotes) {
-      injectZeroWidthStyles();
-    }
 
     this.initialized = true;
     log.service(
@@ -546,13 +539,6 @@ export class ChatPresentationService {
   }
 
   /**
-   * Check if zero-width emotes are enabled
-   */
-  isZeroWidthEnabled(): boolean {
-    return this.config.features.zeroWidthEmotes;
-  }
-
-  /**
    * Cleanup and disconnect
    */
   async cleanup(): Promise<void> {
@@ -609,7 +595,6 @@ export function createChatPresentationConfig(
       badges: !params.hideSpecialBadges,
       paints: true,
       personalEmotes: true,
-      zeroWidthEmotes: true,
     },
   };
 }

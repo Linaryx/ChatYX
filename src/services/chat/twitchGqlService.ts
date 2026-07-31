@@ -41,6 +41,12 @@ export type TwitchGqlCustomReward = {
   cost: number;
 };
 
+export type TwitchGqlChannelProfile = {
+  id: string;
+  login: string;
+  primaryColorHex: string;
+};
+
 export type TwitchGqlLeaderboardUser = {
   id: string;
   login: string;
@@ -115,6 +121,12 @@ function parseSender(data: any): TwitchGqlSender | null {
   };
 }
 
+function normalizeHexColor(value: unknown): string {
+  const color = String(value || "").trim();
+  const match = color.match(/^#?([0-9a-f]{6})$/i);
+  return match ? `#${match[1]}` : "";
+}
+
 class TwitchGqlService {
   private senderCache = new Map<string, Promise<TwitchGqlSender | null>>();
   private badgeSetCache = new Map<string, Promise<TwitchGqlBadge[]>>();
@@ -122,6 +134,7 @@ class TwitchGqlService {
     string,
     Promise<Map<string, TwitchGqlCustomReward>>
   >();
+  private channelPrimaryColorCache = new Map<string, Promise<string>>();
   private leaderboardUsersCache = new Map<
     string,
     Promise<TwitchGqlLeaderboardUser[]>
@@ -285,6 +298,45 @@ class TwitchGqlService {
     return promise;
   }
 
+  async loadChannelPrimaryColor(channelLogin: string): Promise<string> {
+    const normalizedLogin = channelLogin.trim().toLowerCase();
+    if (!normalizedLogin) return "";
+
+    const cached = this.channelPrimaryColorCache.get(normalizedLogin);
+    if (cached) return cached;
+
+    const promise = this.requestQuery(
+      "ChatYXChannelPrimaryColor",
+      `
+        query ChatYXChannelPrimaryColor($login: String!) {
+          user(login: $login) {
+            id
+            login
+            primaryColorHex
+          }
+        }
+      `,
+      { login: normalizedLogin },
+    )
+      .then((data) => {
+        const color = normalizeHexColor(data?.user?.primaryColorHex);
+        if (!color) this.channelPrimaryColorCache.delete(normalizedLogin);
+        return color;
+      })
+      .catch((error) => {
+        log.warn(
+          LOG_CATEGORIES.CHAT,
+          "Twitch GQL channel primary color unavailable",
+          error,
+        );
+        this.channelPrimaryColorCache.delete(normalizedLogin);
+        return "";
+      });
+
+    this.channelPrimaryColorCache.set(normalizedLogin, promise);
+    return promise;
+  }
+
   async loadChannelLeaderboardUsers(
     channelId: string,
     first = 10,
@@ -345,6 +397,37 @@ class TwitchGqlService {
     }
 
     const payload = await response.json();
+    if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+      throw new Error("Twitch GQL query returned errors");
+    }
+    return payload?.data ?? null;
+  }
+
+  private async requestQuery(
+    operationName: string,
+    query: string,
+    variables: Record<string, unknown>,
+  ): Promise<any> {
+    const response = await withTimeout(
+      fetch(GQL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Client-ID": TWITCH_WEB_CLIENT_ID,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ operationName, query, variables }),
+      }),
+      3000,
+    );
+
+    if (!response.ok) {
+      throw new Error(`Twitch GQL HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+      throw new Error("Twitch GQL query returned errors");
+    }
     return payload?.data ?? null;
   }
 

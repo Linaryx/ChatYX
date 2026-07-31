@@ -9,6 +9,7 @@ export type TwitchEventType =
   | "first-message"
   | "raid"
   | "subscription"
+  | "watch-streak"
   | "highlighted-message"
   | "reward"
   | "power-up"
@@ -20,6 +21,7 @@ export type TwitchEvent = {
   detail?: string;
   level?: string;
   count?: number;
+  points?: number;
   color?: string;
 };
 
@@ -103,6 +105,27 @@ function getUserNoticeEvent(
   displayName: string,
 ): TwitchEvent | undefined {
   if (!msgId) return undefined;
+
+  if (msgId === "viewermilestone") {
+    const category = tags["msg-param-category"]?.toLowerCase();
+    if (category !== "watch-streak" && category !== "watch-fk") {
+      return undefined;
+    }
+
+    const parsePositiveInteger = (value: string | undefined) => {
+      if (!value || !/^\d+$/.test(value)) return undefined;
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+    };
+
+    return {
+      type: "watch-streak",
+      label: "Новая серия просмотров!",
+      detail: displayName,
+      count: parsePositiveInteger(tags["msg-param-value"]),
+      points: parsePositiveInteger(tags["msg-param-copoReward"]),
+    };
+  }
 
   if (msgId === "raid") {
     const raider = tags["msg-param-displayName"] || displayName;
@@ -559,7 +582,7 @@ export class TwitchService {
     try {
       // Парсим USERNOTICE сообщения (включая Cheer события)
       const match = line.match(
-        /^@([^ ]+) (?:[^ ]+ )?USERNOTICE #([A-Za-z0-9_]+)(?: :(.+))?$/,
+        /^@([^ ]+) (?:[^ ]+ )?USERNOTICE #([A-Za-z0-9_]+)(?: :?(.+))?$/,
       );
       if (!match) return null;
 

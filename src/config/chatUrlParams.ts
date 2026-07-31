@@ -57,12 +57,14 @@ export interface ChatConfig {
   showHighlightedMessages: boolean;
   showChannelPointRewards: boolean;
   showGigantifiedEmotes: boolean;
+  showPredictions: boolean;
   linkMode: LinkDisplayMode;
   linkColor: string;
   hideLinkRewards: boolean;
 }
 
 export const DEFAULT_FONT_WEIGHT = 800;
+export const DEFAULT_RECENT_MESSAGE_LIMIT = 15;
 
 export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   channel: "",
@@ -80,7 +82,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   messageSpeed: DEFAULT_MESSAGE_SPEED,
   showHomies: true,
   recentMessages: true,
-  bots: true,
+  bots: false,
   commands: true,
   hideSpecialBadges: false,
   emoteScale: 1,
@@ -109,6 +111,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   showHighlightedMessages: true,
   showChannelPointRewards: true,
   showGigantifiedEmotes: true,
+  showPredictions: false,
   linkMode: "normal",
   linkColor: "#53b7ff",
   hideLinkRewards: true,
@@ -319,6 +322,11 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     kind: "bool",
     aliases: ["show_gigantified_emotes"],
   },
+  showPredictions: {
+    query: "pred",
+    kind: "bool",
+    aliases: ["predictions", "show_predictions"],
+  },
   linkMode: {
     query: "links",
     kind: "string",
@@ -346,6 +354,15 @@ function parseBool(raw: string): boolean | null {
 function parseIntSafe(raw: string): number | null {
   const n = Number.parseInt(raw, 10);
   return Number.isFinite(n) ? n : null;
+}
+
+export function parseRecentMessageLimit(searchParams: URLSearchParams): number {
+  const raw = searchParams.get("rmlimit");
+  if (raw === null) return DEFAULT_RECENT_MESSAGE_LIMIT;
+
+  const parsed = parseIntSafe(raw);
+  if (parsed === null) return DEFAULT_RECENT_MESSAGE_LIMIT;
+  return Math.min(Math.max(parsed, 1), 100);
 }
 
 function parseFloatSafe(raw: string): number | null {

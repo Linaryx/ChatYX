@@ -1,17 +1,29 @@
 import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_CHAT_CONFIG,
+  DEFAULT_RECENT_MESSAGE_LIMIT,
   chatConfigToSearchParams,
   normalizeBotNames,
   parseChatConfigFromSearchParams,
+  parseRecentMessageLimit,
   type ChatConfig,
 } from "../src/config/chatUrlParams";
 
 describe("chat URL params", () => {
+  test("reads the hidden recent-message limit without changing setup config", () => {
+    expect(parseRecentMessageLimit(new URLSearchParams("rmlimit=30"))).toBe(30);
+    expect(parseRecentMessageLimit(new URLSearchParams("rmlimit=0"))).toBe(1);
+    expect(parseRecentMessageLimit(new URLSearchParams("rmlimit=999"))).toBe(100);
+    expect(parseRecentMessageLimit(new URLSearchParams("rmlimit=nope"))).toBe(
+      DEFAULT_RECENT_MESSAGE_LIMIT,
+    );
+  });
+
   test("uses the hosted YouTube websocket by default", () => {
     expect(DEFAULT_CHAT_CONFIG.youtubeWebSocketUrl).toBe(
       "wss://ytwss.ruina.team",
     );
+    expect(DEFAULT_CHAT_CONFIG.bots).toBe(false);
   });
 
   test("parses aliases and typed values", () => {
@@ -45,7 +57,7 @@ describe("chat URL params", () => {
       channel: "xqc",
       youtubeChannel: "someyt",
       youtubeWebSocketUrl: "ws://localhost:9905",
-      bots: false,
+      bots: true,
       fade: false,
       recentMessages: false,
       shadow: false,
@@ -61,6 +73,7 @@ describe("chat URL params", () => {
       showHighlightedMessages: false,
       showChannelPointRewards: false,
       showGigantifiedEmotes: false,
+      showPredictions: true,
       linkMode: "highlight",
       linkColor: "#00ccff",
       hideLinkRewards: false,
@@ -72,7 +85,7 @@ describe("chat URL params", () => {
     expect(params.get("c")).toBe("xqc");
     expect(params.get("yt")).toBe("someyt");
     expect(params.get("ytws")).toBe("ws://localhost:9905");
-    expect(params.get("b")).toBe("false");
+    expect(params.get("b")).toBe("true");
     expect(params.get("fd")).toBe("0");
     expect(params.get("rm")).toBe("false");
     expect(params.get("sh")).toBe("0");
@@ -88,6 +101,7 @@ describe("chat URL params", () => {
     expect(params.get("hl")).toBe("false");
     expect(params.get("rewards")).toBe("false");
     expect(params.get("gigantify")).toBe("false");
+    expect(params.get("pred")).toBe("true");
     expect(params.get("links")).toBe("highlight");
     expect(params.get("linkcolor")).toBe("#00ccff");
     expect(params.get("hidelinkrewards")).toBe("false");
@@ -133,5 +147,20 @@ describe("chat URL params", () => {
       parseChatConfigFromSearchParams(new URLSearchParams("links=invalid"))
         .linkMode,
     ).toBe("normal");
+  });
+
+  test("parses predictions aliases and defaults to off", () => {
+    expect(DEFAULT_CHAT_CONFIG.showPredictions).toBe(false);
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams("pred=true"))
+        .showPredictions,
+    ).toBe(true);
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams("predictions=1"))
+        .showPredictions,
+    ).toBe(true);
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams()).showPredictions,
+    ).toBe(false);
   });
 });

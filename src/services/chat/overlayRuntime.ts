@@ -1,37 +1,22 @@
-import { parseChatConfigFromSearchParams } from "~/config/chatUrlParams";
-import { fetchWithFallback, FALLBACK_APIS, TWITCH_CONFIG } from "~/config/twitch";
-import { badgeService } from "~/services/badges";
+import {
+  DEFAULT_RECENT_MESSAGE_LIMIT,
+  parseChatConfigFromSearchParams,
+  parseRecentMessageLimit,
+} from "~/config/chatUrlParams";
 import {
   ChatPresentationService,
-  TwitchService,
-  YouTubeChatService,
-  channelRolesService,
   createChatPresentationConfig,
   emoteService,
   mentionStyleService,
-  sevenTVCosmeticsService,
-  sevenTVEventApi,
-  twitchGqlService,
   chatFeatureIntegration,
-  type TwitchGqlCustomReward,
   type TwitchMessage,
 } from "~/services/chat";
 import { fetchRecentMessages } from "~/services/chat/recentMessagesService";
 import {
-  generateShadowStyles,
-  generateSizeStyles,
-  generateStrokeStyles,
-  generateVariantStyles,
-} from "~/styles/chatStyles";
-import { createMessageTokenSnapshot } from "~/utils/chat/emojiUtils";
-import {
-  DEFAULT_ANIMATION_OPTIONS,
   getAnimationScrollBehavior,
   hasMessageEntryAnimation,
-  updateAnimationStyles,
 } from "~/utils/ui/animationUtils";
 import { log, LOG_CATEGORIES } from "~/utils/logger";
-import { mergeBadgesBySetId } from "~/utils/chat/senderIdentity";
 import type { ChatConfig } from "~/utils/chat";
 import {
   ChatCommandFeedback,
@@ -40,42 +25,37 @@ import {
   isDeveloperChatMessage,
   parseTestMessageCount,
 } from "./chatCommandService";
-
-type MessageUpdater = (messages: TwitchMessage[]) => TwitchMessage[];
-type MessageRefreshPatch = Partial<
-  Pick<TwitchMessage, "displayName" | "color" | "badges">
->;
+import {
+  AnnouncementColorResolver,
+  ChatAssetLoader,
+  ChatConnectionManager,
+  ChannelIdentityResolver,
+  MessagePreparationPipeline,
+  MessageQueueManager,
+  OverlayStyleManager,
+  type ChannelIdentity,
+  type MessageUpdater,
+} from "./runtime";
 
 type LoadingState = {
   status: string;
   progress: number;
 };
 
-type ChannelResolution = {
-  channelId: string;
-  displayName: string;
+export type ChatCommandStatus = {
+  text: string;
 };
-
-const RECENT_MESSAGE_LIMIT = 15;
 
 type OverlayRuntimeHooks = {
   onConfigResolved: (config: ChatConfig) => void;
   onServiceReady: (service: ChatPresentationService) => void;
   onLoadingChange: (state: LoadingState) => void;
+  onCommandStatusChange: (status: ChatCommandStatus | null) => void;
   onConnectionChange: (connected: boolean) => void;
   onMessagesChange: (updater: MessageUpdater) => void;
   onAnimationDurationChange: (durationMs: number) => void;
-  onChannelResolved: (resolution: ChannelResolution) => void;
+  onChannelResolved: (resolution: ChannelIdentity) => void;
 };
-
-function getAdaptiveAnimationDuration(
-  baseDuration: number,
-  messagesPerSecond: number,
-) {
-  if (messagesPerSecond <= 6) return baseDuration;
-  const scale = Math.max(0.38, 1 - (messagesPerSecond - 6) * 0.045);
-  return Math.round(baseDuration * scale);
-}
 
 function removeMessageElements(selector: string, tracked: number[]) {
   const remove = () => {
@@ -101,42 +81,30 @@ function setTrackedTimeout(
   return id;
 }
 
-function isTwitchUserId(value: string): boolean {
-  return /^\d+$/.test(value) && value !== "0";
-}
-
 export class OverlayRuntime {
-  private readonly twitchService = new TwitchService();
-  private readonly youtubeService = new YouTubeChatService();
   private readonly commandFeedback = new ChatCommandFeedback();
-  private readonly recentMessageTimes: number[] = [];
-  private readonly seenMessageIds = new Set<string>();
-  private readonly styleElementIds = [
-    "chat-size-styles",
-    "chat-shadow-styles",
-    "chat-stroke-styles",
-    "chat-variant-styles",
-    "chat-animations",
-  ];
+  private readonly styleManager = new OverlayStyleManager();
+  private readonly announcementColorResolver: AnnouncementColorResolver;
+  private readonly assetLoader: ChatAssetLoader;
+  private readonly connectionManager: ChatConnectionManager;
+  private readonly channelIdentityResolver: ChannelIdentityResolver;
+  private readonly messagePipeline: MessagePreparationPipeline;
+  private readonly messageQueue: MessageQueueManager;
 
   private chatService: ChatPresentationService | null = null;
   private readonly pendingTimers: number[] = [];
-  private readonly pendingMessages: TwitchMessage[] = [];
-  private readonly pendingMessageRefreshes = new Map<
-    string,
-    MessageRefreshPatch
-  >();
-  private pendingMessageFrame: number | null = null;
-  private pendingMessageRefreshFrame: number | null = null;
   private initialized = false;
-  private connected = false;
   private activeChannelId = "";
   private activeConfig: ChatConfig | null = null;
+  private recentMessageLimit = DEFAULT_RECENT_MESSAGE_LIMIT;
+  private commandStatusTimer: number | null = null;
+  private initializationGeneration = 0;
   private readonly eventHandlers = {
     messageDeleted: (event: Event) => {
       const customEvent = event as CustomEvent<{ messageId: string }>;
       const { messageId } = customEvent.detail;
-      this.discardPendingMessages((message) => message.id === messageId);
+      this.messagePipeline.cancelMessage(messageId);
+      this.messageQueue.discard((message) => message.id === messageId);
       this.hooks.onMessagesChange((messages) =>
         messages.filter((message) => message.id !== messageId),
       );
@@ -144,7 +112,8 @@ export class OverlayRuntime {
     userTimeout: (event: Event) => {
       const customEvent = event as CustomEvent<{ username: string }>;
       const username = customEvent.detail.username.toLowerCase();
-      this.discardPendingMessages(
+      this.messagePipeline.cancelUser(username);
+      this.messageQueue.discard(
         (message) => message.username.toLowerCase() === username,
       );
       this.hooks.onMessagesChange((messages) =>
@@ -154,7 +123,8 @@ export class OverlayRuntime {
     userBanned: (event: Event) => {
       const customEvent = event as CustomEvent<{ username: string }>;
       const username = customEvent.detail.username.toLowerCase();
-      this.discardPendingMessages(
+      this.messagePipeline.cancelUser(username);
+      this.messageQueue.discard(
         (message) => message.username.toLowerCase() === username,
       );
       this.hooks.onMessagesChange((messages) =>
@@ -163,8 +133,9 @@ export class OverlayRuntime {
     },
     chatCleared: () => {
       log.debug(LOG_CATEGORIES.INTEGRATION, "Clearing all chat messages");
-      this.clearPendingMessages();
-      this.clearPendingMessageRefreshes();
+      this.messagePipeline.cancelPending();
+      this.messageQueue.clear();
+      this.messageQueue.clearRefreshes();
       this.hooks.onMessagesChange(() => []);
     },
     sevenTvEvent: (event: Event) => {
@@ -194,7 +165,52 @@ export class OverlayRuntime {
   constructor(
     private readonly channel: string,
     private readonly hooks: OverlayRuntimeHooks,
-  ) {}
+  ) {
+    this.announcementColorResolver = new AnnouncementColorResolver(channel);
+    this.assetLoader = new ChatAssetLoader(channel);
+    this.channelIdentityResolver = new ChannelIdentityResolver(channel);
+    this.messageQueue = new MessageQueueManager({
+      getConfig: () => this.activeConfig,
+      getService: () => this.chatService,
+      onAnimationDurationChange: hooks.onAnimationDurationChange,
+      onMessagesChange: hooks.onMessagesChange,
+    });
+    this.messagePipeline = new MessagePreparationPipeline({
+      announcementColorResolver: this.announcementColorResolver,
+      assetLoader: this.assetLoader,
+      getConfig: () => this.activeConfig,
+      getService: () => this.chatService,
+      onMessageRefresh: (messageId) =>
+        this.messageQueue.queueRefresh(messageId),
+    });
+    this.connectionManager = new ChatConnectionManager({
+      onChatClear: () => this.clearMessages(),
+      onMessageDelete: (messageId) => this.deleteMessage(messageId),
+      onTwitchConnectionChange: (connected) => {
+        this.hooks.onConnectionChange(connected);
+        if (connected) this.setLoading("Готово!", 100);
+      },
+      onTwitchMessage: async (message) => {
+        if (!this.activeConfig) return;
+        this.handleChatCommand(message);
+        if (isDeveloperChatMessage(message, this.channel)) return;
+        const preparedMessage = await this.prepareMessageForDisplay(message);
+        if (preparedMessage) this.appendMessage(preparedMessage);
+      },
+      onTwitchUserClear: (username) => this.clearUserMessages(username),
+      onYouTubeConnectionChange: (connected) => {
+        if (this.channel.trim()) return;
+        this.hooks.onConnectionChange(connected);
+        if (connected) this.setLoading("Готово!", 100);
+      },
+      onYouTubeMessage: async (message) => {
+        if (!this.activeConfig) return;
+        const preparedMessage = await this.prepareMessageForDisplay(message);
+        if (preparedMessage) this.appendMessage(preparedMessage);
+      },
+      onYouTubeUserBan: (userId) => this.banYouTubeUser(userId),
+    });
+  }
 
   getService() {
     return this.chatService;
@@ -203,7 +219,7 @@ export class OverlayRuntime {
   updateConfig(config: ChatConfig) {
     this.activeConfig = config;
     this.hooks.onConfigResolved(config);
-    this.injectStyles(config);
+    this.styleManager.apply(config);
 
     if (this.chatService) {
       const presentationConfig = createChatPresentationConfig(config);
@@ -222,6 +238,7 @@ export class OverlayRuntime {
 
   async initialize(): Promise<void> {
     if (this.initialized || typeof window === "undefined") return;
+    const initializationGeneration = ++this.initializationGeneration;
 
     mentionStyleService.reset();
 
@@ -235,12 +252,13 @@ export class OverlayRuntime {
     const chatConfig = parseChatConfigFromSearchParams(urlParams, {
       channel: this.channel,
     });
+    this.recentMessageLimit = parseRecentMessageLimit(urlParams);
     const hasTwitchChannel = Boolean(this.channel.trim());
 
     this.activeConfig = chatConfig;
     this.hooks.onConfigResolved(chatConfig);
     this.setLoading("Подготовка стилей...", 25);
-    this.injectStyles(chatConfig);
+    this.styleManager.apply(chatConfig);
 
     this.setLoading("Инициализация сервисов...", 35);
     const service = new ChatPresentationService(
@@ -254,12 +272,12 @@ export class OverlayRuntime {
       45,
     );
     const channelResolution = hasTwitchChannel
-      ? await this.resolveChannelIdentity()
+      ? await this.channelIdentityResolver.resolve()
       : { channelId: "", displayName: "" };
+    if (!this.isInitializationCurrent(initializationGeneration)) return;
     this.hooks.onChannelResolved(channelResolution);
 
-    const hasChannelId = isTwitchUserId(channelResolution.channelId);
-    const channelId = hasChannelId ? channelResolution.channelId : "";
+    const channelId = channelResolution.channelId;
     this.activeChannelId = channelId;
     log.info(
       LOG_CATEGORIES.CHAT,
@@ -268,26 +286,34 @@ export class OverlayRuntime {
 
     this.setLoading("Загрузка баджей и эмоутов...", 55);
     await service.initialize(this.channel, channelId);
+    if (!this.isInitializationCurrent(initializationGeneration)) return;
 
     if (channelId) {
       this.setLoading("Подключение 7TV EventAPI...", 70);
       await chatFeatureIntegration.initialize(channelId).catch((error) => {
         log.error(LOG_CATEGORIES.INTEGRATION, "Failed to initialize chat feature integration", error);
-        log.error(
-          LOG_CATEGORIES.INTEGRATION,
-          "Failed to initialize chat feature integration:",
-          error,
-        );
       });
+      if (!this.isInitializationCurrent(initializationGeneration)) return;
     }
 
     this.initializeLayout(service);
 
     if (hasTwitchChannel) {
-      void twitchGqlService
-        .loadChannelPointRewards(this.channel)
-        .catch(() => {});
+      this.announcementColorResolver.preload();
+      this.assetLoader.preloadChannelRewards();
     }
+
+    this.setLoading("Загрузка эмоутов...", 76);
+    void this.assetLoader
+      .loadEmotes({
+        channelId,
+        show7tvUnlisted: chatConfig.show7tvUnlisted,
+      })
+      .then(() => {
+        if (this.isInitializationCurrent(initializationGeneration)) {
+          this.refreshRenderedMessages();
+        }
+      });
 
     this.setLoading(
       chatConfig.recentMessages && hasTwitchChannel
@@ -298,34 +324,10 @@ export class OverlayRuntime {
     const loadedRecentMessages = chatConfig.recentMessages && hasTwitchChannel
       ? await this.loadRecentMessages()
       : 0;
+    if (!this.isInitializationCurrent(initializationGeneration)) return;
 
     this.setLoading("Фоновая загрузка данных...", 85);
-    void Promise.all([
-      channelId
-        ? badgeService
-            .loadBadges(this.channel, channelId)
-            .catch((error) => log.error(LOG_CATEGORIES.BADGE, "Failed to load badges", error))
-        : undefined,
-      channelId
-        ? sevenTVCosmeticsService
-            .loadCosmetics(channelId)
-            .catch((error) =>
-              log.error(LOG_CATEGORIES.PAINTS, "Failed to load cosmetics", error),
-            )
-        : undefined,
-      emoteService
-        .loadEmotes(channelId, this.channel, {
-          show7tvUnlisted: chatConfig.show7tvUnlisted,
-        })
-        .catch((error) => log.error(LOG_CATEGORIES.EMOTES, "Failed to load emotes", error)),
-      hasTwitchChannel
-        ? channelRolesService
-            .loadChannelRoles(this.channel)
-            .catch((error) =>
-              log.error(LOG_CATEGORIES.INTEGRATION, "Failed to load channel roles", error),
-            )
-        : undefined,
-    ]);
+    void this.assetLoader.loadDeferredAssets(channelId, hasTwitchChannel);
 
     this.setupEventListeners();
 
@@ -337,28 +339,31 @@ export class OverlayRuntime {
       this.setLoading("Подключение к Twitch IRC...", 100);
     }
     if (hasTwitchChannel) {
-      this.connectToTwitch();
+      this.connectionManager.connectTwitch(this.channel, [
+        CHATYX_DEVELOPER_CHANNEL,
+      ]);
     }
-    this.connectToYouTube();
+    this.connectionManager.connectYouTube(
+      chatConfig.youtubeChannel,
+      chatConfig.youtubeWebSocketUrl,
+    );
     this.initialized = true;
     log.info(LOG_CATEGORIES.CHAT, "Chat overlay initialized");
   }
 
   destroy() {
+    this.initializationGeneration += 1;
     for (const id of this.pendingTimers) window.clearTimeout(id);
     this.pendingTimers.length = 0;
-    this.clearPendingMessages();
-    this.clearPendingMessageRefreshes();
-    this.recentMessageTimes.length = 0;
-    this.seenMessageIds.clear();
+    this.messageQueue.destroy();
+    this.messagePipeline.clear();
     this.removeEventListeners();
-    this.twitchService.disconnect();
-    this.youtubeService.disconnect();
+    this.connectionManager.destroy();
     this.commandFeedback.destroy();
+    this.setCommandStatus(null);
     chatFeatureIntegration.destroy();
     this.chatService?.cleanup();
     this.chatService = null;
-    this.connected = false;
     this.initialized = false;
   }
 
@@ -366,52 +371,25 @@ export class OverlayRuntime {
     this.hooks.onLoadingChange({ status, progress });
   }
 
-  private injectStyles(config: ChatConfig) {
-    this.cleanupStyleElements();
-
-    const sizeStyleElement = document.createElement("style");
-    sizeStyleElement.id = "chat-size-styles";
-    sizeStyleElement.innerHTML = generateSizeStyles(config.size as 1 | 2 | 3);
-    document.head.appendChild(sizeStyleElement);
-
-    if (config.shadow) {
-      const shadowStyleElement = document.createElement("style");
-      shadowStyleElement.id = "chat-shadow-styles";
-      shadowStyleElement.innerHTML = generateShadowStyles(
-        config.shadow as 1 | 2 | 3,
-      );
-      document.head.appendChild(shadowStyleElement);
-    }
-
-    if (config.stroke) {
-      const strokeStyleElement = document.createElement("style");
-      strokeStyleElement.id = "chat-stroke-styles";
-      strokeStyleElement.innerHTML = generateStrokeStyles(
-        config.stroke as 1 | 2 | 3 | 4,
-      );
-      document.head.appendChild(strokeStyleElement);
-    }
-
-    const variantStyles = generateVariantStyles(config);
-    if (variantStyles) {
-      const variantStyleElement = document.createElement("style");
-      variantStyleElement.id = "chat-variant-styles";
-      variantStyleElement.innerHTML = variantStyles;
-      document.head.appendChild(variantStyleElement);
-    }
-
-    if (hasMessageEntryAnimation(config.animation)) {
-      updateAnimationStyles({
-        enabled: true,
-        duration: DEFAULT_ANIMATION_OPTIONS.duration,
-        easing: "ease-out",
-        type: config.animation,
-      });
-    }
+  private isInitializationCurrent(generation: number) {
+    return generation === this.initializationGeneration;
   }
 
-  private cleanupStyleElements() {
-    this.styleElementIds.forEach((id) => document.getElementById(id)?.remove());
+  private setCommandStatus(
+    status: ChatCommandStatus | null,
+    durationMs?: number,
+  ) {
+    if (this.commandStatusTimer !== null) {
+      window.clearTimeout(this.commandStatusTimer);
+      this.commandStatusTimer = null;
+    }
+    this.hooks.onCommandStatusChange(status);
+    if (status && durationMs) {
+      this.commandStatusTimer = window.setTimeout(
+        () => this.setCommandStatus(null),
+        durationMs,
+      );
+    }
   }
 
   private initializeLayout(service: ChatPresentationService) {
@@ -423,107 +401,7 @@ export class OverlayRuntime {
 
   private appendMessage(message: TwitchMessage) {
     if (!this.chatService || !this.activeConfig) return;
-
-    const now = Date.now();
-    this.recentMessageTimes.push(now);
-    while (
-      this.recentMessageTimes.length > 0 &&
-      now - this.recentMessageTimes[0] > 1000
-    ) {
-      this.recentMessageTimes.shift();
-    }
-
-    this.pendingMessages.push(message);
-    if (this.pendingMessageFrame !== null) return;
-
-    this.pendingMessageFrame = window.requestAnimationFrame(() => {
-      this.pendingMessageFrame = null;
-      const batch = this.pendingMessages.splice(0);
-      if (batch.length === 0) return;
-
-      this.hooks.onMessagesChange((messages) => {
-        const nextMessages = [...messages, ...batch];
-        return nextMessages.length > 100 ? nextMessages.slice(-100) : nextMessages;
-      });
-
-      const baseAnimationDuration =
-        this.chatService?.getConfig().animation.duration ?? 380;
-      this.hooks.onAnimationDurationChange(
-        getAdaptiveAnimationDuration(
-          baseAnimationDuration,
-          this.recentMessageTimes.length,
-        ),
-      );
-
-      if (this.chatService && this.activeConfig) {
-        this.chatService.scrollToLatest(
-          getAnimationScrollBehavior(this.activeConfig.animation),
-        );
-      }
-    });
-  }
-
-  private discardPendingMessages(predicate: (message: TwitchMessage) => boolean) {
-    for (let index = this.pendingMessages.length - 1; index >= 0; index -= 1) {
-      if (predicate(this.pendingMessages[index])) {
-        this.pendingMessages.splice(index, 1);
-      }
-    }
-
-    if (this.pendingMessages.length === 0 && this.pendingMessageFrame !== null) {
-      window.cancelAnimationFrame(this.pendingMessageFrame);
-      this.pendingMessageFrame = null;
-    }
-  }
-
-  private clearPendingMessages() {
-    this.pendingMessages.length = 0;
-    if (this.pendingMessageFrame !== null) {
-      window.cancelAnimationFrame(this.pendingMessageFrame);
-      this.pendingMessageFrame = null;
-    }
-  }
-
-  private queueMessageRefresh(
-    messageId: string,
-    patch: MessageRefreshPatch = {},
-  ) {
-    const existingPatch = this.pendingMessageRefreshes.get(messageId) ?? {};
-    this.pendingMessageRefreshes.set(messageId, {
-      ...existingPatch,
-      ...patch,
-    });
-
-    if (this.pendingMessageRefreshFrame !== null) return;
-
-    this.pendingMessageRefreshFrame = window.requestAnimationFrame(() => {
-      this.pendingMessageRefreshFrame = null;
-      const refreshes = new Map(this.pendingMessageRefreshes);
-      this.pendingMessageRefreshes.clear();
-      if (refreshes.size === 0) return;
-
-      this.hooks.onMessagesChange((messages) => {
-        let changed = false;
-        const nextMessages = messages.map((message) => {
-          if (!refreshes.has(message.id)) return message;
-
-          changed = true;
-          return {
-            ...message,
-            ...refreshes.get(message.id),
-          };
-        });
-        return changed ? nextMessages : messages;
-      });
-    });
-  }
-
-  private clearPendingMessageRefreshes() {
-    this.pendingMessageRefreshes.clear();
-    if (this.pendingMessageRefreshFrame !== null) {
-      window.cancelAnimationFrame(this.pendingMessageRefreshFrame);
-      this.pendingMessageRefreshFrame = null;
-    }
+    this.messageQueue.append(message);
   }
 
   private setupEventListeners() {
@@ -548,101 +426,46 @@ export class OverlayRuntime {
     window.removeEventListener("chatyx:7tv-event", this.eventHandlers.sevenTvEvent);
   }
 
-  private async resolveChannelIdentity(): Promise<ChannelResolution> {
-    try {
-      const response = await fetchWithFallback(
-        `${TWITCH_CONFIG.API_BASE_URL}/users?login=${encodeURIComponent(this.channel)}`,
-        FALLBACK_APIS.user_info(this.channel),
-      );
-
-      if (!response.ok) {
-        log.warn(LOG_CATEGORIES.TWITCH_IRC, "Failed to get channel ID, using channel name as fallback");
-        return { channelId: "", displayName: "" };
-      }
-
-      const data = await response.json();
-      const pickDisplayName = (entry: any) =>
-        entry?.display_name || entry?.displayName || entry?.login || "";
-
-      if (data.data?.[0]?.id) {
-        return {
-          channelId: data.data[0].id,
-          displayName: pickDisplayName(data.data[0]),
-        };
-      }
-
-      if (Array.isArray(data) && data[0]?.id) {
-        return {
-          channelId: data[0].id,
-          displayName: pickDisplayName(data[0]),
-        };
-      }
-
-      log.warn(LOG_CATEGORIES.TWITCH_IRC, "Unexpected API response format, using channel name as fallback");
-      return { channelId: "", displayName: "" };
-    } catch (error) {
-      log.warn(LOG_CATEGORIES.TWITCH_IRC, "Failed to get channel ID, using channel name as fallback", error,
-      );
-      return { channelId: "", displayName: "" };
-    }
+  private deleteMessage(messageId: string) {
+    log.debug(LOG_CATEGORIES.CHAT, `Deleting message: ${messageId}`);
+    this.messagePipeline.cancelMessage(messageId);
+    this.messageQueue.discard((message) => message.id === messageId);
+    this.hooks.onMessagesChange((messages) =>
+      messages.filter((message) => message.id !== messageId),
+    );
+    removeMessageElements(`[data-id="${messageId}"]`, this.pendingTimers);
   }
 
-  private connectToTwitch() {
-    if (this.connected || this.twitchService.isConnected()) return;
-
-    log.info(LOG_CATEGORIES.TWITCH_IRC, `Connecting to channel: ${this.channel}`);
-
-    this.twitchService.connect(
-      this.channel,
-      async (message) => {
-        if (!this.activeConfig) return;
-
-        this.handleChatCommand(message);
-        if (isDeveloperChatMessage(message, this.channel)) return;
-        const preparedMessage = await this.prepareMessageForDisplay(message);
-        if (preparedMessage) this.appendMessage(preparedMessage);
-      },
-      () => {
-        this.connected = true;
-        this.hooks.onConnectionChange(true);
-        this.setLoading("Готово!", 100);
-      },
-      () => {
-        this.connected = false;
-        this.hooks.onConnectionChange(false);
-      },
-      (messageId) => {
-        log.debug(LOG_CATEGORIES.CHAT, `Deleting message: ${messageId}`);
-        this.discardPendingMessages((message) => message.id === messageId);
-        this.hooks.onMessagesChange((messages) =>
-          messages.filter((message) => message.id !== messageId),
-        );
-        removeMessageElements(`[data-id="${messageId}"]`, this.pendingTimers);
-      },
-      (username) => {
-        log.debug(LOG_CATEGORIES.CHAT, `Clearing chat for user: ${username}`);
-        this.discardPendingMessages(
-          (message) =>
-            message.username.toLowerCase() === username.toLowerCase(),
-        );
-        this.hooks.onMessagesChange((messages) =>
-          messages.filter(
-            (message) =>
-              message.username.toLowerCase() !== username.toLowerCase(),
-          ),
-        );
-        removeMessageElements(`[data-nick="${username}"]`, this.pendingTimers);
-      },
-      () => {
-        log.debug(LOG_CATEGORIES.CHAT, "Clearing all chat messages");
-        this.clearPendingMessages();
-        this.clearPendingMessageRefreshes();
-        this.hooks.onMessagesChange(() => []);
-      },
-      [CHATYX_DEVELOPER_CHANNEL],
+  private clearUserMessages(username: string) {
+    log.debug(LOG_CATEGORIES.CHAT, `Clearing chat for user: ${username}`);
+    const normalizedUsername = username.toLowerCase();
+    this.messagePipeline.cancelUser(normalizedUsername);
+    this.messageQueue.discard(
+      (message) => message.username.toLowerCase() === normalizedUsername,
     );
+    this.hooks.onMessagesChange((messages) =>
+      messages.filter(
+        (message) => message.username.toLowerCase() !== normalizedUsername,
+      ),
+    );
+    removeMessageElements(`[data-nick="${username}"]`, this.pendingTimers);
+  }
 
-    log.info(LOG_CATEGORIES.TWITCH_IRC, "Twitch IRC connection initialized");
+  private banYouTubeUser(userId: string) {
+    this.messagePipeline.cancelUserId(userId);
+    this.messageQueue.discard((message) => message.userId === userId);
+    this.hooks.onMessagesChange((messages) =>
+      messages.filter((message) => message.userId !== userId),
+    );
+    removeMessageElements(`[data-user-id="${userId}"]`, this.pendingTimers);
+  }
+
+  private clearMessages() {
+    log.debug(LOG_CATEGORIES.CHAT, "Clearing all chat messages");
+    this.messagePipeline.cancelPending();
+    this.messageQueue.clear();
+    this.messageQueue.clearRefreshes();
+    this.hooks.onMessagesChange(() => []);
   }
 
   private handleChatCommand(message: TwitchMessage): void {
@@ -656,8 +479,14 @@ export class OverlayRuntime {
 
     switch (command.name) {
       case "refresh": {
-        const visibleMessages = this.captureVisibleMessages();
-        const cosmeticUsers = [...visibleMessages, ...this.pendingMessages]
+        this.setCommandStatus({
+          text: "Обновляем эмоуты, бейджи и 7TV-косметику...",
+        });
+        const visibleMessages = this.messageQueue.captureVisibleMessages();
+        const cosmeticUsers = [
+          ...visibleMessages,
+          ...this.messageQueue.getPendingMessages(),
+        ]
           .filter((entry) => entry.platform !== "youtube" && entry.userId)
           .map((entry) => ({
             username: entry.username,
@@ -670,31 +499,25 @@ export class OverlayRuntime {
           });
         }
 
-        void Promise.all([
-          emoteService.reloadEmotes(
-            this.activeChannelId,
-            this.channel,
-            { show7tvUnlisted: this.activeConfig.show7tvUnlisted },
-          ),
-          this.activeChannelId
-            ? badgeService.loadBadges(this.channel, this.activeChannelId)
-            : undefined,
-          sevenTVCosmeticsService.reloadCosmetics(cosmeticUsers),
-        ])
+        void this.assetLoader
+          .refresh(
+            {
+              channelId: this.activeChannelId,
+              show7tvUnlisted: this.activeConfig.show7tvUnlisted,
+            },
+            cosmeticUsers,
+          )
           .then(() => {
-            sevenTVEventApi.replacePaintCosmetics(
-              sevenTVCosmeticsService.getCosmetics(),
-              sevenTVCosmeticsService.getUserCosmetics(),
-            );
             this.chatService?.clearPaintCache();
             this.refreshRenderedMessages();
-            this.commandFeedback.showNotice(
-              "ChatYX: эмоуты и 7TV-косметика обновлены",
-            );
+            this.setCommandStatus(null);
           })
           .catch((error) => {
             log.error(LOG_CATEGORIES.CHAT, "Failed to refresh chat assets", error);
-            this.commandFeedback.showNotice("ChatYX: не удалось обновить данные");
+            this.setCommandStatus(
+              { text: "Не удалось обновить данные" },
+              3500,
+            );
           });
         break;
       }
@@ -712,8 +535,9 @@ export class OverlayRuntime {
         break;
       }
       case "clear":
-        this.clearPendingMessages();
-        this.clearPendingMessageRefreshes();
+        this.messagePipeline.cancelPending();
+        this.messageQueue.clear();
+        this.messageQueue.clearRefreshes();
         this.hooks.onMessagesChange(() => []);
         break;
       case "ping":
@@ -757,84 +581,9 @@ export class OverlayRuntime {
     }
   }
 
-  private captureVisibleMessages(): TwitchMessage[] {
-    let snapshot: TwitchMessage[] = [];
-    this.hooks.onMessagesChange((messages) => {
-      snapshot = messages;
-      return messages;
-    });
-    return snapshot;
-  }
-
   private refreshRenderedMessages(): void {
-    const refresh = (message: TwitchMessage): TwitchMessage => {
-      const tokenSnapshot = createMessageTokenSnapshot(message.message);
-      const serviceSnapshot = this.createMessageEmoteSnapshot({
-        ...message,
-        tokenSnapshot,
-      });
-      const platformSnapshot =
-        message.platform === "youtube"
-          ? message.emoteSnapshot ?? new Map<string, any>()
-          : new Map<string, any>();
-
-      return {
-        ...message,
-        tokenSnapshot,
-        emoteSnapshot: new Map([...serviceSnapshot, ...platformSnapshot]),
-      };
-    };
-
-    for (let index = 0; index < this.pendingMessages.length; index += 1) {
-      this.pendingMessages[index] = refresh(this.pendingMessages[index]);
-    }
-    this.hooks.onMessagesChange((messages) => messages.map(refresh));
-  }
-
-  private connectToYouTube() {
-    if (!this.activeConfig?.youtubeChannel) return;
-
-    log.info(
-      LOG_CATEGORIES.CHAT,
-      `Connecting to YouTube channel: ${this.activeConfig.youtubeChannel}`,
-    );
-
-    this.youtubeService.connect(
-      this.activeConfig.youtubeChannel,
-      this.activeConfig.youtubeWebSocketUrl,
-      {
-        onMessage: async (message) => {
-          if (!this.activeConfig) return;
-
-          const preparedMessage = await this.prepareMessageForDisplay(message);
-          if (preparedMessage) this.appendMessage(preparedMessage);
-        },
-        onDelete: (messageId) => {
-          this.discardPendingMessages((message) => message.id === messageId);
-          this.hooks.onMessagesChange((messages) =>
-            messages.filter((message) => message.id !== messageId),
-          );
-          removeMessageElements(`[data-id="${messageId}"]`, this.pendingTimers);
-        },
-        onBan: (userId) => {
-          this.discardPendingMessages((message) => message.userId === userId);
-          this.hooks.onMessagesChange((messages) =>
-            messages.filter((message) => message.userId !== userId),
-          );
-          removeMessageElements(`[data-user-id="${userId}"]`, this.pendingTimers);
-        },
-        onConnectionChange: (connected) => {
-          log.info(
-            LOG_CATEGORIES.CHAT,
-            `YouTube chat ${connected ? "connected" : "disconnected"}`,
-          );
-          if (!this.channel.trim()) {
-            this.connected = connected;
-            this.hooks.onConnectionChange(connected);
-            if (connected) this.setLoading("Готово!", 100);
-          }
-        },
-      },
+    this.messageQueue.refreshMessages((message) =>
+      this.messagePipeline.refresh(message),
     );
   }
 
@@ -844,12 +593,12 @@ export class OverlayRuntime {
     try {
       const rawMessages = await fetchRecentMessages(
         this.channel,
-        RECENT_MESSAGE_LIMIT,
+        this.recentMessageLimit,
       );
       if (rawMessages.length === 0) return 0;
 
       const parsedMessages = rawMessages
-        .map((line) => this.twitchService.parseMessageLine(line))
+        .map((line) => this.connectionManager.parseTwitchMessageLine(line))
         .filter((message): message is TwitchMessage => Boolean(message));
 
       const preparedMessages = (
@@ -866,6 +615,9 @@ export class OverlayRuntime {
           ? nextMessages.slice(-100)
           : nextMessages;
       });
+      this.chatService.scrollToLatest(
+        getAnimationScrollBehavior(this.activeConfig.animation),
+      );
 
       return preparedMessages.length;
     } catch (error) {
@@ -877,137 +629,7 @@ export class OverlayRuntime {
   private async prepareMessageForDisplay(
     message: TwitchMessage,
   ): Promise<TwitchMessage | null> {
-    if (!this.activeConfig || !this.chatService) return null;
-    if (this.isDuplicateMessage(message)) return null;
-
-    if (!this.chatService.shouldDisplayMessage(message.username, message.message)) {
-      return null;
-    }
-
-    const userId = message.userId || "0";
-    message.badges = mergeBadgesBySetId(message.badges, []);
-
-    if (message.customRewardId) {
-      const reward = await this.resolveChannelPointReward(message.customRewardId);
-      if (reward) {
-        message.channelPointReward = reward;
-        const isGigantifiedReward = reward.prompt.toUpperCase().includes("FFZ:GE");
-        if (
-          isGigantifiedReward ||
-          message.twitchEvent?.type === "power-up"
-        ) {
-          message.isGigantifiedEmote = true;
-          if (message.twitchEvent?.type !== "power-up") {
-            message.twitchEvent = {
-              type: "power-up",
-              label: "Гигантский эмоут",
-            };
-          }
-        } else {
-          message.twitchEvent = {
-            type: "reward",
-            label: "Награда",
-            detail: reward.title,
-            count: reward.cost,
-          };
-        }
-      }
-    }
-
-    mentionStyleService.registerMessageAuthor(message);
-
-    message.tokenSnapshot = createMessageTokenSnapshot(message.message);
-    const serviceSnapshot = this.createMessageEmoteSnapshot(message);
-    message.emoteSnapshot = new Map([
-      ...serviceSnapshot,
-      ...(message.emoteSnapshot ?? new Map<string, any>()),
-    ]);
-    this.rememberMessage(message);
-
-    if (message.platform !== "youtube") {
-      this.loadUserBadgesAndRefresh(message, userId);
-    }
-
-    return message;
-  }
-
-  private loadUserBadgesAndRefresh(message: TwitchMessage, userId: string) {
-    if (!message.id) return;
-
-    const messageId = message.id;
-    const username = message.username;
-
-    void badgeService
-      .loadUserBadges(username, userId)
-      .then((badges) => {
-        if (
-          badges.length === 0 ||
-          !this.chatService ||
-          !this.seenMessageIds.has(messageId)
-        ) {
-          return;
-        }
-
-        this.queueMessageRefresh(messageId);
-      })
-      .catch(() => {});
-  }
-
-  private isDuplicateMessage(message: TwitchMessage): boolean {
-    return Boolean(message.id && this.seenMessageIds.has(message.id));
-  }
-
-  private rememberMessage(message: TwitchMessage) {
-    if (!message.id) return;
-
-    this.seenMessageIds.add(message.id);
-    if (this.seenMessageIds.size <= 300) return;
-
-    const oldest = this.seenMessageIds.values().next().value as string | undefined;
-    if (oldest) this.seenMessageIds.delete(oldest);
-  }
-
-  private createMessageEmoteSnapshot(message: TwitchMessage) {
-    const snapshot = new Map<string, any>();
-
-    if (!this.chatService) {
-      return snapshot;
-    }
-
-    const tokenSnapshot =
-      message.tokenSnapshot?.source === message.message
-        ? message.tokenSnapshot
-        : createMessageTokenSnapshot(message.message);
-    for (const token of tokenSnapshot.tokens) {
-      if (!token.raw || token.isWhitespace) continue;
-
-      const emoteName = token.cleanText;
-      if (!emoteName) continue;
-
-      const emote = this.chatService.getEmote(emoteName, message.username);
-      if (emote) {
-        snapshot.set(emoteName, { ...emote });
-      }
-    }
-
-    return snapshot;
-  }
-
-  private async resolveChannelPointReward(
-    rewardId: string,
-  ): Promise<TwitchGqlCustomReward | null> {
-    if (!rewardId) return null;
-
-    return new Promise<TwitchGqlCustomReward | null>((resolve) => {
-      const timeout = window.setTimeout(() => resolve(null), 350);
-      twitchGqlService
-        .loadChannelPointRewards(this.channel)
-        .then(
-          (rewards) => resolve(rewards.get(rewardId) ?? null),
-          () => resolve(null),
-        )
-        .finally(() => window.clearTimeout(timeout));
-    });
+    return this.messagePipeline.prepare(message);
   }
 
 }

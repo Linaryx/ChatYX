@@ -10,17 +10,26 @@ import { PerfMonitor } from "~/components/debug/PerfMonitor";
 import { Title } from "@solidjs/meta";
 import { LoadingScreen } from "~/components/LoadingScreen";
 import { ChatMessageList } from "~/components/chat/ChatMessageList";
+import {
+  createPreviewPredictionEvent,
+  PredictionProgressOverlay,
+} from "~/components/predictions/PredictionProgressOverlay";
 import { parseChatConfigFromSearchParams } from "~/config/chatUrlParams";
 import {
   createChatPresentationConfig,
   OverlayRuntime,
   ChatPresentationService,
+  type ChatCommandStatus,
   emoteService,
   mentionStyleService,
   sevenTVCosmeticsService,
   type TwitchMessage,
 } from "~/services/chat";
 import { badgeService } from "~/services/badges";
+import {
+  createTwitchPredictionsClient,
+  type TwitchPredictionEvent,
+} from "~/services/predictions/twitchPredictions";
 import "~/styles/chat.css";
 import type { ChatConfig } from "~/utils/chat";
 import {
@@ -97,12 +106,21 @@ export default function ChatOverlay() {
   const [loadingProgress, setLoadingProgress] = createSignal(0);
   const [loadingStatus, setLoadingStatus] = createSignal("Initializing...");
   const [isLoading, setIsLoading] = createSignal(true);
+  const [commandStatus, setCommandStatus] = createSignal<ChatCommandStatus | null>(null);
+  const [prediction, setPrediction] = createSignal<TwitchPredictionEvent | null>(
+    null,
+  );
+  const [predictionNow, setPredictionNow] = createSignal(Date.now());
   let previewService: ChatPresentationService | null = null;
   let previewInterval: number | undefined;
   let previewChannelId = "0";
   let previewReady = false;
   let previewDestroyed = false;
   let activePreviewConfig = initialConfig;
+  let activePredictionsChannel = "";
+  let predictionsClient: ReturnType<typeof createTwitchPredictionsClient> | null =
+    null;
+  let predictionClock: number | undefined;
   const previewDemoKind = parsePreviewDemoKind(urlParams.get("demo"));
 
   const runtime =
@@ -110,10 +128,11 @@ export default function ChatOverlay() {
       ? new OverlayRuntime(channel, {
           onConfigResolved: setConfig,
           onServiceReady: setChatService,
-          onLoadingChange: ({ status, progress }) => {
-            setLoadingStatus(status);
-            setLoadingProgress(progress);
-          },
+           onLoadingChange: ({ status, progress }) => {
+             setLoadingStatus(status);
+             setLoadingProgress(progress);
+           },
+           onCommandStatusChange: setCommandStatus,
           onConnectionChange: setIsConnected,
           onMessagesChange: (updater) => setMessages(updater),
           onAnimationDurationChange: setAnimationDurationMs,
@@ -128,11 +147,73 @@ export default function ChatOverlay() {
   });
   const chatVisible = createMemo(() => !isLoading() || loadingProgress() >= 100);
   const hasMessages = createMemo(() => messages().length > 0);
+  const showPredictionsBar = createMemo(
+    () => Boolean((config() ?? initialConfig).showPredictions) && Boolean(channel),
+  );
+  const hasPredictionBar = createMemo(
+    () => showPredictionsBar() && Boolean(prediction()),
+  );
   const removeMessageById = (messageId: string) => {
     setMessages((current) =>
       current.filter((message) => message.id !== messageId),
     );
   };
+
+  const stopPredictionsClient = () => {
+    predictionsClient?.stop();
+    predictionsClient = null;
+    activePredictionsChannel = "";
+  };
+
+  const clearPredictionClock = () => {
+    if (predictionClock === undefined) return;
+    window.clearInterval(predictionClock);
+    predictionClock = undefined;
+  };
+
+  createEffect(() => {
+    const cfg = config();
+    if (!cfg) return;
+
+    const channelLogin = cfg.channel.trim().toLowerCase();
+    const enabled = Boolean(cfg.showPredictions && channelLogin);
+
+    if (!enabled) {
+      stopPredictionsClient();
+      setPrediction(null);
+      clearPredictionClock();
+      return;
+    }
+
+    if (predictionClock === undefined) {
+      predictionClock = window.setInterval(
+        () => setPredictionNow(Date.now()),
+        1000,
+      );
+    }
+
+    if (isPreview) {
+      stopPredictionsClient();
+      setPrediction(createPreviewPredictionEvent());
+      return;
+    }
+
+    if (predictionsClient && activePredictionsChannel === channelLogin) {
+      return;
+    }
+
+    stopPredictionsClient();
+    const client = createTwitchPredictionsClient({
+      channelLogin,
+      onPrediction: setPrediction,
+      onError: (error) => {
+        console.warn("[Predictions]", error.message);
+      },
+    });
+    predictionsClient = client;
+    activePredictionsChannel = channelLogin;
+    client.start();
+  });
 
   const clearPreviewInterval = () => {
     if (previewInterval === undefined) return;
@@ -191,6 +272,7 @@ export default function ChatOverlay() {
     const nextConfig = event.data.config;
     if (!isPreview) {
       runtime?.updateConfig(nextConfig);
+      setConfig(nextConfig);
       return;
     }
 
@@ -217,24 +299,17 @@ export default function ChatOverlay() {
     if (speedChanged) restartPreviewInterval();
   };
 
-  const chromeStyle = createMemo(() => {
+  const overlayRootStyle = createMemo(() => {
     const cfg = config() ?? initialConfig;
-    const chromeVisible = hasMessages();
-    const bgOpacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
-    const borderOpacity = clamp(cfg.overlayBorderOpacity, 0, 100) / 100;
-    const borderRadius = clamp(cfg.overlayBackgroundRadius, 0, 128);
-    const fadeDurationMs = chatService()?.getConfig().fade.fadeOutDuration ?? 1000;
-
     return {
       position: "absolute",
-      bottom: "0",
-      left: "0",
+      inset: "0",
       width: "100%",
-      "max-width": "100%",
+      height: "100%",
       "max-height": "100vh",
       display: "flex",
       "flex-direction": "column",
-      "align-items": "flex-start",
+      "align-items": "stretch",
       "justify-content":
         cfg.reverseLineOrder && !cfg.horizontal ? "flex-start" : "flex-end",
       padding: "10px",
@@ -243,8 +318,32 @@ export default function ChatOverlay() {
       "pointer-events": "none",
       opacity: chatVisible() ? "1" : "0",
       overflow: "hidden",
+      transition: "opacity 0.5s ease-in",
+    } as const;
+  });
+
+  const chromeStyle = createMemo(() => {
+    const cfg = config() ?? initialConfig;
+    const withPrediction = hasPredictionBar();
+    const chromeVisible = hasMessages() || withPrediction;
+    const bgOpacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
+    const borderOpacity = clamp(cfg.overlayBorderOpacity, 0, 100) / 100;
+    const borderRadius = clamp(cfg.overlayBackgroundRadius, 0, 128);
+    const fadeDurationMs = chatService()?.getConfig().fade.fadeOutDuration ?? 1000;
+
+    return {
+      position: "relative",
+      width: withPrediction ? "100%" : "fit-content",
+      "max-width": "100%",
+      "max-height": "calc(100vh - 20px)",
+      display: "block",
+      "flex-shrink": "1",
+      "min-height": withPrediction && !hasMessages() ? "72px" : "0",
+      padding: "0",
+      "box-sizing": "border-box",
+      "pointer-events": "none",
+      overflow: "hidden",
       transition: [
-        "opacity 0.5s ease-in",
         `background-color ${fadeDurationMs}ms ease-out`,
         `border-color ${fadeDurationMs}ms ease-out`,
       ].join(", "),
@@ -258,13 +357,14 @@ export default function ChatOverlay() {
 
   const containerStyle = createMemo(() => ({
     position: "relative",
-    width: "fit-content",
+    width: hasPredictionBar() ? "100%" : "fit-content",
     "max-width": "100%",
-    "max-height": "calc(100vh - 20px)",
-    "flex-shrink": "0",
+    "max-height": "100%",
     padding: "0",
     "box-sizing": "border-box",
     "pointer-events": "none",
+    overflow: "hidden",
+    "z-index": "1",
   }) as const);
 
   createEffect(() => {
@@ -386,6 +486,8 @@ export default function ChatOverlay() {
       onCleanup(() => {
         previewDestroyed = true;
         clearPreviewInterval();
+        clearPredictionClock();
+        stopPredictionsClient();
         cleanupPreviewStyles();
       });
 
@@ -397,11 +499,14 @@ export default function ChatOverlay() {
       return;
     }
 
+    setConfig(initialConfig);
     void runtime.initialize();
   });
 
   onCleanup(() => {
     window.removeEventListener("message", handlePreviewConfigMessage);
+    clearPredictionClock();
+    stopPredictionsClient();
     runtime?.destroy();
     if (isPreview) chatService()?.cleanup();
   });
@@ -421,21 +526,41 @@ export default function ChatOverlay() {
               onComplete={() => setIsLoading(false)}
             />
           </Show>
-          <div id="chat_chrome" style={chromeStyle()}>
+          <div id="chat_overlay_root" style={overlayRootStyle()}>
             <div
-              id="chat_container"
-              data-connected={isConnected() ? "true" : "false"}
-              style={containerStyle()}
+              id="chat_chrome"
+              classList={{ "has-prediction": hasPredictionBar() }}
+              style={chromeStyle()}
             >
-              <ChatMessageList
-                messages={messages()}
-                config={config()}
-                service={chatService()}
-                animationDurationMs={animationDurationMs()}
-                onMessageExpired={removeMessageById}
-              />
+              <Show when={hasPredictionBar()}>
+                <div class="chat-prediction-slot">
+                  <PredictionProgressOverlay
+                    event={prediction()}
+                    now={predictionNow()}
+                    variant="chat"
+                  />
+                </div>
+              </Show>
+              <div
+                id="chat_container"
+                data-connected={isConnected() ? "true" : "false"}
+                style={containerStyle()}
+              >
+                <ChatMessageList
+                  messages={messages()}
+                  config={config()}
+                  service={chatService()}
+                  animationDurationMs={animationDurationMs()}
+                  onMessageExpired={removeMessageById}
+                />
+              </div>
             </div>
           </div>
+          <Show when={commandStatus()}>
+            {(status) => (
+              <LoadingScreen progress={0} status={status().text} overlay />
+            )}
+          </Show>
         </>
       </Show>
       <Show when={isDebug}>

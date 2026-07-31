@@ -122,3 +122,38 @@ describe("Twitch GQL leaderboards", () => {
     expect(requestCount).toBe(1);
   });
 });
+
+describe("Twitch GQL channel colors", () => {
+  test("retries after an empty color response instead of caching it", async () => {
+    (globalThis as any).window = { setTimeout, clearTimeout };
+    let requestCount = 0;
+    globalThis.fetch = (async () => {
+      requestCount += 1;
+      const primaryColorHex = requestCount === 1 ? "" : "9146ff";
+      return new Response(
+        JSON.stringify({ data: { user: { primaryColorHex } } }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    expect(await twitchGqlService.loadChannelPrimaryColor("empty-color-test")).toBe("");
+    expect(await twitchGqlService.loadChannelPrimaryColor("empty-color-test")).toBe("#9146ff");
+    expect(requestCount).toBe(2);
+  });
+
+  test("retries after a GraphQL error response", async () => {
+    (globalThis as any).window = { setTimeout, clearTimeout };
+    let requestCount = 0;
+    globalThis.fetch = (async () => {
+      requestCount += 1;
+      const payload = requestCount === 1
+        ? { errors: [{ message: "temporary failure" }] }
+        : { data: { user: { primaryColorHex: "#abcdef" } } };
+      return new Response(JSON.stringify(payload), { status: 200 });
+    }) as typeof fetch;
+
+    expect(await twitchGqlService.loadChannelPrimaryColor("error-color-test")).toBe("");
+    expect(await twitchGqlService.loadChannelPrimaryColor("error-color-test")).toBe("#abcdef");
+    expect(requestCount).toBe(2);
+  });
+});

@@ -52,6 +52,10 @@ export function parseChatCommand(input: string): ParsedChatCommand | null {
   if (/^!refreshoverlay(?:\s|$)/i.test(text)) {
     return buildParsedCommand("refresh", text.slice("!refreshoverlay".length));
   }
+  if (/^!(?:update|clearcache)(?:\s|$)/i.test(text)) {
+    const match = /^!(?:update|clearcache)/i.exec(text);
+    return buildParsedCommand("refresh", text.slice(match?.[0].length));
+  }
   if (/^!reloadchat(?:\s|$)/i.test(text)) {
     return buildParsedCommand("reload", text.slice("!reloadchat".length));
   }

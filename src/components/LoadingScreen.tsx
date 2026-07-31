@@ -5,6 +5,7 @@ interface LoadingScreenProps {
   progress: number;
   status: string;
   onComplete?: () => void;
+  overlay?: boolean;
 }
 
 const loadingImageSrc = getPublicAssetUrl("img/Peepo.png");
@@ -14,7 +15,7 @@ export function LoadingScreen(props: LoadingScreenProps) {
   let completeTimer: number | undefined;
 
   createEffect(() => {
-    if (props.progress < 100 || showFinalScreen()) return;
+    if (props.overlay || props.progress < 100 || showFinalScreen()) return;
 
     setShowFinalScreen(true);
     completeTimer = window.setTimeout(() => {
@@ -30,9 +31,60 @@ export function LoadingScreen(props: LoadingScreenProps) {
 
   return (
     <>
-      {/* Сцена 1: Крутящийся Peepo со статусом (с фоном) */}
-      <Show when={!showFinalScreen()}>
+      <Show when={props.overlay}>
         <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-busy="true"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            "flex-direction": "column",
+            "align-items": "center",
+            "justify-content": "center",
+            "z-index": "99999",
+            "pointer-events": "none",
+          }}
+        >
+          <img
+            src={loadingImageSrc}
+            alt=""
+            style={{
+              width: "64px",
+              height: "64px",
+              animation: "spin 1.5s linear infinite",
+              "margin-bottom": "10px",
+            }}
+          />
+          <div
+            style={{
+              "font-family": "Inter, system-ui, -apple-system, sans-serif",
+              "font-size": "14px",
+              color: "rgb(255, 255, 255)",
+              "font-weight": "600",
+              "letter-spacing": "0.3px",
+              "text-align": "center",
+              padding: "0 12px",
+            }}
+          >
+            {props.status}
+          </div>
+        </div>
+      </Show>
+
+      {/* Сцена 1: Крутящийся Peepo со статусом (с фоном) */}
+      <Show when={!props.overlay && !showFinalScreen()}>
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-busy="true"
           style={{
             position: "fixed",
             top: 0,
@@ -72,7 +124,7 @@ export function LoadingScreen(props: LoadingScreenProps) {
       </Show>
 
       {/* Сцена 2: Финальная надпись (без фона) */}
-      <Show when={showFinalScreen()}>
+      <Show when={!props.overlay && showFinalScreen()}>
         <div
           style={{
             position: "fixed",

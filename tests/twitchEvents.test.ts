@@ -95,6 +95,71 @@ describe("Twitch IRC event classification", () => {
     });
   });
 
+  test("classifies watch streaks and keeps the viewer message", () => {
+    const message = service.parseMessageLine(
+      "@badge-info=subscriber/3;badges=subscriber/3;color=#9146ff;display-name=GregdH_;id=streak-1;login=gregdh_;mod=0;msg-id=viewermilestone;msg-param-category=watch-streak;msg-param-copoReward=350;msg-param-id=milestone-1;msg-param-value=3;subscriber=1;system-msg=GregdH_\\swatched\\s3\\sconsecutive\\sstreams\\sthis\\smonth\\sand\\ssparked\\sa\\swatch\\sstreak!;user-id=6 :tmi.twitch.tv USERNOTICE #channel :Серия продолжается",
+    );
+
+    expect(message?.twitchEvent).toEqual({
+      type: "watch-streak",
+      label: "Новая серия просмотров!",
+      detail: "GregdH_",
+      count: 3,
+      points: 350,
+    });
+    expect(message?.message).toBe("Серия продолжается");
+  });
+
+  test("parses historical watch streak notices without a message colon", () => {
+    const message = service.parseMessageLine(
+      "@subscriber=0;historical=1;mod=0;emotes;badges=vip/1,qsmp2/1;flags;room-id=684505240;rm-received-ts=1784907129972;user-id=713840442;msg-param-id=1acb20d4-dd6e-4bf8-8d75-66c7dd76bc0e;tmi-sent-ts=1784907129877;vip=1;system-msg=x1m000\\swatched\\s15\\sconsecutive\\sstreams\\sand\\ssparked\\sa\\swatch\\sstreak!;color=#0000FF;msg-param-category=watch-streak;login=x1m000;id=08d3f8ae-a4ff-428a-b454-a5dbeec4746c;msg-param-value=15;display-name=x1m000;user-type;msg-param-copoReward=450;badge-info;msg-id=viewermilestone :tmi.twitch.tv USERNOTICE #linaryx Ezhik",
+    );
+
+    expect(message?.message).toBe("Ezhik");
+    expect(message?.twitchEvent).toEqual({
+      type: "watch-streak",
+      label: "Новая серия просмотров!",
+      detail: "x1m000",
+      count: 15,
+      points: 450,
+    });
+  });
+
+  test("parses other historical USERNOTICE messages without a message colon", () => {
+    const message = service.parseMessageLine(
+      "@historical=1;badges=subscriber/1;color=#9146ff;display-name=Subber;id=historical-sub;login=subber;mod=0;msg-id=sub;subscriber=1;user-id=5 :tmi.twitch.tv USERNOTICE #channel Спасибо!",
+    );
+
+    expect(message?.message).toBe("Спасибо!");
+    expect(message?.twitchEvent).toEqual({
+      type: "subscription",
+      label: "Новая подписка",
+      detail: "Subber оформил(а) подписку",
+    });
+  });
+
+  test("handles the watch streak alias and malformed counters", () => {
+    const message = service.parseMessageLine(
+      "@badges=;color=#9146ff;display-name=Viewer;id=streak-2;login=viewer;mod=0;msg-id=viewermilestone;msg-param-category=watch-fk;msg-param-copoReward=350oops;msg-param-value=three;subscriber=0;user-id=7 :tmi.twitch.tv USERNOTICE #channel",
+    );
+
+    expect(message?.twitchEvent).toEqual({
+      type: "watch-streak",
+      label: "Новая серия просмотров!",
+      detail: "Viewer",
+      count: undefined,
+      points: undefined,
+    });
+  });
+
+  test("ignores unrelated viewer milestones", () => {
+    const message = service.parseMessageLine(
+      "@badges=;color=#9146ff;display-name=Viewer;id=milestone-1;login=viewer;mod=0;msg-id=viewermilestone;msg-param-category=unknown;msg-param-value=3;subscriber=0;user-id=7 :tmi.twitch.tv USERNOTICE #channel",
+    );
+
+    expect(message?.twitchEvent).toBeUndefined();
+  });
+
   test("uses the color selected for announcements", () => {
     const message = service.parseMessageLine(
       "@badges=broadcaster/1;color=#9146ff;display-name=Streamer;id=announcement-1;login=streamer;mod=0;msg-id=announcement;msg-param-color=GREEN;subscriber=0;user-id=10 :tmi.twitch.tv USERNOTICE #channel :important update",

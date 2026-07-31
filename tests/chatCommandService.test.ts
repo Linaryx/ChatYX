@@ -34,11 +34,13 @@ function message(
 }
 
 describe("chat commands", () => {
-  test("parses ChatIS, Cyan Chat, and jChat aliases", () => {
+  test("parses ChatIS, Cyan Chat, jChat, and legacy refresh aliases", () => {
     expect(parseChatCommand("!chat refresh")).toEqual({ name: "refresh", args: "", targetChannels: [] });
     expect(parseChatCommand("!chatis reload")).toEqual({ name: "reload", args: "", targetChannels: [] });
     expect(parseChatCommand("!chatyx clear")).toEqual({ name: "clear", args: "", targetChannels: [] });
     expect(parseChatCommand("!refreshoverlay")).toEqual({ name: "refresh", args: "", targetChannels: [] });
+    expect(parseChatCommand("!update -c channel")).toEqual({ name: "refresh", args: "", targetChannels: ["channel"] });
+    expect(parseChatCommand("!clearcache")).toEqual({ name: "refresh", args: "", targetChannels: [] });
     expect(parseChatCommand("!reloadchat")).toEqual({ name: "reload", args: "", targetChannels: [] });
   });
 

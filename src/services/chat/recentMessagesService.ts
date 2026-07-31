@@ -3,6 +3,7 @@ import { log, LOG_CATEGORIES } from "~/utils/logger";
 const RECENT_MESSAGES_MIRRORS = [
   "https://recent-messages.zneix.eu/api/v2/recent-messages",
   "https://recent-messages.robotty.de/api/v2/recent-messages",
+  "https://rm.lilb.dev/api/v2/recent-messages",
 ] as const;
 
 type RecentMessagesResponse = {
@@ -17,6 +18,15 @@ function buildRecentMessagesUrl(baseUrl: string, channel: string, limit: number)
   return url.toString();
 }
 
+function getMessageId(line: string) {
+  return line.match(/(?:^@|;)id=([^;]+)/)?.[1] || line;
+}
+
+function getMessageTimestamp(line: string) {
+  const value = line.match(/(?:^@|;)tmi-sent-ts=(\d+)/)?.[1];
+  return value ? Number(value) : 0;
+}
+
 async function fetchRecentMessagesFromMirror(
   baseUrl: string,
   channel: string,
@@ -24,7 +34,7 @@ async function fetchRecentMessagesFromMirror(
   timeoutMs: number,
 ) {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(buildRecentMessagesUrl(baseUrl, channel, limit), {
@@ -48,7 +58,7 @@ async function fetchRecentMessagesFromMirror(
       (message): message is string => typeof message === "string",
     );
   } finally {
-    window.clearTimeout(timeout);
+    globalThis.clearTimeout(timeout);
   }
 }
 
@@ -60,23 +70,32 @@ export async function fetchRecentMessages(
   const normalizedChannel = channel.trim().toLowerCase();
   if (!normalizedChannel) return [];
 
-  for (const mirror of RECENT_MESSAGES_MIRRORS) {
-    try {
-      const messages = await fetchRecentMessagesFromMirror(
-        mirror,
-        normalizedChannel,
-        limit,
-        timeoutMs,
-      );
-      if (messages.length > 0) return messages;
-    } catch (error) {
-      log.warn(
-        LOG_CATEGORIES.CHAT,
-        `Failed to load recent messages from ${mirror}`,
-        error,
-      );
-    }
+  const results = await Promise.all(
+    RECENT_MESSAGES_MIRRORS.map(async (mirror) => {
+      try {
+        return await fetchRecentMessagesFromMirror(
+          mirror,
+          normalizedChannel,
+          limit,
+          timeoutMs,
+        );
+      } catch (error) {
+        log.warn(
+          LOG_CATEGORIES.CHAT,
+          `Failed to load recent messages from ${mirror}`,
+          error,
+        );
+        return [];
+      }
+    }),
+  );
+
+  const uniqueMessages = new Map<string, string>();
+  for (const message of results.flat()) {
+    uniqueMessages.set(getMessageId(message), message);
   }
 
-  return [];
+  return [...uniqueMessages.values()]
+    .sort((left, right) => getMessageTimestamp(left) - getMessageTimestamp(right))
+    .slice(-limit);
 }

@@ -15,13 +15,15 @@ export { SevenTVPaintService, sevenTVPaintService } from "./sevenTVPaintService"
 export { sevenTVEventApi } from "./sevenTVEventApi";
 export type { SevenTVEventApiService } from "./sevenTVEventApi";
 export { TwitchService } from "./twitchService";
-export type { TwitchMessage } from "./twitchService";
+export type { TwitchEvent, TwitchMessage } from "./twitchService";
 export { twitchGqlService } from "./twitchGqlService";
 export type {
   TwitchGqlBadge,
+  TwitchGqlChannelProfile,
   TwitchGqlCustomReward,
   TwitchGqlSender,
 } from "./twitchGqlService";
 export { chatFeatureIntegration } from "./chatFeatureIntegration";
 export { YouTubeChatService } from "./youtubeChatService";
 export { OverlayRuntime } from "./overlayRuntime";
+export type { ChatCommandStatus } from "./overlayRuntime";
