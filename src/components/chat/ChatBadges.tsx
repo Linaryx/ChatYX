@@ -22,8 +22,6 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
   const renderedBadges = createMemo(() => {
     const { message, config, service } = props;
     const badges: JSX.Element[] = [];
-
-  if (message.badges?.length) {
     const roleBadgeMap = new Map<string, JSX.Element>();
     const vanityBadgeElements: JSX.Element[] = [];
     const subBadgeMap = new Map<string, JSX.Element>();
@@ -37,14 +35,17 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
       return label.includes("bot");
     };
 
-    const thirdPartyBadges = service.getBadges(message.username);
+    const thirdPartyBadges = config.hideSpecialBadges
+      ? []
+      : service.getBadges(message.username);
     const ffzBotBadge = thirdPartyBadges.find((badge) => isFfzBotBadge(badge));
     const enhancedBadges = thirdPartyBadges.filter(
       (badge) => !isFfzBotBadge(badge),
     );
     let mixedBotRendered = false;
 
-    const hasVipBadge = message.badges.some((badge) =>
+    const nativeBadges = message.badges ?? [];
+    const hasVipBadge = nativeBadges.some((badge) =>
       badge.startsWith("vip/"),
     );
 
@@ -66,7 +67,7 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
       }
     };
 
-    message.badges.forEach((badge) => {
+    nativeBadges.forEach((badge) => {
       const [badgeName, badgeVersion] = badge.split("/");
       const badgeUrl = badgeService.getTwitchBadge(badgeName, badgeVersion);
 
@@ -125,6 +126,27 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
         }
       }
     });
+
+    if (nativeBadges.length === 0) {
+      const fallbackBadge = message.isModerator
+        ? { name: "moderator", url: badgeService.getTwitchBadge("moderator", "1") }
+        : message.isSubscriber
+          ? { name: "subscriber", url: badgeService.getTwitchBadge("subscriber", "1") }
+          : message.userType === "vip"
+            ? { name: "vip", url: badgeService.getTwitchBadge("vip", "1") }
+            : null;
+
+      if (fallbackBadge?.url) {
+        const element = (
+          <img class="badge" src={fallbackBadge.url} alt={fallbackBadge.name} />
+        );
+        if (fallbackBadge.name === "subscriber") {
+          subBadgeMap.set(fallbackBadge.name, element);
+        } else {
+          roleBadgeMap.set(fallbackBadge.name, element);
+        }
+      }
+    }
 
     const orderedRoleBadges = [
       ...ROLE_BADGE_ORDER.map((name) => roleBadgeMap.get(name)).filter(Boolean),
@@ -186,35 +208,21 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
         />,
       );
     }
-  } else {
-    let badgeUrl: string | null = null;
-    if (message.isModerator) {
-      badgeUrl = badgeService.getTwitchBadge("moderator", "1") || null;
-    } else if (message.isSubscriber) {
-      badgeUrl = badgeService.getTwitchBadge("subscriber", "1") || null;
-    } else if (message.userType === "vip") {
-      badgeUrl = badgeService.getTwitchBadge("vip", "1") || null;
-    }
 
-    if (badgeUrl) {
-      badges.push(<img class="badge" src={badgeUrl} alt="badge" />);
-    }
-  }
-
-  message.platformBadges
-    ?.filter((badge) => badge.url)
-    .forEach((badge) => {
-      const title = badge.title || "YouTube badge";
-      badges.push(
-        <img
-          class="badge"
-          src={badge.url}
-          title={title}
-          alt={title}
-          loading="lazy"
-        />,
-      );
-    });
+    message.platformBadges
+      ?.filter((badge) => badge.url)
+      .forEach((badge) => {
+        const title = badge.title || "YouTube badge";
+        badges.push(
+          <img
+            class="badge"
+            src={badge.url}
+            title={title}
+            alt={title}
+            loading="lazy"
+          />,
+        );
+      });
 
     return badges;
   });

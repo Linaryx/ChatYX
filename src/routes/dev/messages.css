@@ -1,0 +1,206 @@
+html.message-style-dev-scroll,
+body.message-style-dev-scroll {
+  height: auto !important;
+  min-height: 100%;
+  overflow: auto !important;
+}
+
+html.message-style-dev-scroll #root {
+  height: auto !important;
+  min-height: 100%;
+}
+
+.message-style-dev {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  font-family:
+    "Inter",
+    "Segoe UI",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+}
+
+.message-style-dev * {
+  border-color: hsl(var(--border));
+}
+
+.message-style-dev__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 auto 20px;
+  max-width: 1400px;
+}
+
+.message-style-dev__eyebrow {
+  margin: 0 0 6px;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.message-style-dev h1 {
+  margin: 0;
+  color: hsl(var(--foreground));
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.message-style-dev p {
+  margin: 10px 0 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.message-style-dev__controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.message-style-dev__controls button {
+  border: 1px solid hsl(var(--input));
+  border-radius: calc(var(--radius) - 2px);
+  padding: 8px 12px;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.message-style-dev__controls button:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.message-style-dev__controls button.active {
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+}
+
+.message-style-dev__stage {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 10px);
+  background: hsl(var(--card));
+  box-shadow: 0 18px 48px hsl(240 10% 2% / 0.34);
+}
+
+.message-style-dev__chat-shell {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 6px);
+  background:
+    linear-gradient(90deg, hsl(var(--border) / 0.32) 1px, transparent 1px),
+    linear-gradient(hsl(var(--border) / 0.32) 1px, transparent 1px),
+    hsl(var(--background));
+  background-size: 32px 32px;
+}
+
+.message-style-dev #chat_container {
+  display: block !important;
+  position: relative;
+  bottom: auto;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  color: white;
+  background: transparent;
+  scrollbar-width: none;
+}
+
+.message-style-dev #chat_container.layout-horizontal {
+  white-space: nowrap;
+}
+
+.message-style-dev__case {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--card) / 0.72);
+}
+
+.message-style-dev__case + .message-style-dev__case {
+  margin-top: 8px;
+}
+
+.message-style-dev__case-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 30px;
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.message-style-dev__case-title code {
+  width: fit-content;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+  font-family: "Source Code Pro", monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.message-style-dev__case-message {
+  min-width: 0;
+  overflow: visible;
+}
+
+.message-style-dev #chat_container .chat_line {
+  margin-bottom: 0 !important;
+}
+
+.message-style-dev #chat_container.layout-horizontal .chat_line {
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .message-style-dev {
+    padding: 16px;
+  }
+
+  .message-style-dev__header,
+  .message-style-dev__case {
+    display: block;
+  }
+
+  .message-style-dev__controls {
+    justify-content: flex-start;
+    margin-top: 16px;
+  }
+
+  .message-style-dev__case-title {
+    margin-bottom: 8px;
+  }
+}

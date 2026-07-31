@@ -55,6 +55,44 @@ function formatEventCount(value: number | undefined): string {
   return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
+function getSubscriptionMonths(detail: string | undefined): string | null {
+  return detail?.match(/(\d+)\s*мес/i)?.[1] || null;
+}
+
+function formatWatchStreakCount(value: number | undefined): string {
+  if (value === undefined) return "смотрит подряд";
+
+  const abs = Math.abs(value);
+  const lastTwo = abs % 100;
+  const last = abs % 10;
+  const unit = lastTwo >= 11 && lastTwo <= 14
+    ? "стримов"
+    : last === 1
+      ? "стрим"
+      : last >= 2 && last <= 4
+        ? "стрима"
+        : "стримов";
+
+  return `${formatEventCount(value)} ${unit} подряд`;
+}
+
+function formatRaidViewers(value: number | undefined): string {
+  if (value === undefined) return "";
+
+  const abs = Math.abs(value);
+  const lastTwo = abs % 100;
+  const last = abs % 10;
+  const unit = lastTwo >= 11 && lastTwo <= 14
+    ? "зрителей"
+    : last === 1
+      ? "зрителем"
+      : last >= 2 && last <= 4
+        ? "зрителями"
+        : "зрителями";
+
+  return ` с ${formatEventCount(value)} ${unit}`;
+}
+
 function EventStar() {
   return (
     <svg
@@ -149,15 +187,18 @@ export const ChatMessage = (props: ChatMessageProps) => {
     const event = visibleTwitchEvent();
     return event?.type === "highlighted-message" ? undefined : event;
   });
-  const fontWeight = createMemo(() => {
-    const weight = normalizeFontWeight(props.config.fontWeight);
-    return String(styledTwitchEvent() && props.config.twitchEventBold ? 900 : weight);
-  });
+  const normalizedFontWeight = createMemo(() =>
+    normalizeFontWeight(props.config.fontWeight),
+  );
+  const fontWeight = createMemo(() => String(normalizedFontWeight()));
   const nickFontWeight = createMemo(() =>
+    String(normalizeFontWeight(props.config.nickFontWeight)),
+  );
+  const eventFontWeight = createMemo(() =>
     String(
       styledTwitchEvent() && props.config.twitchEventBold
-        ? 900
-        : normalizeFontWeight(props.config.nickFontWeight),
+        ? Math.min(1000, normalizedFontWeight() + 100)
+        : normalizedFontWeight(),
     ),
   );
   const eventColor = createMemo(() =>
@@ -177,6 +218,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
       eventColor(),
       props.config.twitchEventBackgroundOpacity,
     ),
+    "--chat-event-font-weight": eventFontWeight(),
     "--chat-link-color": safeCssColor(props.config.linkColor, "#53b7ff"),
     "font-style": styledTwitchEvent() && props.config.twitchEventItalic
       ? "italic"
@@ -205,6 +247,9 @@ export const ChatMessage = (props: ChatMessageProps) => {
 
   const messageTextColor = isAction ? userColor : "white";
   const replyText = createMemo(() => getReplyText(message));
+  const hasEventMessageText = createMemo(() =>
+    Boolean(visibleTwitchEvent() && processedMessage.trim()),
+  );
   const showPlatformMarker = createMemo(() =>
     Boolean(props.config.channel.trim() && props.config.youtubeChannel.trim()),
   );
@@ -247,12 +292,16 @@ export const ChatMessage = (props: ChatMessageProps) => {
           message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
         ),
         "platform-marked": showPlatformMarker(),
-        "chat-event": Boolean(visibleTwitchEvent()),
-        "chat-event-highlight": Boolean(
-          visibleTwitchEvent() && props.config.highlightTwitchEvents,
-        ),
-        [`chat-event-${visibleTwitchEvent()?.type}`]: Boolean(visibleTwitchEvent()),
-      }}
+	        "chat-event": Boolean(visibleTwitchEvent()),
+	        "chat-event-highlight": Boolean(
+	          visibleTwitchEvent() && props.config.highlightTwitchEvents,
+	        ),
+	        "chat-event-with-message": hasEventMessageText(),
+	        [`chat-event-${visibleTwitchEvent()?.type}`]: Boolean(visibleTwitchEvent()),
+	        [`chat-event-announcement-${visibleTwitchEvent()?.level?.toLowerCase()}`]:
+	          visibleTwitchEvent()?.type === "announcement" &&
+	          Boolean(visibleTwitchEvent()?.level),
+	      }}
       style={messageStyle()}
       data-nick={message.username}
       data-user-id={message.userId || ""}
@@ -303,24 +352,60 @@ export const ChatMessage = (props: ChatMessageProps) => {
             >
               <Match when={event().type === "subscription"}>
                 <EventStar />
+                <Show when={getSubscriptionMonths(event().detail)}>
+                  {(months) => (
+                    <span class="chat-subscription-months">{months()}</span>
+                  )}
+                </Show>
               </Match>
-              <Match when={event().type === "raid"}>
-                <img
-                  class="chat-event-icon"
-                  src="https://static-cdn.jtvnw.net/emoticons/v2/62836/default/dark/3.0"
-                  alt="Рейд"
-                />
-                <span class="chat-event-label">
-                  {event().detail || event().label}
-                </span>
-                <span class="chat-event-detail">
-                  проводит рейд
-                  {event().count !== undefined
-                    ? ` в компании ${formatEventCount(event().count)}`
-                    : ""}
-                  .
-                </span>
+              <Match when={event().type === "watch-streak"}>
+                <span class="chat-watch-streak">
+                  <svg
+                    class="chat-event-icon chat-watch-streak-gem"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+	                  >
+	                    <path d="M12 7.2a4.8 4.8 0 0 1 4.8 4.8h-2.4a2.4 2.4 0 0 0-2.4-2.4V7.2Z" />
+	                    <path fill-rule="evenodd" d="M21.6 12A9.6 9.6 0 1 1 2.4 12a9.6 9.6 0 0 1 19.2 0Zm-2.4 0a7.2 7.2 0 1 1-14.4 0 7.2 7.2 0 0 1 14.4 0Z" clip-rule="evenodd" />
+	                  </svg>
+	                  <Show when={event().points !== undefined}>
+	                    <span
+	                      class="chat-watch-streak-points"
+	                      title={`${formatEventCount(event().points)} баллов канала`}
+	                    >
+	                      +{formatEventCount(event().points)}
+	                    </span>
+	                  </Show>
+	                  <span class="chat-watch-streak-copy">
+	                    <Show
+	                      when={hasEventMessageText()}
+	                      fallback={
+	                        <>
+	                          <span class="chat-watch-streak-user" style={{ color: userColor }}>
+	                            {message.displayName || event().detail}
+	                          </span>
+	                          {` · ${formatWatchStreakCount(event().count)}`}
+	                        </>
+	                      }
+	                    >
+	                      {`${event().points !== undefined ? " · " : ""}${formatWatchStreakCount(event().count)}`}
+	                    </Show>
+	                  </span>
+	                </span>
               </Match>
+	              <Match when={event().type === "raid"}>
+	                <img
+	                  class="chat-event-icon"
+	                  src="https://static-cdn.jtvnw.net/emoticons/v2/62836/default/dark/3.0"
+	                  alt="Рейд"
+	                />
+	                <span class="chat-event-label">
+	                  {event().detail || event().label}
+	                </span>
+	                <span class="chat-event-detail">
+	                  {`проводит рейд${formatRaidViewers(event().count)}!`}
+	                </span>
+	              </Match>
               <Match when={event().type === "reward"}>
                 <svg
                   class="chat-event-icon"
@@ -331,14 +416,17 @@ export const ChatMessage = (props: ChatMessageProps) => {
                   <path d="M12 7.2a4.8 4.8 0 0 1 4.8 4.8h-2.4a2.4 2.4 0 0 0-2.4-2.4V7.2Z" />
                   <path fill-rule="evenodd" d="M21.6 12A9.6 9.6 0 1 1 2.4 12a9.6 9.6 0 0 1 19.2 0Zm-2.4 0a7.2 7.2 0 1 1-14.4 0 7.2 7.2 0 0 1 14.4 0Z" clip-rule="evenodd" />
                 </svg>
-                <Show when={event().count !== undefined}>
-                  <span class="chat-event-detail">
-                    {formatEventCount(event().count)}
-                  </span>
-                </Show>
-                <span class="chat-event-label">
-                  {event().detail || event().label}
-                </span>
+	                <Show when={event().count !== undefined}>
+	                  <span class="chat-event-detail">
+	                    {formatEventCount(event().count)}
+	                  </span>
+	                </Show>
+	                <Show when={event().count !== undefined && (event().detail || event().label)}>
+	                  <span class="chat-event-separator">•</span>
+	                </Show>
+	                <span class="chat-event-label">
+	                  {event().detail || event().label}
+	                </span>
               </Match>
             </Switch>
           </span>

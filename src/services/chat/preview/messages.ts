@@ -123,7 +123,7 @@ function getPreviewTwitchEvent(
   index: number,
   displayName: string,
 ): TwitchMessage["twitchEvent"] {
-  switch (index % 14) {
+  switch (index % 16) {
     case 0:
       return { type: "first-message", label: "Впервые в чате" };
     case 2:
@@ -163,6 +163,14 @@ function getPreviewTwitchEvent(
         label: "Объявление",
         level: "ORANGE",
         color: "#ff7621",
+      };
+    case 14:
+      return {
+        type: "watch-streak",
+        label: "Новая серия просмотров!",
+        detail: displayName,
+        count: 3,
+        points: 350,
       };
     default:
       return undefined;
@@ -261,7 +269,10 @@ export function nextPreviewMessage(
     id: `preview-live-${Date.now()}-${index}`,
     username,
     displayName,
-    message: twitchEvent?.type === "raid" ? "" : messageText,
+    message:
+      twitchEvent?.type === "raid" || twitchEvent?.type === "watch-streak"
+        ? ""
+        : messageText,
     color,
     badges,
     emotes: {},

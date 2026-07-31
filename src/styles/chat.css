@@ -7,6 +7,25 @@ body {
   -webkit-user-select: text;
 }
 
+/* Prediction sits above messages; layout of chat is unchanged */
+.chat-prediction-slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 10px 10px 8px;
+  pointer-events: none;
+  z-index: 50;
+}
+
+#chat_chrome.has-prediction #chat_container {
+  position: relative;
+  z-index: 1;
+}
+
 #chat_container {
   width: 100%;
   padding: 0;
@@ -40,49 +59,245 @@ body {
   background: var(--chat-event-background, rgba(145, 70, 255, 0.22));
 }
 
+.chat_line.chat-event-highlighted-message.chat-event-highlight {
+  position: relative;
+  box-sizing: border-box;
+  padding: 0.12em 0.5em 0.14em !important;
+  border-radius: 0.38em;
+  background:
+    linear-gradient(90deg, var(--chat-event-background, rgba(145, 70, 255, 0.24)), rgba(255, 255, 255, 0.055)),
+    rgba(12, 9, 24, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.11),
+    0 0.08em 0.42em rgba(0, 0, 0, 0.18);
+}
+
+.chat_line.chat-event-highlighted-message.platform-marked {
+  padding-left: calc(10px + 0.5em) !important;
+}
+
 .chat-event-summary {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0.35em;
-  margin-right: 0.45em;
+  align-items: center;
+  gap: 0.32em;
+  margin-right: 0.38em;
+  padding: 0;
   color: white;
+  font-weight: var(--chat-event-font-weight, inherit);
+  line-height: 1.15;
+}
+
+.chat_line.chat-event-with-message .chat-event-summary {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-right: 0;
+  margin-bottom: 0.14em;
+}
+
+.chat_line.chat-event-with-message .badge:first-of-type {
+  margin-left: 0;
 }
 
 .chat-event-reward .chat-event-summary {
   display: flex;
-  width: 100%;
+  min-width: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.chat_line.chat-event-raid.chat-event-highlight {
+.chat-event-reward .chat-event-label,
+.chat-event-reward .chat-event-detail {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.chat-event-reward .chat-event-detail {
+  flex: 0 0 auto;
+}
+
+.chat-event-reward .chat-event-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-event-separator {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.chat_line.chat-event-highlight.chat-event-first-message,
+.chat_line.chat-event-highlight.chat-event-reward,
+.chat_line.chat-event-highlight.chat-event-subscription,
+.chat_line.chat-event-highlight.chat-event-raid,
+.chat_line.chat-event-highlight.chat-event-watch-streak,
+.chat_line.chat-event-highlight.chat-event-power-up,
+.chat_line.chat-event-highlight.chat-event-announcement {
   box-sizing: border-box;
-  padding: 0.12em 0.45em !important;
-  border-left: 0.18em solid var(--chat-event-color, #9146ff);
-  background: rgba(24, 24, 27, 0.94);
+  padding: 0.12em 0.5em 0.14em !important;
+  border-radius: 0.38em;
+  background:
+    linear-gradient(90deg, var(--chat-event-background, rgba(145, 70, 255, 0.22)), rgba(255, 255, 255, 0.045)),
+    rgba(12, 9, 24, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.095),
+    0 0.08em 0.36em rgba(0, 0, 0, 0.14);
+}
+
+.chat_line.chat-event-first-message {
+  --chat-event-background: rgba(34, 197, 94, 0.22);
+}
+
+.chat_line.chat-event-reward {
+  --chat-event-background: rgba(239, 68, 68, 0.24);
+}
+
+.chat_line.chat-event-subscription {
+  --chat-event-background: rgba(168, 85, 247, 0.22);
+}
+
+.chat_line.chat-event-raid {
+  --chat-event-background: rgba(124, 58, 237, 0.22);
+}
+
+.chat_line.chat-event-watch-streak {
+  --chat-event-background: rgba(99, 102, 241, 0.22);
+}
+
+.chat_line.chat-event-highlight.chat-event-announcement-purple {
+  background:
+    linear-gradient(90deg, rgba(145, 71, 255, 0.26), rgba(255, 117, 230, 0.2)),
+    rgba(12, 9, 24, 0.28);
+}
+
+.chat_line.chat-event-highlight.chat-event-announcement-blue {
+  background:
+    linear-gradient(90deg, rgba(0, 214, 214, 0.25), rgba(145, 71, 255, 0.22)),
+    rgba(12, 9, 24, 0.28);
+}
+
+.chat_line.chat-event-highlight.chat-event-announcement-green {
+  background:
+    linear-gradient(90deg, rgba(0, 219, 132, 0.25), rgba(87, 190, 230, 0.2)),
+    rgba(12, 9, 24, 0.28);
+}
+
+.chat_line.chat-event-highlight.chat-event-announcement-orange {
+  background:
+    linear-gradient(90deg, rgba(255, 179, 26, 0.25), rgba(224, 224, 0, 0.18)),
+    rgba(12, 9, 24, 0.28);
+}
+
+.chat-event-subscription .chat-event-summary {
+  gap: 0.18em;
+}
+
+.chat-event-subscription .chat-event-star {
+  width: 1em;
+  height: 1em;
+  fill: rgba(255, 255, 255, 0.92);
+}
+
+.chat-subscription-months {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.9em;
+  line-height: 1;
 }
 
 .chat-event-raid .chat-event-summary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.28em;
-  width: 100%;
+  gap: 0.32em;
+  width: auto;
   margin-right: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: clamp(10px, 4vw, 1em);
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  white-space: normal;
+  line-height: inherit;
 }
 
 .chat-event-raid .chat-event-icon {
-  width: 1.25em;
-  height: 1.25em;
+  width: 1em;
+  height: 1em;
 }
 
 .chat-event-raid .chat-event-label {
   flex: 0 0 auto;
-  color: white;
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .chat-event-raid .chat-event-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chat-event-watch-streak .chat-event-summary {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-right: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.chat-watch-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42em;
+  width: 100%;
+  min-width: 0;
+}
+
+.chat-watch-streak-user {
+  font-weight: inherit;
+}
+
+.chat-watch-streak-points {
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 0.18em;
+  color: #a1a1aa;
+  font-size: 0.88em;
+  font-weight: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-watch-streak-gem {
+  width: 1em;
+  height: 1em;
+  fill: var(--chat-event-color, #9146ff);
+}
+
+.chat-watch-streak-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.chat-event-watch-streak.chat-event-with-message .chat-watch-streak-copy {
+  color: #a1a1aa;
+}
+
+.chat-event-watch-streak:not(.chat-event-with-message) > .badge,
+.chat-event-watch-streak:not(.chat-event-with-message) > .user_info {
+  display: none;
+}
+
+.chat-event-watch-streak:not(.chat-event-with-message) > .message {
+  display: inline;
+  margin: 0 0 0 0.35em;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+}
+
+.chat_line.chat-event-with-message .chat-event-summary {
+  display: flex;
+  width: fit-content;
 }
 
 #chat_container.layout-horizontal .chat_line.chat-event-highlight {
@@ -104,9 +319,30 @@ body {
   width: auto;
 }
 
+#chat_container.layout-horizontal .chat-event-watch-streak .chat-event-summary {
+  display: inline-flex;
+  width: auto;
+  font-size: inherit;
+}
+
+#chat_container.layout-horizontal .chat-watch-streak {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.38em;
+  width: auto;
+}
+
+#chat_container.layout-horizontal .chat-event-watch-streak:not(.chat-event-with-message) > .message {
+  display: inline;
+  margin: 0 0 0 0.35em;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+}
+
 .chat-event-label {
   color: var(--chat-event-color, #9146ff);
-  font-weight: 900;
+  font-weight: inherit;
 }
 
 .chat-event-icon {
@@ -212,6 +448,142 @@ img.badge {
   position: relative;
 }
 
+.emote-modified {
+  vertical-align: middle;
+}
+
+.emote-modifier-wide {
+  width: var(--emote-wide-width);
+  max-width: 100%;
+}
+
+.emote-modifier-wide .emote-transform-layer,
+.emote-modifier-wide .emote-filter-layer,
+.emote-modifier-wide .emote-animation-layer {
+  width: 100%;
+}
+
+.emote-modifier-wide .emote:not(.zerowidth) {
+  width: 100% !important;
+  height: var(--emote-wide-height) !important;
+  max-width: 100% !important;
+  max-height: none !important;
+}
+
+.emote-modified.emote-modifier-rotate-left:not(.emote-modifier-wide),
+.emote-modified.emote-modifier-rotate-right:not(.emote-modifier-wide) {
+  width: var(--emote-layout-width);
+  height: var(--emote-layout-height);
+}
+
+.emote-modified.emote-modifier-rotate-left:not(.emote-modifier-wide) > .emote-transform-layer,
+.emote-modified.emote-modifier-rotate-right:not(.emote-modifier-wide) > .emote-transform-layer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* rotate + wide: no *4 stretch — fit rotated box into the line (FFZ-style cap) */
+.emote-modifier-wide.emote-modifier-rotate-left,
+.emote-modifier-wide.emote-modifier-rotate-right {
+  width: min(var(--emote-wide-width, 100%), 100%);
+  height: min(var(--emote-wide-height, 100%), 100%);
+  max-width: 100%;
+  max-height: 100%;
+  overflow: visible;
+}
+
+.emote-modifier-wide.emote-modifier-rotate-left .emote-transform-layer,
+.emote-modifier-wide.emote-modifier-rotate-right .emote-transform-layer,
+.emote-modifier-wide.emote-modifier-rotate-left .emote-filter-layer,
+.emote-modifier-wide.emote-modifier-rotate-right .emote-filter-layer,
+.emote-modifier-wide.emote-modifier-rotate-left .emote-animation-layer,
+.emote-modifier-wide.emote-modifier-rotate-right .emote-animation-layer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emote-modifier-wide.emote-modifier-rotate-left .emote:not(.zerowidth),
+.emote-modifier-wide.emote-modifier-rotate-right .emote:not(.zerowidth) {
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain;
+}
+
+.emote-transform-layer,
+.emote-filter-layer,
+.emote-animation-layer {
+  display: inline-block;
+  line-height: 0;
+}
+
+.emote-transform-layer {
+  transform: scaleX(var(--emote-scale-x, 1)) scaleY(var(--emote-scale-y, 1)) rotate(var(--emote-rotation, 0deg));
+  transform-origin: var(--emote-transform-origin, center);
+}
+
+.emote-modifier-flip-x .emote-transform-layer {
+  --emote-scale-x: -1;
+}
+
+.emote-modifier-flip-y .emote-transform-layer {
+  --emote-scale-y: -1;
+}
+
+.emote-modifier-cursed .emote-filter-layer {
+  filter: grayscale(1) brightness(0.75) contrast(1.7);
+}
+
+.emote-modifier-party .emote-animation-layer {
+  animation: emote-party 2s linear infinite;
+}
+
+.emote-modifier-shake .emote-animation-layer {
+  animation: emote-shake 140ms steps(2, end) infinite;
+}
+
+.emote-modifier-party.emote-modifier-shake .emote-animation-layer {
+  animation:
+    emote-party 2s linear infinite,
+    emote-shake 140ms steps(2, end) infinite;
+}
+
+@keyframes emote-party {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+@keyframes emote-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-2px, 1px);
+  }
+  75% {
+    transform: translate(2px, -1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emote-modifier-party .emote-animation-layer,
+  .emote-modifier-shake .emote-animation-layer {
+    animation: none;
+  }
+}
+
 .emoji-container {
   display: inline-flex;
   align-items: center;
@@ -224,13 +596,20 @@ img.badge {
 .emote-container[data-zw-group],
 .emoji-container[data-zw-group] {
   display: inline-grid;
+  position: relative;
   vertical-align: middle;
 }
 
-.emote-container[data-zw-group] > img,
-.emoji-container[data-zw-group] > img {
+.emote-container[data-zw-group] > img.zerowidth,
+.emoji-container[data-zw-group] > img.zerowidth,
+.emote-container[data-zw-group] > .emote-modified,
+.emoji-container[data-zw-group] > .emote-modified,
+.emote-container[data-zw-group] > .emote-transform-layer,
+.emoji-container[data-zw-group] > .emote-transform-layer {
   grid-area: 1 / 1;
   place-self: center;
+  z-index: 1;
+  line-height: 0;
 }
 
 .emoji {
@@ -275,8 +654,14 @@ img.badge {
 .gigantified-emote-line {
   display: block;
   width: 100%;
-  max-width: 300px;
+  max-width: min(var(--gigantified-emote-width, 300px), 100%);
   line-height: 1;
+  overflow: hidden;
+}
+
+.gigantified-emote-line:has(.emote-modifier-wide) {
+  max-width: none;
+  overflow: visible;
 }
 
 .gigantified-emote-line img.gigantified {
@@ -286,6 +671,33 @@ img.badge {
   max-width: none !important;
   max-height: none !important;
   margin: 0.3em 0;
+}
+
+.gigantified-emote-line .emote-modified {
+  display: block;
+  overflow: visible;
+}
+
+.gigantified-emote-line .emote-modified.emote-modifier-rotate-left,
+.gigantified-emote-line .emote-modified.emote-modifier-rotate-right {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.gigantified-emote-line .emote-modifier-wide {
+  width: var(--emote-wide-width, 100%);
+  max-width: none;
+}
+
+.gigantified-emote-line .emote-modifier-wide img.gigantified {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.chat_line.gigantified-emote:has(.emote-modifier-wide) {
+  overflow: visible;
+  max-width: none;
 }
 
 /* 7TV Paint стили */

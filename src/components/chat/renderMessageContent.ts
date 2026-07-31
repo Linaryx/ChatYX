@@ -10,6 +10,16 @@ import {
 } from "~/utils/chat/emojiUtils";
 import { SIZE_CONFIGS } from "~/styles/chatStyles";
 import { tokenizeLinks } from "~/utils/chat/linkUtils";
+import {
+  attachZeroWidthOverlay,
+  bindWideEmoteSizes,
+  buildGigantifiedLine,
+  getEmoteModifier,
+  resolveEmoteModifiers,
+  wrapEmoteModifiers,
+  wrapZeroWidthModifiers,
+  type EmoteModifierEffect,
+} from "~/utils/chat/emoteModifiers";
 
 export function escapeHtml(message: string): string {
   return message
@@ -77,17 +87,22 @@ function emoteImageAttrs(
   );
 }
 
-function applyImageSizeAttrsFromData(image: HTMLImageElement) {
-  const width = Number(image.dataset.emoteWidth || image.getAttribute("width"));
-  const height = Number(image.dataset.emoteHeight || image.getAttribute("height"));
-  if (!Number.isFinite(width) || !Number.isFinite(height)) return;
-  if (width <= 0 || height <= 0) return;
+function twitchEmoteImageAttrs(
+  config: ChatConfig,
+  size: (typeof SIZE_CONFIGS)[keyof typeof SIZE_CONFIGS],
+): string {
+  const emoteScale = Number.isFinite(config.emoteScale)
+    ? Math.min(Math.max(config.emoteScale, 0.25), 3)
+    : 1;
+  const dimension = Math.round(size.emoteMaxHeight * emoteScale);
 
-  image.setAttribute("width", String(Math.round(width)));
-  image.setAttribute("height", String(Math.round(height)));
+  return ` width="${dimension}" height="${dimension}" style="width: ${dimension}px; height: ${dimension}px;"`;
 }
 
-function renderMentionHtml(token: string, service: ChatPresentationService): string | null {
+function renderMentionHtml(
+  token: string,
+  service: ChatPresentationService,
+): string | null {
   const mentionStyle = mentionStyleService.resolveMention(token, service);
   if (!mentionStyle) return null;
 
@@ -98,18 +113,25 @@ function renderMentionHtml(token: string, service: ChatPresentationService): str
     case "global-paint":
       return `<span class="mention chatyx-seventv-paint" data-seventv-paint-id="${escapeAttr(mentionStyle.paintId)}">${escapedText}</span>${escapedSuffix}`;
     case "inline-paint": {
-      // css is generated internally from 7TV paint data — strip any quotes to prevent attr breakout
       const safeCss = mentionStyle.css.replace(/"/g, "'");
       return `<span class="mention" style="${safeCss}">${escapedText}</span>${escapedSuffix}`;
     }
     case "color": {
-      // color comes from Twitch IRC tag — only allow safe hex/rgb/named values
-      const safeColor = /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|[a-zA-Z]{1,30})$/.test(mentionStyle.color)
-        ? mentionStyle.color
-        : "#ffffff";
+      const safeColor =
+        /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|[a-zA-Z]{1,30})$/.test(
+          mentionStyle.color,
+        )
+          ? mentionStyle.color
+          : "#ffffff";
       return `<span class="mention" style="color: ${safeColor};">${escapedText}</span>${escapedSuffix}`;
     }
   }
+}
+
+function getEmoteScale(config: ChatConfig): number {
+  return Number.isFinite(config.emoteScale)
+    ? Math.min(Math.max(config.emoteScale, 0.25), 3)
+    : 1;
 }
 
 /**
@@ -123,6 +145,7 @@ export function renderMessageWithEmotes(
   const size =
     SIZE_CONFIGS[config.size as keyof typeof SIZE_CONFIGS] || SIZE_CONFIGS[2];
   const rawMessage = message.message;
+  const emoteScale = getEmoteScale(config);
 
   type Replacement =
     | { kind: "html"; html: string; isOverlayTarget: boolean }
@@ -130,7 +153,6 @@ export function renderMessageWithEmotes(
 
   const replacements: Record<string, Replacement> = {};
 
-  // Twitch emotes (uses codepoint indexes)
   if (message.emotes && typeof message.emotes === "object") {
     const codePointToCodeUnit = (
       text: string,
@@ -140,7 +162,7 @@ export function renderMessageWithEmotes(
       for (let i = 0; i < text.length; i++) {
         if (currentCodePoint === codePointIndex) return i;
         const charCode = text.charCodeAt(i);
-        if (charCode >= 0xd800 && charCode <= 0xdbff) i += 1; // skip low surrogate
+        if (charCode >= 0xd800 && charCode <= 0xdbff) i += 1;
         currentCodePoint += 1;
       }
       return text.length;
@@ -157,13 +179,12 @@ export function renderMessageWithEmotes(
 
           const start = codePointToCodeUnit(rawMessage, startCP);
           const end = codePointToCodeUnit(rawMessage, endCP + 1);
-
           const emoteCode = rawMessage.substring(start, end);
           if (!emoteCode || /^\s*$/.test(emoteCode)) return;
 
           replacements[emoteCode] = {
             kind: "html",
-            html: `<span class="emote-container"><img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0" alt="" title="${escapeAttr(emoteCode)}" /></span>`,
+            html: `<span class="emote-container"><img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0" alt="" title="${escapeAttr(emoteCode)}"${twitchEmoteImageAttrs(config, size)} /></span>`,
             isOverlayTarget: true,
           };
         });
@@ -171,7 +192,6 @@ export function renderMessageWithEmotes(
     );
   }
 
-  // Cheers: render single merged cheer (v2 behavior)
   if (
     (message as any).enhanced?.cheers &&
     (message as any).enhanced?.totalBits
@@ -190,19 +210,11 @@ export function renderMessageWithEmotes(
                     </span>`;
 
         cheers.forEach((cheer: any, index: number) => {
-          if (index === 0) {
-            replacements[cheer.text] = {
-              kind: "html",
-              html: cheerHtml,
-              isOverlayTarget: false,
-            };
-          } else {
-            replacements[cheer.text] = {
-              kind: "html",
-              html: "",
-              isOverlayTarget: false,
-            };
-          }
+          replacements[cheer.text] = {
+            kind: "html",
+            html: index === 0 ? cheerHtml : "",
+            isOverlayTarget: false,
+          };
         });
       }
     }
@@ -214,37 +226,15 @@ export function renderMessageWithEmotes(
       : createMessageTokenSnapshot(rawMessage);
 
   type SegmentKind = "ws" | "text" | "target" | "other";
-  type Segment = { kind: SegmentKind; html: string };
-  const segments: Segment[] = [];
-
-  const attachZeroWidth = (overlayHtml: string): boolean => {
-    let index = segments.length - 1;
-    while (index >= 0 && segments[index].kind === "ws") index -= 1;
-    if (index < 0) return false;
-    if (segments[index].kind !== "target") return false;
-
-    segments.length = index + 1;
-
-    const closingTag = "</span>";
-    const html = segments[index].html;
-    const closeIndex = html.lastIndexOf(closingTag);
-    if (closeIndex === -1 || closeIndex !== html.length - closingTag.length) {
-      return false;
-    }
-
-    const combined = html.slice(0, closeIndex) + overlayHtml + closingTag;
-    // Mark container so CSS and fixZeroWidthEmotes() can widen it to the largest emote
-    segments[index].html = combined
-      .replace(
-        '<span class="emote-container">',
-        '<span class="emote-container" data-zw-group="true">',
-      )
-      .replace(
-        '<span class="emoji-container">',
-        '<span class="emoji-container" data-zw-group="true">',
-      );
-    return true;
+  type Segment = {
+    kind: SegmentKind;
+    html: string;
+    isZeroWidth?: boolean;
+    zeroWidthOverlayHtml?: string;
+    effects?: EmoteModifierEffect[];
+    accessibleText?: string;
   };
+  const segments: Segment[] = [];
 
   const createEmoteReplacement = (
     cleanText: string,
@@ -256,9 +246,9 @@ export function renderMessageWithEmotes(
     if (!url) return null;
 
     const sourceClass = emote.source === "youtube" ? " youtube-emote" : "";
+    const attrs = emoteImageAttrs(emote.width, emote.height, config, size);
 
     if (emote.zero_width) {
-      const attrs = emoteImageAttrs(emote.width, emote.height, config, size);
       return {
         kind: "zw",
         overlayHtml: `<img class="emote zerowidth${sourceClass}" src="${url}" alt="" title="${escapeAttr(cleanText)}"${attrs} />`,
@@ -268,25 +258,68 @@ export function renderMessageWithEmotes(
 
     return {
       kind: "html",
-      html: `<span class="emote-container"><img class="emote${sourceClass}" src="${url}" alt="" title="${escapeAttr(cleanText)}"${emoteImageAttrs(emote.width, emote.height, config, size)} /></span>`,
+      html: `<span class="emote-container"><img class="emote${sourceClass}" src="${url}" alt="" title="${escapeAttr(cleanText)}"${attrs} /></span>`,
       isOverlayTarget: true,
     };
   };
 
-  const pushReplacement = (activeReplacement: Replacement) => {
+  const pushReplacement = (
+    activeReplacement: Replacement,
+    effects: EmoteModifierEffect[] = [],
+    accessibleText?: string,
+  ) => {
     if (activeReplacement.kind === "zw") {
-      if (!attachZeroWidth(activeReplacement.overlayHtml)) {
+      if (!attachZeroWidthOverlay(segments, activeReplacement.overlayHtml)) {
         segments.push({
           kind: "target",
           html: activeReplacement.fallbackHtml,
+          isZeroWidth: true,
+          zeroWidthOverlayHtml: activeReplacement.overlayHtml,
+          effects,
+          accessibleText,
         });
       }
-    } else {
-      segments.push({
-        kind: activeReplacement.isOverlayTarget ? "target" : "other",
-        html: activeReplacement.html,
-      });
+      return;
     }
+
+    segments.push({
+      kind: activeReplacement.isOverlayTarget ? "target" : "other",
+      html: activeReplacement.html,
+      effects,
+      accessibleText,
+    });
+  };
+
+  const applyModifiers = (
+    activeReplacement: Replacement,
+    effects: EmoteModifierEffect[],
+    accessibleText: string | undefined,
+  ): Replacement => {
+    if (effects.length === 0) return activeReplacement;
+    if (activeReplacement.kind === "zw") {
+      return {
+        kind: "zw",
+        overlayHtml: wrapZeroWidthModifiers(
+          activeReplacement.overlayHtml,
+          effects,
+          accessibleText,
+        ),
+        fallbackHtml: wrapEmoteModifiers(
+          activeReplacement.fallbackHtml,
+          effects,
+          accessibleText,
+        ),
+      };
+    }
+
+    return {
+      ...activeReplacement,
+      html: wrapEmoteModifiers(
+        activeReplacement.html,
+        effects,
+        accessibleText,
+      ),
+    };
   };
 
   const pushTextSegment = (textWithPlaceholders: string, emojis: string[]) => {
@@ -333,7 +366,10 @@ export function renderMessageWithEmotes(
     if (!snapshot) return false;
 
     const tokens = Array.from(snapshot.keys())
-      .filter((token) => token.startsWith("yt_emoji_") && withPlaceholders.includes(token))
+      .filter(
+        (token) =>
+          token.startsWith("yt_emoji_") && withPlaceholders.includes(token),
+      )
       .sort((left, right) => right.length - left.length);
     if (tokens.length === 0) return false;
 
@@ -366,11 +402,8 @@ export function renderMessageWithEmotes(
         matchToken,
         snapshot.get(matchToken),
       );
-      if (replacement) {
-        pushReplacement(replacement);
-      } else {
-        pushTextSegment(matchToken, emojis);
-      }
+      if (replacement) pushReplacement(replacement);
+      else pushTextSegment(matchToken, emojis);
 
       index = matchIndex + matchToken.length;
     }
@@ -378,53 +411,97 @@ export function renderMessageWithEmotes(
     return true;
   };
 
-  for (const token of tokenSnapshot.tokens) {
+  const tokenStates = tokenSnapshot.tokens.map((token) => {
+    if (token.isWhitespace) return { token };
+
+    const { withPlaceholders, emojis, cleanText } = token;
+    const isPlainLookupToken = withPlaceholders === cleanText;
+    const replacement = isPlainLookupToken
+      ? replacements[cleanText]
+      : undefined;
+    const emote = isPlainLookupToken
+      ? message.emoteSnapshot?.get(cleanText) ||
+        service.getEmote(cleanText, message.username)
+      : null;
+    const activeReplacement =
+      replacement || createEmoteReplacement(cleanText, emote);
+    const isEmojiOnlyToken = cleanText.length === 0 && emojis.length > 0;
+    const modifier = isPlainLookupToken
+      ? getEmoteModifier(cleanText)
+      : undefined;
+
+    return { token, activeReplacement, isEmojiOnlyToken, modifier };
+  });
+
+  const modifierResolution = resolveEmoteModifiers(
+    tokenStates.map((state) => ({
+      raw: state.token.raw,
+      isWhitespace: state.token.isWhitespace,
+      isTarget:
+        !state.modifier &&
+        Boolean(state.activeReplacement || state.isEmojiOnlyToken),
+      modifier: state.modifier,
+    })),
+  );
+
+  for (let index = 0; index < tokenStates.length; index += 1) {
+    const state = tokenStates[index];
+    const token = state.token;
+    const modifiers = modifierResolution[index];
+    if (modifiers.consumed) continue;
+
     if (token.isWhitespace) {
       segments.push({ kind: "ws", html: token.raw });
       continue;
     }
 
-    const { withPlaceholders, emojis, cleanText } = token;
-    const isPlainLookupToken = withPlaceholders === cleanText;
+    const { withPlaceholders, emojis } = token;
+    if (state.activeReplacement) {
+      pushReplacement(
+        applyModifiers(
+          state.activeReplacement,
+          modifiers.effects,
+          modifiers.accessibleText,
+        ),
+        modifiers.effects,
+        modifiers.accessibleText,
+      );
+      continue;
+    }
 
-    const replacement = isPlainLookupToken ? replacements[cleanText] : undefined;
-    const emote = isPlainLookupToken
-      ? message.emoteSnapshot?.get(cleanText) ||
-        service.getEmote(cleanText, message.username)
-      : null;
-    const emoteReplacement = createEmoteReplacement(cleanText, emote);
-
-    if (replacement || emoteReplacement) {
-      const activeReplacement = replacement || emoteReplacement;
-      if (!activeReplacement) continue;
-      pushReplacement(activeReplacement);
+    if (state.isEmojiOnlyToken && modifiers.effects.length > 0) {
+      const emojiHtml = parseGoogleEmoji(
+        escapeHtml(restoreEmojis(withPlaceholders, emojis)),
+        size.emojiHeight,
+      );
+      segments.push({
+        kind: "target",
+        html: wrapEmoteModifiers(
+          emojiHtml,
+          modifiers.effects,
+          modifiers.accessibleText,
+        ),
+      });
       continue;
     }
 
     if (pushInlineSnapshotTokens(withPlaceholders, emojis)) continue;
-
     pushTextSegment(withPlaceholders, emojis);
   }
 
-  const joinedText = segments.map((segment) => segment.html).join("");
   const element = document.createElement("span");
-  element.innerHTML = joinedText;
+  element.innerHTML = segments.map((segment) => segment.html).join("");
+
+  bindWideEmoteSizes(
+    element,
+    Number.parseFloat(size.emoteMaxWidth) * emoteScale,
+    size.emoteMaxHeight * emoteScale,
+  );
 
   if (message.isGigantifiedEmote) {
-    const target = element.querySelector("img.emote, img.emoji");
-    if (target) {
-      const line = document.createElement("span");
-      const giant = target.cloneNode(true) as HTMLImageElement;
-
-      line.className = "gigantified-emote-line";
-      giant.removeAttribute("style");
-      applyImageSizeAttrsFromData(giant);
-      giant.classList.add("gigantified");
-      line.append(giant);
-      element.replaceChildren(line);
-    }
+    const line = buildGigantifiedLine(element);
+    if (line) element.replaceChildren(line);
   }
 
   return element;
 }
-
