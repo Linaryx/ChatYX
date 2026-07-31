@@ -1,15 +1,18 @@
+import { Switch } from "~/components/ui/switch";
+
 type SetupSwitchProps = {
   checked: boolean;
   onChange: (checked: boolean) => void;
+  label: string;
 };
 
 export function SetupSwitch(props: SetupSwitchProps) {
   return (
-    <input
-      type="checkbox"
-      class="setup-switch"
+    <Switch
       checked={props.checked}
-      onInput={(event) => props.onChange(event.currentTarget.checked)}
+      onChange={props.onChange}
+      aria-label={props.label}
+      class="shrink-0"
     />
   );
 }

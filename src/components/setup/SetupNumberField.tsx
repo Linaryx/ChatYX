@@ -1,6 +1,6 @@
 import { NumberField } from "@kobalte/core/number-field";
-import type { JSX } from "solid-js";
-import "./SetupNumberField.css";
+import { Slider } from "~/components/ui/slider";
+import { cn } from "~/lib/utils";
 
 type SetupNumberFieldProps = {
   value: string;
@@ -9,6 +9,7 @@ type SetupNumberFieldProps = {
   max?: number;
   step?: number;
   placeholder?: string;
+  label: string;
 };
 
 function parseNumber(value: string, fallback: number): number {
@@ -25,46 +26,12 @@ export function SetupNumberField(props: SetupNumberFieldProps) {
   const rangeStep = () => props.step ?? 1;
   const rangeMax = () => {
     if (props.max !== undefined) return props.max;
-
     const min = rangeMin();
     const current = parseNumber(props.value, min);
     return Math.max(min + 100, current, 300);
   };
   const rangeValue = () =>
     clamp(parseNumber(props.value, rangeMin()), rangeMin(), rangeMax());
-  const rangeFill = () => {
-    const min = rangeMin();
-    const max = rangeMax();
-    if (max <= min) return "0%";
-
-    return `${((rangeValue() - min) / (max - min)) * 100}%`;
-  };
-  const styles = {
-    root: {
-      width: "100%",
-    },
-    group: {
-      display: "flex",
-      "flex-direction": "column",
-      gap: "9px",
-      width: "100%",
-    },
-    input: {
-      padding: "7px 10px",
-      height: "34px",
-      border: "1px solid #2a2a2a",
-      "border-radius": "10px",
-      "font-size": "14px",
-      background: "#111111",
-      color: "#e5e7eb",
-      "font-family": "inherit",
-      "box-sizing": "border-box",
-      width: "100%",
-      appearance: "textfield",
-      "-moz-appearance": "textfield",
-      "text-align": "center",
-    },
-  } as const;
 
   return (
     <NumberField
@@ -75,24 +42,32 @@ export function SetupNumberField(props: SetupNumberFieldProps) {
       step={props.step}
       format={false}
       changeOnWheel={false}
-      style={styles.root}
+      class="w-full"
     >
-      <div style={styles.group}>
-        <NumberField.Input placeholder={props.placeholder} style={styles.input} />
-        <input
-          class="setup-number-slider"
-          type="range"
-          min={rangeMin()}
-          max={rangeMax()}
+      <div class="flex w-full flex-col gap-2.5">
+        <NumberField.Input
+          aria-label={props.label}
+          placeholder={props.placeholder}
+          class={cn(
+            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-center text-sm",
+            "ring-offset-background placeholder:text-muted-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            "appearance-textfield [-moz-appearance:textfield]",
+            "[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+          )}
+        />
+        <Slider
+          aria-label={`${props.label}: ползунок`}
+          minValue={rangeMin()}
+          maxValue={rangeMax()}
           step={rangeStep()}
-          value={rangeValue()}
-          onInput={(event) => props.onChange(event.currentTarget.value)}
-          style={
-            {
-              "--setup-number-slider-fill": rangeFill(),
-            } as JSX.CSSProperties
-          }
-          aria-label={props.placeholder || "Настройка значения"}
+          value={[rangeValue()]}
+          onChange={(values) => {
+            const next = values[0];
+            if (next !== undefined) props.onChange(String(next));
+          }}
+          class="w-full px-1"
         />
       </div>
     </NumberField>

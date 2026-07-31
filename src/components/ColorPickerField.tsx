@@ -1,11 +1,13 @@
 import type { LucidColorPicker } from "lucid-color-picker";
 import "lucid-color-picker";
 import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 
 type ColorPickerFieldProps = {
   color: string;
   opacity: number;
   showOpacity?: boolean;
+  label?: string;
   onChange: (value: { color: string; opacity: number }) => void;
 };
 
@@ -68,10 +70,12 @@ function hexToRgba(hex: string, opacity: number) {
 
 export function ColorPickerField(props: ColorPickerFieldProps) {
   const [rootRef, setRootRef] = createSignal<HTMLDivElement>();
+  const [panelRef, setPanelRef] = createSignal<HTMLDivElement>();
   const [pickerRef, setPickerRef] = createSignal<LucidColorPicker>();
   const [draft, setDraft] = createSignal(normalizeHexColor(props.color));
   const [draftOpacity, setDraftOpacity] = createSignal(String(props.opacity));
   const [open, setOpen] = createSignal(false);
+  const [panelPosition, setPanelPosition] = createSignal({ left: 8, top: 8 });
 
   const currentValue = () =>
     joinHexAlpha(props.color, props.showOpacity === false ? 100 : props.opacity);
@@ -83,6 +87,7 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
     },
     control: {
       display: "flex",
+      "flex-wrap": "wrap",
       gap: "10px",
       width: "100%",
       "align-items": "center",
@@ -126,7 +131,7 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
       "box-sizing": "border-box",
       width: "160px",
       flex: "1 1 160px",
-      "min-width": "160px",
+      "min-width": "0",
       "text-transform": "uppercase",
     },
     opacityInput: {
@@ -144,9 +149,7 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
       flex: "0 0 auto",
     },
     panel: {
-      position: "absolute",
-      top: "calc(100% + 8px)",
-      left: "0",
+      position: "fixed",
       padding: "12px",
       background: "#111111",
       border: "1px solid #2a2a2a",
@@ -168,6 +171,30 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
     props.onChange({ color: normalizeHexColor(draft(), props.color), opacity: next });
   };
 
+  const updatePanelPosition = () => {
+    const root = rootRef();
+    const panel = panelRef();
+    if (!root || !panel || !open()) return;
+
+    const gap = 8;
+    const viewportPadding = 8;
+    const anchorRect = root.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const panelWidth = panelRect.width || 306;
+    const panelHeight = panelRect.height || 306;
+    const left = Math.min(
+      Math.max(anchorRect.left, viewportPadding),
+      Math.max(viewportPadding, window.innerWidth - panelWidth - viewportPadding),
+    );
+    const opensBelow =
+      anchorRect.bottom + gap + panelHeight <= window.innerHeight - viewportPadding;
+    const top = opensBelow
+      ? anchorRect.bottom + gap
+      : Math.max(viewportPadding, anchorRect.top - panelHeight - gap);
+
+    setPanelPosition({ left, top });
+  };
+
   onMount(() => {
     const picker = pickerRef();
     if (!picker) return;
@@ -185,19 +212,30 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
 
     const handlePointerDown = (event: MouseEvent) => {
       const root = rootRef();
+      const panel = panelRef();
       if (!open() || !root) return;
       const target = event.target;
-      if (target instanceof Node && !root.contains(target)) {
+      if (
+        target instanceof Node &&
+        !root.contains(target) &&
+        !panel?.contains(target)
+      ) {
         setOpen(false);
       }
     };
 
+    const handleViewportChange = () => updatePanelPosition();
+
     picker.addEventListener("change", handleChange);
     document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
 
     onCleanup(() => {
       picker.removeEventListener("change", handleChange);
       document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
     });
   });
 
@@ -211,15 +249,22 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
     }
   });
 
+  createEffect(() => {
+    if (!open()) return;
+    window.requestAnimationFrame(updatePanelPosition);
+  });
+
   return (
     <div ref={setRootRef} style={styles.root}>
       <div style={styles.control}>
         <button
           type="button"
+          class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           style={styles.trigger}
           onClick={() => setOpen((value) => !value)}
-          aria-label="Choose overlay background color"
+          aria-label={`${props.label ?? "Цвет"}: открыть палитру`}
           aria-expanded={open()}
+          aria-haspopup="dialog"
         >
           <div style={styles.triggerSwatch}>
             <div
@@ -235,6 +280,7 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
         </button>
 
         <input
+          class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           value={draft()}
           onInput={(event) => setDraft(event.currentTarget.value.toUpperCase())}
           onBlur={commitDraft}
@@ -245,11 +291,13 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
             }
           }}
           placeholder="#000000"
+          aria-label={`${props.label ?? "Цвет"}: HEX`}
           style={styles.input}
         />
 
         <Show when={props.showOpacity !== false}>
           <input
+            class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             type="number"
             min="0"
             max="100"
@@ -263,19 +311,27 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
               }
             }}
             placeholder="50"
+            aria-label={`${props.label ?? "Цвет"}: прозрачность в процентах`}
             style={styles.opacityInput}
           />
         </Show>
       </div>
 
-      <div
-        style={{
-          ...styles.panel,
-          display: open() ? "block" : "none",
-        }}
-      >
-        <lucid-color-picker ref={setPickerRef} value={currentValue()} />
-      </div>
+      <Portal>
+        <div
+          ref={setPanelRef}
+          role="dialog"
+          aria-label={`${props.label ?? "Цвет"}: палитра`}
+          style={{
+            ...styles.panel,
+            display: open() ? "block" : "none",
+            left: `${panelPosition().left}px`,
+            top: `${panelPosition().top}px`,
+          }}
+        >
+          <lucid-color-picker ref={setPickerRef} value={currentValue()} />
+        </div>
+      </Portal>
     </div>
   );
 }

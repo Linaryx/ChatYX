@@ -5,6 +5,7 @@ import { MetaProvider, Meta } from "@solidjs/meta";
 import { Suspense, lazy } from "solid-js";
 import { getAppBasePath } from "~/utils/appBase";
 import "./root.css";
+import "./app.css";
 import "./styles/fonts.css";
 
 const root = document.getElementById("root");
@@ -37,6 +38,10 @@ render(
           <Route
             path="/predictions/"
             component={lazy(() => import("./routes/predictions"))}
+          />
+          <Route
+            path="/dev/messages"
+            component={lazy(() => import("./routes/dev/messages"))}
           />
           <Route path="*" component={lazy(() => import("./routes/[...404]"))} />
         </Suspense>

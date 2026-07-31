@@ -1,0 +1,13 @@
+{
+  "style": "default",
+  "tailwind": {
+    "css": "src/app.css",
+    "baseColor": "slate"
+  },
+  "aliases": {
+    "components": "~/components/ui",
+    "utils": "~/lib/utils",
+    "hooks": "~/hooks"
+  },
+  "registries": {}
+}

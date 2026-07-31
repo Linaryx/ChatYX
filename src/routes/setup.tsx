@@ -5,13 +5,26 @@ import {
   For,
   onCleanup,
   onMount,
-  type JSX,
+  Show,
 } from "solid-js";
 import { Title } from "@solidjs/meta";
 import { ColorPickerField } from "~/components/ColorPickerField";
+import {
+  ControlRows,
+  SectionCard,
+  SetupNav,
+  ToggleRows,
+  type ControlRow,
+  type SetupSectionId,
+  type ToggleRow,
+} from "~/components/setup/SetupLayout";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
+import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
 import { TwitchChannelField } from "~/components/setup/TwitchChannelField";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Slider } from "~/components/ui/slider";
 import { DEFAULT_BOT_NAMES } from "~/config/botNames";
 import {
   DEFAULT_CHAT_CONFIG,
@@ -31,19 +44,7 @@ import {
   createChatPreviewConfigMessage,
   getChatPreviewSessionKey,
 } from "~/services/chat/preview";
-
-type ControlRow = {
-  label: string;
-  control: JSX.Element;
-  hint?: string;
-};
-
-type ToggleRow = {
-  label: string;
-  checked: () => boolean;
-  onChange: (value: boolean) => void;
-  hint?: string;
-};
+import { cn } from "~/lib/utils";
 
 type BotProfile = {
   login: string;
@@ -242,44 +243,6 @@ function mergeUniqueLogins(current: string[], raw: string): string[] {
   return merged;
 }
 
-function renderToggleRows(
-  rows: ToggleRow[],
-  styles: Record<string, JSX.CSSProperties>,
-) {
-  return (
-    <For each={rows}>
-      {(row) => (
-        <div style={styles.toggleRow}>
-          <div style={styles.toggleLabelWrap}>
-            <div style={styles.settingLabel}>{row.label}</div>
-            {row.hint && <div style={styles.settingHint}>{row.hint}</div>}
-          </div>
-          <SetupSwitch checked={row.checked()} onChange={row.onChange} />
-        </div>
-      )}
-    </For>
-  );
-}
-
-function renderControlRows(
-  rows: ControlRow[],
-  styles: Record<string, JSX.CSSProperties>,
-) {
-  return (
-    <For each={rows}>
-      {(row) => (
-        <div style={styles.controlRow}>
-          <div style={styles.controlLabelWrap}>
-            <div style={styles.settingLabel}>{row.label}</div>
-            {row.hint && <div style={styles.settingHint}>{row.hint}</div>}
-          </div>
-          <div style={styles.controlSlot}>{row.control}</div>
-        </div>
-      )}
-    </For>
-  );
-}
-
 export default function ChatSetup() {
   const [channel, setChannel] = createSignal(
     readStoredSetupValue(SETUP_STORAGE_KEYS.twitchChannel),
@@ -402,6 +365,9 @@ export default function ChatSetup() {
   const [showGigantifiedEmotes, setShowGigantifiedEmotes] = createSignal(
     DEFAULT_CHAT_CONFIG.showGigantifiedEmotes,
   );
+  const [showPredictions, setShowPredictions] = createSignal(
+    DEFAULT_CHAT_CONFIG.showPredictions,
+  );
   const [linkMode, setLinkMode] = createSignal<LinkDisplayMode>(
     DEFAULT_CHAT_CONFIG.linkMode,
   );
@@ -414,6 +380,8 @@ export default function ChatSetup() {
   const [previewUrl, setPreviewUrl] = createSignal("");
   // eslint-disable-next-line no-unassigned-vars -- assigned by SolidJS ref={}
   let iframeRef: HTMLIFrameElement | undefined;
+  // eslint-disable-next-line no-unassigned-vars -- assigned by SolidJS ref={}
+  let settingsScrollRef: HTMLDivElement | undefined;
   let activePreviewSessionKey = "";
   let previewNavigationTimer: number | undefined;
 
@@ -425,12 +393,30 @@ export default function ChatSetup() {
   };
 
   onMount(() => {
-    const previousHtmlBackground = document.documentElement.style.background;
-    const previousBodyBackground = document.body.style.background;
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById("root");
+    const prev = {
+      htmlBg: html.style.background,
+      bodyBg: body.style.background,
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyHeight: body.style.height,
+      rootOverflow: root?.style.overflow ?? "",
+      rootHeight: root?.style.height ?? "",
+    };
     const supportedBrowser = detectLocalFontBrowser();
 
-    document.documentElement.style.background = "#09090b";
-    document.body.style.background = "#09090b";
+    // Lock document scroll — setup owns scrolling in fixed columns
+    html.style.background = "#09090b";
+    html.style.overflow = "hidden";
+    body.style.background = "#09090b";
+    body.style.overflow = "hidden";
+    body.style.height = "100%";
+    if (root) {
+      root.style.overflow = "hidden";
+      root.style.height = "100%";
+    }
 
     if (supportedBrowser) {
       setLocalFontBrowser(supportedBrowser);
@@ -440,559 +426,53 @@ export default function ChatSetup() {
     }
 
     onCleanup(() => {
-      document.documentElement.style.background = previousHtmlBackground;
-      document.body.style.background = previousBodyBackground;
+      html.style.background = prev.htmlBg;
+      html.style.overflow = prev.htmlOverflow;
+      body.style.background = prev.bodyBg;
+      body.style.overflow = prev.bodyOverflow;
+      body.style.height = prev.bodyHeight;
+      if (root) {
+        root.style.overflow = prev.rootOverflow;
+        root.style.height = prev.rootHeight;
+      }
     });
   });
 
-  // shadcn-dark zinc palette
-  const C = {
-    bg: "#09090b",
-    card: "#111113",
-    border: "#27272a",
-    input: "#0d0d0f",
-    text: "#fafafa",
-    muted: "#71717a",
-    subtle: "#a1a1aa",
-  } as const;
+  const [activeSection, setActiveSection] =
+    createSignal<SetupSectionId>("appearance");
+  const [openSections, setOpenSections] = createSignal<
+    Record<SetupSectionId, boolean>
+  >({
+    appearance: true,
+    styling: false,
+    behavior: false,
+    content: false,
+    bots: false,
+  });
 
-  const styles = {
-    page: {
-      background: C.bg,
-      color: C.text,
-      padding: "16px 32px 48px",
-      "min-height": "100vh",
-      width: "100%",
-      "box-sizing": "border-box",
-      "overflow-x": "hidden",
-    },
-    shell: {
-      margin: "0 auto",
-      width: "100%",
-      "max-width": "1760px",
-      display: "flex",
-      "flex-direction": "column",
-      gap: "16px",
-      "font-family": "'Inter', 'Segoe UI', sans-serif",
-    },
-    title: {
-      "text-align": "center",
-      "font-size": "18px",
-      "font-weight": 600,
-      color: C.text,
-      "letter-spacing": "-0.01em",
-    },
-    channelCard: {
-      background: C.card,
-      padding: "14px 16px",
-      width: "100%",
-      "box-sizing": "border-box",
-      "border-radius": "8px",
-      border: `1px solid ${C.border}`,
-      display: "flex",
-      "flex-direction": "column",
-      gap: "12px",
-    },
-    channelRow: {
-      display: "grid",
-      "grid-template-columns": "repeat(2, minmax(0, 1fr))",
-      "align-items": "center",
-      gap: "10px",
-    },
-    channelInput: {
-      width: "100%",
-      "min-width": "0",
-      height: "40px",
-      padding: "9px 14px",
-      border: `1px solid ${C.border}`,
-      "border-radius": "6px",
-      "font-size": "14px",
-      background: C.input,
-      color: C.text,
-      "font-family": "inherit",
-      "box-sizing": "border-box",
-      "text-align": "center",
-    },
-    primaryButton: {
-      background: C.text,
-      color: C.bg,
-      border: "none",
-      padding: "0 16px",
-      "border-radius": "6px",
-      "font-size": "13px",
-      "font-weight": 600,
-      "font-family": "'Inter', 'Segoe UI', sans-serif",
-      cursor: "pointer",
-      transition: "opacity 0.15s",
-      "min-width": "160px",
-      height: "40px",
-    },
-    mainGrid: {
-      display: "grid",
-      gap: "20px",
-      width: "100%",
-    },
-    leftPane: {
-      display: "flex",
-      "flex-direction": "column",
-      gap: "12px",
-      "min-width": "0",
-    },
-    previewPane: {
-      "min-width": "0",
-      width: "100%",
-    },
-    sectionCard: {
-      background: C.card,
-      border: `1px solid ${C.border}`,
-      "border-radius": "8px",
-      padding: "16px",
-      "box-sizing": "border-box",
-      display: "flex",
-      "flex-direction": "column",
-      gap: "12px",
-    },
-    sectionTitle: {
-      margin: "0",
-      "font-size": "11px",
-      "font-family": "'Inter', 'Segoe UI', sans-serif",
-      "font-weight": 700,
-      color: C.text,
-      "text-transform": "uppercase",
-      "letter-spacing": "0.08em",
-    },
-    sectionHint: {
-      "font-size": "12px",
-      color: C.muted,
-      "line-height": 1.5,
-    },
-    controlRow: {
-      display: "grid",
-      "grid-template-columns": "200px minmax(0, 1fr)",
-      gap: "12px",
-      "align-items": "center",
-      width: "100%",
-    },
-    controlLabelWrap: {
-      display: "flex",
-      "flex-direction": "column",
-      gap: "3px",
-      "min-width": "0",
-    },
-    controlSlot: {
-      width: "100%",
-      "min-width": "0",
-    },
-    toggleRow: {
-      display: "grid",
-      "grid-template-columns": "minmax(0, 1fr) auto",
-      gap: "12px",
-      "align-items": "center",
-      width: "100%",
-    },
-    toggleLabelWrap: {
-      display: "flex",
-      "flex-direction": "column",
-      gap: "3px",
-      "min-width": "0",
-    },
-    settingLabel: {
-      "font-size": "13px",
-      "font-weight": 500,
-      color: C.text,
-    },
-    settingHint: {
-      "font-size": "11px",
-      color: C.muted,
-      "line-height": 1.4,
-    },
-    input: {
-      padding: "8px 12px",
-      height: "36px",
-      border: `1px solid ${C.border}`,
-      "border-radius": "6px",
-      "font-size": "13px",
-      background: C.input,
-      color: C.text,
-      "font-family": "inherit",
-      "box-sizing": "border-box",
-      width: "100%",
-    },
-    fontCustomStack: {
-      display: "flex",
-      "flex-direction": "column",
-      gap: "8px",
-    },
-    localFontRow: {
-      display: "grid",
-      "grid-template-columns": "150px minmax(0, 1fr)",
-      gap: "8px",
-      width: "100%",
-    },
-    localFontButton: {
-      height: "36px",
-      padding: "0 12px",
-      border: `1px solid ${C.border}`,
-      "border-radius": "6px",
-      background: "#000000",
-      color: C.text,
-      "font-family": "inherit",
-      "font-size": "12px",
-      "font-weight": 700,
-      cursor: "pointer",
-      "box-sizing": "border-box",
-    },
-    localFontButtonDisabled: {
-      opacity: "0.45",
-      cursor: "not-allowed",
-    },
-    textarea: {
-      padding: "10px 12px",
-      minHeight: "100px",
-      border: `1px solid ${C.border}`,
-      "border-radius": "6px",
-      "font-size": "13px",
-      background: C.input,
-      color: C.text,
-      "font-family": "inherit",
-      "box-sizing": "border-box",
-      width: "100%",
-      resize: "vertical",
-      "line-height": 1.45,
-    },
-    previewSticky: {
-      position: "sticky",
-      top: "24px",
-      display: "flex",
-      "flex-direction": "column",
-      gap: "12px",
-    },
-    previewLabel: {
-      margin: "0",
-      "font-size": "11px",
-      "font-family": "'Inter', 'Segoe UI', sans-serif",
-      "font-weight": 700,
-      color: C.text,
-      "text-transform": "uppercase",
-      "letter-spacing": "0.08em",
-    },
-    speedCard: {
-      padding: "12px",
-      border: `1px solid ${C.border}`,
-      "border-radius": "8px",
-      background: C.card,
-      display: "flex",
-      "flex-direction": "column",
-      gap: "10px",
-    },
-    speedHeader: {
-      display: "flex",
-      "align-items": "baseline",
-      "justify-content": "space-between",
-      gap: "12px",
-    },
-    speedValue: {
-      color: C.subtle,
-      "font-size": "11px",
-      "font-weight": 600,
-      "white-space": "nowrap",
-    },
-    speedScale: {
-      display: "flex",
-      "justify-content": "space-between",
-      color: C.muted,
-      "font-size": "11px",
-    },
-    previewControlsGrid: {
-      display: "grid",
-      "grid-template-columns": "1fr 1fr",
-      gap: "8px",
-    },
-    previewControlStack: {
-      display: "flex",
-      "flex-direction": "column",
-      gap: "5px",
-      "min-width": "0",
-    },
-    previewScreen: {
-      position: "relative",
-      height: "600px",
-      width: "100%",
-      overflow: "hidden",
-      background: "transparent",
-    },
-    previewOverlay: {
-      position: "absolute",
-      inset: "0",
-      background: "transparent",
-      "pointer-events": "none",
-    },
-    previewFrame: {
-      position: "relative",
-      width: "100%",
-      height: "100%",
-      border: "0",
-      display: "block",
-      background: "transparent",
-      "pointer-events": "none",
-      "z-index": "1",
-    },
-    secondaryButton: {
-      display: "inline-flex",
-      "align-items": "center",
-      "justify-content": "center",
-      height: "36px",
-      padding: "0 14px",
-      background: "transparent",
-      color: C.text,
-      border: `1px solid ${C.border}`,
-      "border-radius": "6px",
-      "font-size": "13px",
-      "font-weight": 500,
-      "text-decoration": "none",
-      cursor: "pointer",
-      "box-sizing": "border-box",
-    },
-    botHeader: {
-      display: "grid",
-      "grid-template-columns": "200px minmax(0, 1fr)",
-      gap: "12px",
-      "align-items": "start",
-      width: "100%",
-    },
-    botLabelWrap: {
-      display: "flex",
-      "flex-direction": "column",
-      gap: "8px",
-      "min-width": "0",
-    },
-    botSwitchRow: {
-      display: "inline-flex",
-      "align-items": "center",
-      gap: "8px",
-      "font-size": "12px",
-      color: C.subtle,
-    },
-    botChipField: {
-      width: "100%",
-      minHeight: "92px",
-      padding: "10px",
-      border: `1px solid ${C.border}`,
-      "border-radius": "14px",
-      background: C.input,
-      "box-sizing": "border-box",
-    },
-    botChipList: {
-      display: "flex",
-      "align-items": "center",
-      "align-content": "flex-start",
-      "flex-wrap": "wrap",
-      gap: "8px",
-      width: "100%",
-    },
-    botChip: {
-      display: "inline-flex",
-      "align-items": "center",
-      gap: "8px",
-      maxWidth: "100%",
-      minHeight: "34px",
-      padding: "3px 6px 3px 4px",
-      color: "#ffffff",
-      background: "#050505",
-      border: "1px solid rgba(255,255,255,0.52)",
-      "border-radius": "999px",
-      "box-sizing": "border-box",
-    },
-    botAvatar: {
-      width: "28px",
-      height: "28px",
-      "border-radius": "999px",
-      "object-fit": "cover",
-      background: "#000000",
-      border: "1px solid rgba(255,255,255,0.36)",
-      "box-sizing": "border-box",
-      flex: "0 0 auto",
-    },
-    botAvatarFallback: {
-      width: "28px",
-      height: "28px",
-      "border-radius": "999px",
-      display: "inline-flex",
-      "align-items": "center",
-      "justify-content": "center",
-      background: "#000000",
-      border: "1px solid rgba(255,255,255,0.36)",
-      color: "#ffffff",
-      "font-size": "12px",
-      "font-weight": 700,
-      "box-sizing": "border-box",
-      flex: "0 0 auto",
-    },
-    botText: {
-      display: "flex",
-      "flex-direction": "column",
-      "justify-content": "center",
-      minWidth: "0",
-      "line-height": 1.05,
-    },
-    botDisplayName: {
-      color: "#ffffff",
-      "font-size": "12px",
-      "font-weight": 700,
-      "white-space": "nowrap",
-      overflow: "hidden",
-      "text-overflow": "ellipsis",
-      maxWidth: "150px",
-    },
-    botLogin: {
-      color: "rgba(255,255,255,0.62)",
-      "font-size": "10px",
-      "white-space": "nowrap",
-      overflow: "hidden",
-      "text-overflow": "ellipsis",
-      maxWidth: "150px",
-    },
-    botRemoveButton: {
-      width: "22px",
-      height: "22px",
-      border: "0",
-      "border-radius": "999px",
-      background: "transparent",
-      color: "#ffffff",
-      cursor: "pointer",
-      display: "inline-flex",
-      "align-items": "center",
-      "justify-content": "center",
-      "font-size": "16px",
-      "line-height": 1,
-      padding: "0",
-      flex: "0 0 auto",
-    },
-    botInput: {
-      flex: "1 1 180px",
-      minWidth: "150px",
-      height: "34px",
-      border: "0",
-      background: "transparent",
-      color: "#ffffff",
-      "font-family": "inherit",
-      "font-size": "13px",
-      padding: "0 4px",
-      "box-sizing": "border-box",
-    },
-    roleMergeCard: {
-      display: "grid",
-      "grid-template-columns": "minmax(0, 0.9fr) minmax(300px, 1.4fr)",
-      gap: "12px",
-      "align-items": "stretch",
-      padding: "14px",
-      border: "1px solid rgba(255,255,255,0.18)",
-      "border-radius": "10px",
-      background: "#020202",
-    },
-    roleMergeHeader: {
-      display: "flex",
-      "flex-direction": "column",
-      gap: "5px",
-      "min-width": "0",
-    },
-    roleMergeTitle: {
-      color: C.text,
-      "font-size": "13px",
-      "font-weight": 700,
-    },
-    roleMergeHint: {
-      color: C.muted,
-      "font-size": "11px",
-      "line-height": 1.45,
-    },
-    rolePillGroup: {
-      display: "grid",
-      "grid-template-columns": "repeat(3, minmax(0, 1fr))",
-      gap: "8px",
-    },
-    rolePill: {
-      minHeight: "74px",
-      display: "flex",
-      "flex-direction": "column",
-      "align-items": "center",
-      "justify-content": "center",
-      gap: "9px",
-      padding: "10px",
-      border: "1px solid rgba(255,255,255,0.18)",
-      "border-radius": "10px",
-      background: "#000000",
-      color: "rgba(255,255,255,0.68)",
-      cursor: "pointer",
-      "font-family": "inherit",
-      "font-size": "12px",
-      "font-weight": 700,
-      "box-sizing": "border-box",
-    },
-    rolePillActive: {
-      border: "1px solid rgba(255,255,255,0.72)",
-      color: "#ffffff",
-      background:
-        "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.01))",
-      "box-shadow": "inset 0 0 0 1px rgba(255,255,255,0.05)",
-    },
-    roleBadgePreview: {
-      display: "inline-flex",
-      "align-items": "center",
-      padding: "3px",
-      border: "1px solid rgba(255,255,255,0.16)",
-      "border-radius": "7px",
-      background: "#070707",
-    },
-    roleBadgeIcon: {
-      width: "23px",
-      height: "23px",
-      display: "inline-flex",
-      "align-items": "center",
-      "justify-content": "center",
-      "border-radius": "5px",
-      color: "#ffffff",
-      "font-size": "8px",
-      "font-weight": 900,
-      "letter-spacing": "0.02em",
-      "box-sizing": "border-box",
-      border: "1px solid rgba(255,255,255,0.2)",
-    },
-    roleBadgeImage: {
-      width: "100%",
-      height: "100%",
-      display: "block",
-      "object-fit": "contain",
-    },
-    rolePillLabel: {
-      "line-height": 1.1,
-      "text-align": "center",
-    },
-    resultCard: {
-      background: C.card,
-      padding: "16px",
-      "border-radius": "8px",
-      border: `1px solid ${C.border}`,
-      display: "flex",
-      "flex-direction": "column",
-      gap: "12px",
-    },
-    resultBody: {
-      background: C.input,
-      padding: "12px 14px",
-      "border-radius": "6px",
-      border: `1px solid ${C.border}`,
-      "word-break": "break-all",
-      color: C.subtle,
-      "font-family": "'Source Code Pro', monospace",
-      "font-size": "0.85em",
-    },
-    resultActions: {
-      display: "flex",
-      gap: "8px",
-      "flex-wrap": "wrap",
-    },
-  } as const;
+  const setSectionOpen = (id: SetupSectionId, open: boolean) => {
+    setOpenSections((prev) => ({ ...prev, [id]: open }));
+  };
+
+  const scrollToSection = (id: SetupSectionId) => {
+    setActiveSection(id);
+    setSectionOpen(id, true);
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`setup-section-${id}`);
+      if (!el) return;
+      if (settingsScrollRef) {
+        const top =
+          el.getBoundingClientRect().top -
+          settingsScrollRef.getBoundingClientRect().top +
+          settingsScrollRef.scrollTop -
+          8;
+        settingsScrollRef.scrollTo({ top, behavior: "smooth" });
+        return;
+      }
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
 
   const normalizeHexColor = (raw: string, fallback: string): string => {
     const value = raw.trim();
@@ -1108,6 +588,7 @@ export default function ChatSetup() {
     showHighlightedMessages: showHighlightedMessages(),
     showChannelPointRewards: showChannelPointRewards(),
     showGigantifiedEmotes: showGigantifiedEmotes(),
+    showPredictions: showPredictions(),
     linkMode: linkMode(),
     linkColor: normalizeHexColor(linkColor(), DEFAULT_CHAT_CONFIG.linkColor),
     hideLinkRewards: hideLinkRewards(),
@@ -1334,25 +815,25 @@ export default function ChatSetup() {
   const appearanceRows: ControlRow[] = [
     {
       label: "Размер сообщений",
-      control: (
-        <select
+      control: (labelId) => (
+        <SetupSelect
+          aria-labelledby={labelId}
           value={size()}
           onChange={(e) => setSize(e.currentTarget.value)}
-          style={styles.input}
         >
           <option value="1">Маленький</option>
           <option value="2">Средний</option>
           <option value="3">Большой</option>
-        </select>
+        </SetupSelect>
       ),
     },
     {
       label: "Шрифт",
-      control: (
-        <select
+      control: (labelId) => (
+        <SetupSelect
+          aria-labelledby={labelId}
           value={font()}
           onChange={(e) => setFont(e.currentTarget.value)}
-          style={styles.input}
         >
           <option value="0">Свой шрифт</option>
           <option value="1">Baloo Tammudu</option>
@@ -1367,51 +848,46 @@ export default function ChatSetup() {
           <option value="10">Indie Flower</option>
           <option value="11">Open Sans</option>
           <option value="12">Alsina (Vsauce)</option>
-        </select>
+        </SetupSelect>
       ),
     },
     {
       label: "Название своего шрифта",
       hint: "Работает, когда выше выбран пункт «Свой шрифт».",
-      control: (
-        <div style={styles.fontCustomStack}>
-          <input
+      control: (labelId) => (
+        <div class="flex flex-col gap-2">
+          <Input
+            aria-labelledby={labelId}
             type="text"
             value={fontCustom()}
             onInput={(e) => setFontCustom(e.currentTarget.value)}
             placeholder="Например: Comic Sans MS"
             disabled={font() !== "0"}
-            style={{
-              ...styles.input,
-              opacity: font() === "0" ? "1" : "0.5",
-            }}
+            class={cn(font() !== "0" && "opacity-50")}
           />
-          {localFontBrowser() && (
-            <div style={styles.localFontRow}>
-              <button
+          <Show when={localFontBrowser()}>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={loadLocalFonts}
                 disabled={font() !== "0" || isLoadingLocalFonts()}
-                style={{
-                  ...styles.localFontButton,
-                  ...((font() !== "0" || isLoadingLocalFonts()) &&
-                    styles.localFontButtonDisabled),
-                }}
+                class="h-10"
               >
                 {isLoadingLocalFonts() ? "Загрузка..." : "Локальные"}
-              </button>
-              <select
+              </Button>
+              <SetupSelect
+                aria-label="Выбрать локальный шрифт"
                 value=""
                 onChange={(e) => {
                   const selectedFont = e.currentTarget.value;
                   if (selectedFont) setFontCustom(selectedFont);
                 }}
                 disabled={font() !== "0" || localFonts().length === 0}
-                style={{
-                  ...styles.input,
-                  opacity:
-                    font() === "0" && localFonts().length > 0 ? "1" : "0.5",
-                }}
+                class={cn(
+                  !(font() === "0" && localFonts().length > 0) && "opacity-50",
+                )}
               >
                 <option value="">
                   {localFonts().length > 0
@@ -1428,18 +904,19 @@ export default function ChatSetup() {
                     </option>
                   )}
                 </For>
-              </select>
+              </SetupSelect>
             </div>
-          )}
-          <div style={styles.settingHint}>{localFontStatus()}</div>
+          </Show>
+          <div class="text-xs text-muted-foreground">{localFontStatus()}</div>
         </div>
       ),
     },
     {
       label: "Вес текста",
       hint: "Толщина текста сообщений. 800 — текущий стандарт.",
-      control: (
+      control: (_labelId) => (
         <SetupNumberField
+          label="Вес текста"
           value={fontWeight()}
           onChange={setFontWeight}
           min={100}
@@ -1451,8 +928,9 @@ export default function ChatSetup() {
     {
       label: "Вес ника",
       hint: "Толщина имени автора и двоеточия. 800 — текущий стандарт.",
-      control: (
+      control: (_labelId) => (
         <SetupNumberField
+          label="Вес ника"
           value={nickFontWeight()}
           onChange={setNickFontWeight}
           min={100}
@@ -1463,8 +941,9 @@ export default function ChatSetup() {
     },
     {
       label: "Размер эмоутов",
-      control: (
+      control: (_labelId) => (
         <SetupNumberField
+          label="Размер эмоутов"
           value={emoteScale()}
           onChange={setEmoteScale}
           min={0}
@@ -1478,40 +957,41 @@ export default function ChatSetup() {
   const stylingRows: ControlRow[] = [
     {
       label: "Тень текста",
-      control: (
-        <select
+      control: (labelId) => (
+        <SetupSelect
+          aria-labelledby={labelId}
           value={shadow()}
           onChange={(e) => setShadow(e.currentTarget.value)}
-          style={styles.input}
         >
           <option value="0">Выкл</option>
           <option value="1">Маленькая</option>
           <option value="2">Средняя</option>
           <option value="3">Большая</option>
-        </select>
+        </SetupSelect>
       ),
     },
     {
       label: "Обводка текста",
-      control: (
-        <select
+      control: (labelId) => (
+        <SetupSelect
+          aria-labelledby={labelId}
           value={stroke()}
           onChange={(e) => setStroke(e.currentTarget.value)}
-          style={styles.input}
         >
           <option value="0">Выкл</option>
           <option value="1">Тонкая</option>
           <option value="2">Средняя</option>
           <option value="3">Толстая</option>
           <option value="4">Очень толстая</option>
-        </select>
+        </SetupSelect>
       ),
     },
     {
       label: "Скрывать сообщения через",
       hint: "В секундах. 0 — сообщения остаются на экране.",
-      control: (
+      control: (_labelId) => (
         <SetupNumberField
+          label="Скрывать сообщения через"
           value={fade()}
           onChange={setFade}
           min={0}
@@ -1521,8 +1001,9 @@ export default function ChatSetup() {
     },
     {
       label: "Фон сообщений",
-      control: (
+      control: (_labelId) => (
         <ColorPickerField
+          label="Фон сообщений"
           color={overlayBackgroundColor()}
           opacity={toInt(
             overlayBackgroundOpacity(),
@@ -1537,8 +1018,9 @@ export default function ChatSetup() {
     },
     {
       label: "Скругление фона",
-      control: (
+      control: (_labelId) => (
         <SetupNumberField
+          label="Скругление фона"
           value={overlayBackgroundRadius()}
           onChange={setOverlayBackgroundRadius}
           min={0}
@@ -1549,8 +1031,9 @@ export default function ChatSetup() {
     },
     {
       label: "Видимость рамки",
-      control: (
+      control: (_labelId) => (
         <SetupNumberField
+          label="Видимость рамки"
           value={overlayBorderOpacity()}
           onChange={setOverlayBorderOpacity}
           min={0}
@@ -1562,8 +1045,9 @@ export default function ChatSetup() {
     {
       label: "Подсветка событий Twitch",
       hint: "Цвет первых сообщений, рейдов, подписок, наград и Twitch Power-ups.",
-      control: (
+      control: (_labelId) => (
         <ColorPickerField
+          label="Подсветка событий Twitch"
           color={twitchEventColor()}
           opacity={toInt(
             twitchEventBackgroundOpacity(),
@@ -1579,8 +1063,9 @@ export default function ChatSetup() {
     {
       label: "Цвет ссылок",
       hint: "Используется, когда для ссылок выбран режим выделения.",
-      control: (
+      control: (_labelId) => (
         <ColorPickerField
+          label="Цвет ссылок"
           color={linkColor()}
           opacity={100}
           showOpacity={false}
@@ -1594,35 +1079,35 @@ export default function ChatSetup() {
     {
       label: "Анимация сообщений",
       hint: "Плавный поток двигает существующие строки, остальные режимы анимируют только новое сообщение.",
-      control: (
-        <select
+      control: (labelId) => (
+        <SetupSelect
+          aria-labelledby={labelId}
           value={animation()}
           onChange={(event) =>
             setAnimation(event.currentTarget.value as ChatAnimationMode)
           }
-          style={styles.input}
         >
           <option value="fade">Появление</option>
           <option value="flow">Плавный поток</option>
           <option value="scroll">Плавный скролл</option>
           <option value="none">Без анимации</option>
-        </select>
+        </SetupSelect>
       ),
     },
     {
       label: "Ссылки в сообщениях",
-      control: (
-        <select
+      control: (labelId) => (
+        <SetupSelect
+          aria-labelledby={labelId}
           value={linkMode()}
           onChange={(event) =>
             setLinkMode(event.currentTarget.value as LinkDisplayMode)
           }
-          style={styles.input}
         >
           <option value="normal">Обычный текст</option>
           <option value="highlight">Выделять цветом</option>
           <option value="hide">Скрывать</option>
-        </select>
+        </SetupSelect>
       ),
     },
   ];
@@ -1634,9 +1119,10 @@ export default function ChatSetup() {
       onChange: setHighlightTwitchEvents,
     },
     {
-      label: "Жирный текст событий",
+      label: "Усилить служебный текст событий",
       checked: twitchEventBold,
       onChange: setTwitchEventBold,
+      hint: "Добавляет 100 к выбранному весу текста, не меняя вес ника и сообщения.",
     },
     {
       label: "Курсив для событий",
@@ -1695,6 +1181,12 @@ export default function ChatSetup() {
       onChange: setShowGigantifiedEmotes,
     },
     {
+      label: "Показывать прогноз над чатом",
+      checked: showPredictions,
+      onChange: setShowPredictions,
+      hint: "Полоска Twitch Predictions над сообщениями. Работает только при указанном Twitch-канале.",
+    },
+    {
       label: "Показывать команды с !",
       checked: commands,
       onChange: setCommands,
@@ -1705,9 +1197,10 @@ export default function ChatSetup() {
       onChange: setShow7tvUnlisted,
     },
     {
-      label: "Скрыть сторонние бейджи",
+      label: "Скрыть сторонние бейджи (7TV, FFZ, BTTV)",
       checked: hideSpecialBadges,
       onChange: setHideSpecialBadges,
+      hint: "Бейджи Twitch и YouTube останутся видимыми.",
     },
     {
       label: "Показывать Homies-бейджи",
@@ -1748,7 +1241,7 @@ export default function ChatSetup() {
 
     return (
       <div
-        style={styles.botChip}
+        class="inline-flex max-w-full items-center gap-2 rounded-full border border-white/50 bg-black px-1.5 py-0.5 text-white"
         tabIndex={0}
         onKeyDown={(event) => {
           if (event.key === "Backspace" || event.key === "Delete") {
@@ -1757,25 +1250,34 @@ export default function ChatSetup() {
           }
         }}
       >
-        {avatarUrl() ? (
+        <Show
+          when={avatarUrl()}
+          fallback={
+            <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black text-xs font-bold">
+              {botFallbackName(login)}
+            </span>
+          }
+        >
           <img
             src={avatarUrl()}
             alt=""
-            style={styles.botAvatar}
+            class="size-7 shrink-0 rounded-full border border-white/40 object-cover"
             loading="lazy"
           />
-        ) : (
-          <span style={styles.botAvatarFallback}>{botFallbackName(login)}</span>
-        )}
-        <span style={styles.botText}>
-          <span style={styles.botDisplayName}>{displayName()}</span>
-          {displayName().toLowerCase() !== login && (
-            <span style={styles.botLogin}>@{login}</span>
-          )}
+        </Show>
+        <span class="flex min-w-0 flex-col justify-center leading-tight">
+          <span class="max-w-[150px] truncate text-xs font-bold">
+            {displayName()}
+          </span>
+          <Show when={displayName().toLowerCase() !== login}>
+            <span class="max-w-[150px] truncate text-[10px] text-white/60">
+              @{login}
+            </span>
+          </Show>
         </span>
         <button
           type="button"
-          style={styles.botRemoveButton}
+          class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-base leading-none text-white hover:bg-white/10"
           onClick={() => remove(login)}
           aria-label={`${ariaLabel}: ${displayName()}`}
         >
@@ -1785,181 +1287,174 @@ export default function ChatSetup() {
     );
   };
 
+  const chipFieldClass =
+    "flex min-h-[72px] w-full flex-wrap content-start items-center gap-1.5 rounded-lg border border-input bg-background p-2";
+
   return (
     <>
       <Title>ChatYX • настройка</Title>
 
-      <style>
-        {`
-          .setup-main-grid {
-            grid-template-columns: minmax(640px, 1.4fr) minmax(420px, 560px);
-          }
+      <div class="setup-root dark flex h-dvh max-h-dvh w-full flex-col overflow-hidden">
+        <div class="mx-auto flex h-full min-h-0 w-full max-w-[1760px] flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:px-5 xl:px-6">
+          <header class="flex shrink-0 flex-col items-center gap-0.5 text-center">
+            <h1 class="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+              Настройка чат-оверлея
+            </h1>
+            <p class="text-[11px] text-muted-foreground sm:text-xs">
+              Собери ссылку для OBS — превью обновляется сразу
+            </p>
+          </header>
 
-          @media (max-width: 1200px) {
-            .setup-main-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .setup-preview-sticky {
-              position: static !important;
-            }
-          }
-
-          @media (max-width: 900px) {
-            .setup-channel-row {
-              grid-template-columns: 1fr !important;
-            }
-          }
-
-          @media (max-width: 720px) {
-            .setup-control-row,
-            .setup-bot-row,
-            .setup-role-merge {
-              grid-template-columns: 1fr !important;
-            }
-
-            .setup-toggle-row {
-              grid-template-columns: 1fr auto !important;
-            }
-
-            .setup-role-pills {
-              grid-template-columns: 1fr !important;
-            }
-
-            .setup-preview-controls {
-              grid-template-columns: 1fr !important;
-            }
-
-            .setup-page {
-              padding-left: 12px !important;
-              padding-right: 12px !important;
-            }
-          }
-
-        `}
-      </style>
-
-      <div class="setup-page" style={styles.page}>
-        <div style={styles.shell}>
-          <div style={styles.title}>Настройка чат-оверлея</div>
-
-          <div style={styles.channelCard}>
-            <div class="setup-channel-row" style={styles.channelRow}>
-              <TwitchChannelField value={channel()} onChange={setChannel} />
-              <input
-                type="text"
-                value={youtubeChannel()}
-                onInput={(e) => setYoutubeChannel(e.currentTarget.value)}
-                placeholder="YouTube handle или ID, например @linaryx"
-                style={styles.channelInput}
-              />
-            </div>
+          <div class="shrink-0">
+            <SectionCard
+              title="Каналы"
+              description="Twitch и YouTube для оверлея."
+              compact
+            >
+              <div class="setup-channel-row grid grid-cols-1 items-center gap-2 md:grid-cols-2">
+                <TwitchChannelField value={channel()} onChange={setChannel} />
+                <Input
+                  aria-label="YouTube handle или ID"
+                  type="text"
+                  value={youtubeChannel()}
+                  onInput={(e) => setYoutubeChannel(e.currentTarget.value)}
+                  placeholder="YouTube handle или ID, например @linaryx"
+                  class="h-9 text-center sm:h-10"
+                />
+              </div>
+            </SectionCard>
           </div>
 
-          <div class="setup-main-grid" style={styles.mainGrid}>
-            <div style={styles.leftPane}>
-              <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Текст и размер</h3>
-                <div style={styles.sectionHint}>
-                  Настрой, насколько крупно и каким шрифтом будет выглядеть чат.
-                </div>
-                {renderControlRows(appearanceRows, {
-                  controlRow: { ...styles.controlRow },
-                  controlLabelWrap: styles.controlLabelWrap,
-                  controlSlot: styles.controlSlot,
-                  settingLabel: styles.settingLabel,
-                  settingHint: styles.settingHint,
-                })}
-              </section>
+          {/*
+            <1100: stack
+            ≥1100: settings | preview (compact)
+            ≥1280: nav | settings | preview
+          */}
+          <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto overflow-x-hidden min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(300px,38%)] min-[1100px]:gap-3 min-[1100px]:overflow-hidden xl:grid-cols-[168px_minmax(0,1fr)_minmax(320px,400px)] xl:gap-4">
+            <aside class="hidden min-h-0 xl:block">
+              <div class="setup-pane-scroll h-full max-h-full overflow-y-auto overscroll-contain rounded-lg border border-border/80 bg-card/60 p-1.5">
+                <SetupNav active={activeSection()} onSelect={scrollToSection} />
+              </div>
+            </aside>
 
-              <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Внешний вид</h3>
-                <div style={styles.sectionHint}>
-                  Фон сообщений, тень, обводка и время жизни строк на экране.
+            <div
+              ref={(el) => {
+                settingsScrollRef = el;
+              }}
+              class="setup-pane-scroll flex min-h-0 min-w-0 flex-col gap-2.5 overflow-y-auto overscroll-contain min-[1100px]:h-full"
+            >
+              <div class="xl:hidden">
+                <div class="flex gap-1 overflow-x-auto pb-0.5">
+                  <For
+                    each={[
+                      { id: "appearance" as const, label: "Текст" },
+                      { id: "styling" as const, label: "Вид" },
+                      { id: "behavior" as const, label: "Поведение" },
+                      { id: "content" as const, label: "Контент" },
+                      { id: "bots" as const, label: "Фильтры" },
+                    ]}
+                  >
+                    {(item) => (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={
+                          activeSection() === item.id ? "secondary" : "ghost"
+                        }
+                        onClick={() => scrollToSection(item.id)}
+                        class="h-8 shrink-0 px-2.5 text-xs"
+                      >
+                        {item.label}
+                      </Button>
+                    )}
+                  </For>
                 </div>
-                {renderControlRows(stylingRows, {
-                  controlRow: { ...styles.controlRow },
-                  controlLabelWrap: styles.controlLabelWrap,
-                  controlSlot: styles.controlSlot,
-                  settingLabel: styles.settingLabel,
-                  settingHint: styles.settingHint,
-                })}
-              </section>
+              </div>
 
-              <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Поведение сообщений</h3>
-                <div style={styles.sectionHint}>
-                  Управляет анимацией, переносами, порядком и форматом
-                  сообщений.
-                </div>
-                {renderControlRows(behaviorRows, {
-                  controlRow: { ...styles.controlRow },
-                  controlLabelWrap: styles.controlLabelWrap,
-                  controlSlot: styles.controlSlot,
-                  settingLabel: styles.settingLabel,
-                  settingHint: styles.settingHint,
-                })}
-                {renderToggleRows(behaviorToggles, {
-                  toggleRow: { ...styles.toggleRow },
-                  toggleLabelWrap: styles.toggleLabelWrap,
-                  settingLabel: styles.settingLabel,
-                  settingHint: styles.settingHint,
-                })}
-              </section>
+              <SectionCard
+                id="setup-section-appearance"
+                title="Текст и размер"
+                description="Настрой, насколько крупно и каким шрифтом будет выглядеть чат."
+                collapsible
+                open={openSections().appearance}
+                onOpenChange={(open) => setSectionOpen("appearance", open)}
+              >
+                <ControlRows rows={appearanceRows} />
+              </SectionCard>
 
-              <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Контент и бейджи</h3>
-                <div style={styles.sectionHint}>
-                  Выбери, какие сообщения, эмоуты и бейджи попадут в оверлей.
-                </div>
-                {renderToggleRows(contentToggles, {
-                  toggleRow: { ...styles.toggleRow },
-                  toggleLabelWrap: styles.toggleLabelWrap,
-                  settingLabel: styles.settingLabel,
-                  settingHint: styles.settingHint,
-                })}
+              <SectionCard
+                id="setup-section-styling"
+                title="Внешний вид"
+                description="Фон сообщений, тень, обводка и время жизни строк на экране."
+                collapsible
+                open={openSections().styling}
+                onOpenChange={(open) => setSectionOpen("styling", open)}
+              >
+                <ControlRows rows={stylingRows} />
+              </SectionCard>
 
-                <div class="setup-role-merge" style={styles.roleMergeCard}>
-                  <div style={styles.roleMergeHeader}>
-                    <div style={styles.roleMergeTitle}>
+              <SectionCard
+                id="setup-section-behavior"
+                title="Поведение сообщений"
+                description="Управляет анимацией, переносами, порядком и форматом сообщений."
+                collapsible
+                open={openSections().behavior}
+                onOpenChange={(open) => setSectionOpen("behavior", open)}
+              >
+                <ControlRows rows={behaviorRows} />
+                <ToggleRows rows={behaviorToggles} />
+              </SectionCard>
+
+              <SectionCard
+                id="setup-section-content"
+                title="Контент и бейджи"
+                description="Выбери, какие сообщения, эмоуты и бейджи попадут в оверлей."
+                collapsible
+                open={openSections().content}
+                onOpenChange={(open) => setSectionOpen("content", open)}
+              >
+                <ToggleRows rows={contentToggles} />
+
+                <div class="setup-role-merge grid grid-cols-1 gap-3 rounded-lg border border-border bg-black/40 p-3.5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+                  <div class="flex min-w-0 flex-col gap-1.5">
+                    <div class="text-sm font-bold text-foreground">
                       Объединять bot badge с role badge
                     </div>
-                    <div style={styles.roleMergeHint}>
+                    <div class="text-xs leading-snug text-muted-foreground">
                       Выбери роли, у которых FFZ-бот-бейдж будет показываться
                       рядом с Twitch-бейджем роли.
                     </div>
                   </div>
-                  <div class="setup-role-pills" style={styles.rolePillGroup}>
+                  <div class="setup-role-pills grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <For each={roleBadgeMergeOptions}>
                       {(option) => {
                         const active = () => option.checked();
-
                         return (
                           <button
                             type="button"
-                            style={{
-                              ...styles.rolePill,
-                              ...(active() ? styles.rolePillActive : {}),
-                            }}
+                            class={cn(
+                              "flex min-h-[74px] flex-col items-center justify-center gap-2 rounded-lg border px-2.5 py-2.5 text-xs font-bold transition-colors",
+                              active()
+                                ? "border-white/70 bg-white/5 text-white"
+                                : "border-white/20 bg-black text-white/70 hover:border-white/40",
+                            )}
                             onClick={() => option.onChange(!active())}
                             aria-pressed={active()}
                           >
-                            <span style={styles.roleBadgePreview}>
+                            <span class="inline-flex items-center rounded-md border border-white/15 bg-black/70 p-0.5">
                               <span
-                                style={{
-                                  ...styles.roleBadgeIcon,
-                                  background: option.badgeColor,
-                                }}
+                                class="inline-flex size-[23px] items-center justify-center rounded-[5px] border border-white/20"
+                                style={{ background: option.badgeColor }}
                               >
                                 <img
                                   src={ffzBotBadgePreviewUrl}
                                   alt=""
-                                  style={styles.roleBadgeImage}
+                                  class="block size-full object-contain"
                                   loading="lazy"
                                 />
                               </span>
                             </span>
-                            <span style={styles.rolePillLabel}>
+                            <span class="text-center leading-tight">
                               {option.label}
                             </span>
                           </button>
@@ -1968,227 +1463,245 @@ export default function ChatSetup() {
                     </For>
                   </div>
                 </div>
-              </section>
+              </SectionCard>
 
-              <section style={styles.sectionCard}>
-                <h3 style={styles.sectionTitle}>Боты и фильтры</h3>
-                <div style={styles.sectionHint}>
-                  Спрячь ботов, команды или оставь сообщения только выбранных
-                  пользователей.
-                </div>
-
-                <div class="setup-bot-row" style={styles.botHeader}>
-                  <div style={styles.botLabelWrap}>
-                    <div style={styles.settingLabel}>Ники ботов</div>
-                    <div style={styles.botSwitchRow}>
-                      <SetupSwitch checked={bots()} onChange={setBots} />
+              <SectionCard
+                id="setup-section-bots"
+                title="Боты и фильтры"
+                description="Спрячь ботов, команды или оставь сообщения только выбранных пользователей."
+                collapsible
+                open={openSections().bots}
+                onOpenChange={(open) => setSectionOpen("bots", open)}
+              >
+                <div class="setup-bot-row grid grid-cols-1 items-start gap-2 min-[1100px]:grid-cols-[132px_minmax(0,1fr)] xl:grid-cols-[168px_minmax(0,1fr)] md:max-[1099px]:grid-cols-[180px_minmax(0,1fr)]">
+                  <div class="flex min-w-0 flex-col gap-1.5">
+                    <div class="text-xs font-medium text-foreground sm:text-sm">
+                      Ники ботов
+                    </div>
+                    <div class="inline-flex items-center gap-2 text-[11px] text-muted-foreground sm:text-xs">
+                      <SetupSwitch
+                        checked={bots()}
+                        onChange={setBots}
+                        label="Не фильтровать ботов"
+                      />
                       <span>Не фильтровать ботов</span>
                     </div>
                   </div>
-                  <div style={styles.botChipField}>
-                    <div style={styles.botChipList}>
-                      <For each={botNames()}>
-                        {(login) =>
-                          renderUserChip(
-                            login,
-                            removeBotName,
-                            "Убрать из списка ботов",
-                          )
-                        }
-                      </For>
-
-                      <input
-                        type="text"
-                        value={botInput()}
-                        onInput={(event) =>
-                          setBotInput(event.currentTarget.value)
-                        }
-                        onKeyDown={handleBotInputKeyDown}
-                        onBlur={() => {
-                          addBotNames(botInput());
-                          setBotInput("");
-                        }}
-                        placeholder="Введите никнейм и нажмите Enter"
-                        style={styles.botInput}
-                      />
-                    </div>
+                  <div class={chipFieldClass}>
+                    <For each={botNames()}>
+                      {(login) =>
+                        renderUserChip(
+                          login,
+                          removeBotName,
+                          "Убрать из списка ботов",
+                        )
+                      }
+                    </For>
+                    <input
+                      aria-label="Добавить ник бота"
+                      type="text"
+                      value={botInput()}
+                      onInput={(event) =>
+                        setBotInput(event.currentTarget.value)
+                      }
+                      onKeyDown={handleBotInputKeyDown}
+                      onBlur={() => {
+                        addBotNames(botInput());
+                        setBotInput("");
+                      }}
+                      placeholder="Введите никнейм и нажмите Enter"
+                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
                   </div>
                 </div>
 
-                <div class="setup-control-row" style={styles.controlRow}>
-                  <div style={styles.controlLabelWrap}>
-                    <div style={styles.settingLabel}>
+                <div class="setup-control-row grid grid-cols-1 items-center gap-2 min-[1100px]:grid-cols-[132px_minmax(0,1fr)] xl:grid-cols-[168px_minmax(0,1fr)] md:max-[1099px]:grid-cols-[180px_minmax(0,1fr)]">
+                  <div class="flex min-w-0 flex-col gap-0.5">
+                    <div class="text-xs font-medium text-foreground sm:text-sm">
                       Показывать только этих зрителей
                     </div>
-                    <div style={styles.settingHint}>
+                    <div class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
                       Если список не пустой, остальные сообщения будут скрыты.
                     </div>
                   </div>
-                  <div style={styles.controlSlot}>
-                    <div style={styles.botChipField}>
-                      <div style={styles.botChipList}>
-                        <For each={allowedChatters()}>
-                          {(login) =>
-                            renderUserChip(
-                              login,
-                              removeAllowedChatter,
-                              "Убрать из списка зрителей",
-                            )
-                          }
-                        </For>
-
-                        <input
-                          type="text"
-                          value={allowedChatterInput()}
-                          onInput={(event) =>
-                            setAllowedChatterInput(event.currentTarget.value)
-                          }
-                          onKeyDown={handleAllowedChatterInputKeyDown}
-                          onBlur={() => {
-                            addAllowedChatters(allowedChatterInput());
-                            setAllowedChatterInput("");
-                          }}
-                          placeholder="Введите никнейм и нажмите Enter"
-                          style={styles.botInput}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div style={styles.previewPane}>
-              <div class="setup-preview-sticky" style={styles.previewSticky}>
-                <section style={styles.sectionCard}>
-                  <h3 style={styles.previewLabel}>Живое превью</h3>
-                  <div style={styles.speedCard}>
-                    <div
-                      class="setup-preview-controls"
-                      style={{
-                        ...styles.previewControlsGrid,
-                        "grid-template-columns": isYouTubeOnly()
-                          ? "1fr"
-                          : styles.previewControlsGrid["grid-template-columns"],
+                  <div class={chipFieldClass}>
+                    <For each={allowedChatters()}>
+                      {(login) =>
+                        renderUserChip(
+                          login,
+                          removeAllowedChatter,
+                          "Убрать из списка зрителей",
+                        )
+                      }
+                    </For>
+                    <input
+                      aria-label="Добавить зрителя в разрешённый список"
+                      type="text"
+                      value={allowedChatterInput()}
+                      onInput={(event) =>
+                        setAllowedChatterInput(event.currentTarget.value)
+                      }
+                      onKeyDown={handleAllowedChatterInputKeyDown}
+                      onBlur={() => {
+                        addAllowedChatters(allowedChatterInput());
+                        setAllowedChatterInput("");
                       }}
-                    >
-                      <div style={styles.previewControlStack}>
-                        <div style={styles.settingLabel}>Режим превью</div>
-                        <select
-                          value={previewMode()}
-                          onChange={(event) =>
-                            setPreviewMode(
-                              isYouTubeOnly() ||
-                                event.currentTarget.value === "live"
-                                ? "live"
-                                : "demo",
-                            )
-                          }
-                          style={styles.input}
-                        >
-                          <option value="live">Лайв режим</option>
-                          {!isYouTubeOnly() && (
-                            <option value="demo">Демонстрация</option>
-                          )}
-                        </select>
-                      </div>
-                      {!isYouTubeOnly() && (
-                        <div style={styles.previewControlStack}>
-                          <div style={styles.settingLabel}>Сценарий</div>
-                          <select
-                            value={previewDemoKind()}
-                            onChange={(event) =>
-                              setPreviewDemoKind(
-                                event.currentTarget.value === "emote"
-                                  ? "emote"
-                                  : "pasta",
-                              )
-                            }
-                            disabled={previewMode() !== "demo"}
-                            style={{
-                              ...styles.input,
-                              opacity: previewMode() === "demo" ? "1" : "0.5",
-                            }}
-                          >
-                            <option value="pasta">Сообщения</option>
-                            <option value="emote">Обычный</option>
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                    <div style={styles.settingHint}>
-                      {isYouTubeOnly()
-                        ? "Для YouTube-only превью доступен только лайв режим."
-                        : "Лайв режим берёт реальный чат канала. Демонстрация использует тестовые сообщения."}
-                    </div>
-                  </div>
-                  {previewMode() === "demo" && (
-                    <div style={styles.speedCard}>
-                      <div style={styles.speedHeader}>
-                        <div style={styles.settingLabel}>
-                          Скорость появления сообщений
-                        </div>
-                        <div style={styles.speedValue}>
-                          {messageSpeedLabel()}
-                        </div>
-                      </div>
-                      <input
-                        class="setup-number-slider"
-                        type="range"
-                        min={MIN_MESSAGE_SPEED}
-                        max={MAX_MESSAGE_SPEED}
-                        step="1"
-                        value={messageSpeedValue()}
-                        onInput={(event) =>
-                          setMessageSpeed(event.currentTarget.value)
-                        }
-                        style={
-                          {
-                            "--setup-number-slider-fill": `${messageSpeedValue()}%`,
-                          } as JSX.CSSProperties
-                        }
-                        aria-label="Скорость появления сообщений"
-                      />
-                      <div style={styles.speedScale}>
-                        <span>Полный стоп</span>
-                        <span>Летит</span>
-                      </div>
-                    </div>
-                  )}
-                  <div style={styles.previewScreen}>
-                    <div style={styles.previewOverlay} />
-                    <iframe
-                      ref={iframeRef}
-                      src={previewUrl()}
-                      onLoad={() => postPreviewConfig()}
-                      style={styles.previewFrame}
-                      title="Chat preview"
-                      scrolling="no"
+                      placeholder="Введите никнейм и нажмите Enter"
+                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                     />
                   </div>
-                </section>
-                {generatedUrl() && (
-                  <div style={styles.resultCard}>
-                    <div style={styles.sectionTitle}>Ссылка для OBS готова</div>
-                    <div style={styles.resultBody}>{generatedUrl()}</div>
-                    <div style={styles.resultActions}>
-                      <button
-                        onClick={copyToClipboard}
-                        style={styles.primaryButton}
+                </div>
+              </SectionCard>
+            </div>
+
+            <div class="setup-pane-scroll min-h-0 min-w-0 overflow-y-auto overscroll-contain min-[1100px]:h-full">
+              <div class="flex min-h-0 flex-col gap-2.5 pb-2 min-[1100px]:h-full min-[1100px]:pb-0">
+                <SectionCard
+                  title="Живое превью"
+                  compact
+                  class="min-[1100px]:flex min-[1100px]:min-h-0 min-[1100px]:flex-1 min-[1100px]:flex-col"
+                >
+                  <div class="flex min-h-0 flex-1 flex-col gap-2">
+                    <div class="flex shrink-0 flex-col gap-2 rounded-lg border border-border bg-card/40 p-2.5">
+                      <div
+                        class={cn(
+                          "setup-preview-controls grid gap-2",
+                          isYouTubeOnly()
+                            ? "grid-cols-1"
+                            : "grid-cols-1 min-[1100px]:grid-cols-1 xl:grid-cols-2",
+                        )}
                       >
-                        Скопировать ссылку
-                      </button>
+                        <div class="flex min-w-0 flex-col gap-1">
+                          <div class="text-xs font-medium sm:text-sm">
+                            Режим превью
+                          </div>
+                          <SetupSelect
+                            aria-label="Режим превью"
+                            value={previewMode()}
+                            onChange={(event) =>
+                              setPreviewMode(
+                                isYouTubeOnly() ||
+                                  event.currentTarget.value === "live"
+                                  ? "live"
+                                  : "demo",
+                              )
+                            }
+                            class="h-9"
+                          >
+                            <option value="live">Лайв режим</option>
+                            <Show when={!isYouTubeOnly()}>
+                              <option value="demo">Демонстрация</option>
+                            </Show>
+                          </SetupSelect>
+                        </div>
+                        <Show when={!isYouTubeOnly()}>
+                          <div class="flex min-w-0 flex-col gap-1">
+                            <div class="text-xs font-medium sm:text-sm">
+                              Сценарий
+                            </div>
+                            <SetupSelect
+                              aria-label="Сценарий превью"
+                              value={previewDemoKind()}
+                              onChange={(event) =>
+                                setPreviewDemoKind(
+                                  event.currentTarget.value === "emote"
+                                    ? "emote"
+                                    : "pasta",
+                                )
+                              }
+                              disabled={previewMode() !== "demo"}
+                              class={cn(
+                                "h-9",
+                                previewMode() !== "demo" && "opacity-50",
+                              )}
+                            >
+                              <option value="pasta">Сообщения</option>
+                              <option value="emote">Обычный</option>
+                            </SetupSelect>
+                          </div>
+                        </Show>
+                      </div>
+                      <div class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
+                        {isYouTubeOnly()
+                          ? "Для YouTube-only превью доступен только лайв режим."
+                          : "Лайв — реальный чат. Демо — тестовые сообщения."}
+                      </div>
+                    </div>
+
+                    <Show when={previewMode() === "demo"}>
+                      <div class="flex shrink-0 flex-col gap-2 rounded-lg border border-border bg-card/40 p-2.5">
+                        <div class="flex items-baseline justify-between gap-2">
+                          <div class="text-xs font-medium sm:text-sm">
+                            Скорость сообщений
+                          </div>
+                          <div class="whitespace-nowrap text-[11px] font-semibold text-muted-foreground sm:text-xs">
+                            {messageSpeedLabel()}
+                          </div>
+                        </div>
+                        <Slider
+                          aria-label="Скорость сообщений"
+                          minValue={MIN_MESSAGE_SPEED}
+                          maxValue={MAX_MESSAGE_SPEED}
+                          step={1}
+                          value={[messageSpeedValue()]}
+                          onChange={(values) => {
+                            const next = values[0];
+                            if (next !== undefined)
+                              setMessageSpeed(String(next));
+                          }}
+                          class="w-full px-1"
+                        />
+                        <div class="flex justify-between text-[11px] text-muted-foreground">
+                          <span>Стоп</span>
+                          <span>Летит</span>
+                        </div>
+                      </div>
+                    </Show>
+
+                    <div class="relative h-[min(420px,46dvh)] w-full min-h-[240px] flex-1 overflow-hidden bg-transparent min-[1100px]:h-auto min-[1100px]:min-h-[280px]">
+                      <iframe
+                        ref={iframeRef}
+                        src={previewUrl()}
+                        onLoad={() => postPreviewConfig()}
+                        class="pointer-events-none relative z-[1] block h-full w-full border-0 bg-transparent"
+                        title="Chat preview"
+                        scrolling="no"
+                        tabindex="-1"
+                      />
+                    </div>
+                  </div>
+                </SectionCard>
+
+                <Show when={generatedUrl()}>
+                  <SectionCard
+                    title="Ссылка для OBS"
+                    compact
+                    class="shrink-0"
+                  >
+                    <div class="break-all rounded-md border border-border bg-background px-2.5 py-2 font-mono text-[0.75em] leading-snug text-muted-foreground">
+                      {generatedUrl()}
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={copyToClipboard}
+                      >
+                        Скопировать
+                      </Button>
                       <a
                         href={generatedUrl()}
                         target="_blank"
                         rel="noreferrer"
-                        style={styles.secondaryButton}
+                        class={cn(
+                          "inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        )}
                       >
-                        Открыть оверлей
+                        Открыть
                       </a>
                     </div>
-                  </div>
-                )}
+                  </SectionCard>
+                </Show>
               </div>
             </div>
           </div>

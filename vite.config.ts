@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 import solid from "vite-plugin-solid";
 import { fileURLToPath } from "node:url";
 
@@ -20,11 +21,9 @@ function getPagesBase(): string {
 
 export default defineConfig({
   base: getPagesBase(),
-  plugins: [
-    solid({
+  plugins: [tailwindcss(), solid({
       ssr: false,
-    }),
-  ],
+    }),],
   resolve: {
     alias: {
       "~": srcDir,
