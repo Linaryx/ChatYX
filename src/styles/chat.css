@@ -653,7 +653,7 @@ img.badge {
 .gigantified-emote-line {
   display: block;
   width: 100%;
-  max-width: 100%;
+  max-width: min(500px, 100%);
   line-height: 1;
   overflow: hidden;
 }
