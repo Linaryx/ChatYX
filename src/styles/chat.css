@@ -62,7 +62,6 @@ body {
 .chat_line.chat-event-highlighted-message.chat-event-highlight {
   position: relative;
   box-sizing: border-box;
-  padding: 0.12em 0.5em 0.14em !important;
   border-radius: 0.38em;
   background:
     linear-gradient(90deg, var(--chat-event-background, rgba(145, 70, 255, 0.24)), rgba(255, 255, 255, 0.055)),
@@ -70,10 +69,6 @@ body {
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.11),
     0 0.08em 0.42em rgba(0, 0, 0, 0.18);
-}
-
-.chat_line.chat-event-highlighted-message.platform-marked {
-  padding-left: calc(10px + 0.5em) !important;
 }
 
 .chat-event-summary {
@@ -135,7 +130,6 @@ body {
 .chat_line.chat-event-highlight.chat-event-power-up,
 .chat_line.chat-event-highlight.chat-event-announcement {
   box-sizing: border-box;
-  padding: 0.12em 0.5em 0.14em !important;
   border-radius: 0.38em;
   background:
     linear-gradient(90deg, var(--chat-event-background, rgba(145, 70, 255, 0.22)), rgba(255, 255, 255, 0.045)),
@@ -659,7 +653,7 @@ img.badge {
 .gigantified-emote-line {
   display: block;
   width: 100%;
-  max-width: min(var(--gigantified-emote-width, 300px), 100%);
+  max-width: 100%;
   line-height: 1;
   overflow: hidden;
 }
@@ -675,7 +669,7 @@ img.badge {
   height: auto;
   max-width: none !important;
   max-height: none !important;
-  margin: 0.3em 0;
+  margin: 0;
 }
 
 .gigantified-emote-line .emote-modified {
