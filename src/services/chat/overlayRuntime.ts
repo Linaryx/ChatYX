@@ -25,6 +25,8 @@ import {
   isDeveloperChatMessage,
   parseTestMessageCount,
 } from "./chatCommandService";
+import { createBrowserRteRuntime } from "./browserRteTts";
+import type { RteRuntime } from "./rteRuntimeController";
 import {
   AnnouncementColorResolver,
   ChatAssetLoader,
@@ -90,6 +92,7 @@ export class OverlayRuntime {
   private readonly channelIdentityResolver: ChannelIdentityResolver;
   private readonly messagePipeline: MessagePreparationPipeline;
   private readonly messageQueue: MessageQueueManager;
+  private readonly rteRuntime: RteRuntime;
 
   private chatService: ChatPresentationService | null = null;
   private readonly pendingTimers: number[] = [];
@@ -103,6 +106,7 @@ export class OverlayRuntime {
     messageDeleted: (event: Event) => {
       const customEvent = event as CustomEvent<{ messageId: string }>;
       const { messageId } = customEvent.detail;
+      this.rteRuntime.cancelMessage(messageId);
       this.messagePipeline.cancelMessage(messageId);
       this.messageQueue.discard((message) => message.id === messageId);
       this.hooks.onMessagesChange((messages) =>
@@ -112,6 +116,7 @@ export class OverlayRuntime {
     userTimeout: (event: Event) => {
       const customEvent = event as CustomEvent<{ username: string }>;
       const username = customEvent.detail.username.toLowerCase();
+      this.rteRuntime.cancelUser({ username });
       this.messagePipeline.cancelUser(username);
       this.messageQueue.discard(
         (message) => message.username.toLowerCase() === username,
@@ -123,6 +128,7 @@ export class OverlayRuntime {
     userBanned: (event: Event) => {
       const customEvent = event as CustomEvent<{ username: string }>;
       const username = customEvent.detail.username.toLowerCase();
+      this.rteRuntime.cancelUser({ username });
       this.messagePipeline.cancelUser(username);
       this.messageQueue.discard(
         (message) => message.username.toLowerCase() === username,
@@ -133,6 +139,7 @@ export class OverlayRuntime {
     },
     chatCleared: () => {
       log.debug(LOG_CATEGORIES.INTEGRATION, "Clearing all chat messages");
+      this.rteRuntime.cancelAll();
       this.messagePipeline.cancelPending();
       this.messageQueue.clear();
       this.messageQueue.clearRefreshes();
@@ -165,7 +172,9 @@ export class OverlayRuntime {
   constructor(
     private readonly channel: string,
     private readonly hooks: OverlayRuntimeHooks,
+    rteRuntime: RteRuntime = createBrowserRteRuntime(),
   ) {
+    this.rteRuntime = rteRuntime;
     this.announcementColorResolver = new AnnouncementColorResolver(channel);
     this.assetLoader = new ChatAssetLoader(channel);
     this.channelIdentityResolver = new ChannelIdentityResolver(channel);
@@ -218,6 +227,7 @@ export class OverlayRuntime {
 
   updateConfig(config: ChatConfig) {
     this.activeConfig = config;
+    this.rteRuntime.updateConfig(config);
     this.hooks.onConfigResolved(config);
     this.styleManager.apply(config);
 
@@ -256,6 +266,7 @@ export class OverlayRuntime {
     const hasTwitchChannel = Boolean(this.channel.trim());
 
     this.activeConfig = chatConfig;
+    this.rteRuntime.updateConfig(chatConfig);
     this.hooks.onConfigResolved(chatConfig);
     this.setLoading("Подготовка стилей...", 25);
     this.styleManager.apply(chatConfig);
@@ -360,6 +371,7 @@ export class OverlayRuntime {
     this.removeEventListeners();
     this.connectionManager.destroy();
     this.commandFeedback.destroy();
+    this.rteRuntime.destroy();
     this.setCommandStatus(null);
     chatFeatureIntegration.destroy();
     this.chatService?.cleanup();
@@ -401,6 +413,7 @@ export class OverlayRuntime {
 
   private appendMessage(message: TwitchMessage) {
     if (!this.chatService || !this.activeConfig) return;
+    this.rteRuntime.handleDisplayedMessage(message);
     this.messageQueue.append(message);
   }
 
@@ -428,6 +441,7 @@ export class OverlayRuntime {
 
   private deleteMessage(messageId: string) {
     log.debug(LOG_CATEGORIES.CHAT, `Deleting message: ${messageId}`);
+    this.rteRuntime.cancelMessage(messageId);
     this.messagePipeline.cancelMessage(messageId);
     this.messageQueue.discard((message) => message.id === messageId);
     this.hooks.onMessagesChange((messages) =>
@@ -439,6 +453,7 @@ export class OverlayRuntime {
   private clearUserMessages(username: string) {
     log.debug(LOG_CATEGORIES.CHAT, `Clearing chat for user: ${username}`);
     const normalizedUsername = username.toLowerCase();
+    this.rteRuntime.cancelUser({ username: normalizedUsername });
     this.messagePipeline.cancelUser(normalizedUsername);
     this.messageQueue.discard(
       (message) => message.username.toLowerCase() === normalizedUsername,
@@ -452,6 +467,7 @@ export class OverlayRuntime {
   }
 
   private banYouTubeUser(userId: string) {
+    this.rteRuntime.cancelUser({ userId });
     this.messagePipeline.cancelUserId(userId);
     this.messageQueue.discard((message) => message.userId === userId);
     this.hooks.onMessagesChange((messages) =>
@@ -462,6 +478,7 @@ export class OverlayRuntime {
 
   private clearMessages() {
     log.debug(LOG_CATEGORIES.CHAT, "Clearing all chat messages");
+    this.rteRuntime.cancelAll();
     this.messagePipeline.cancelPending();
     this.messageQueue.clear();
     this.messageQueue.clearRefreshes();
@@ -535,6 +552,7 @@ export class OverlayRuntime {
         break;
       }
       case "clear":
+        this.rteRuntime.cancelAll();
         this.messagePipeline.cancelPending();
         this.messageQueue.clear();
         this.messageQueue.clearRefreshes();
@@ -545,6 +563,12 @@ export class OverlayRuntime {
         break;
       case "test":
         this.appendTestMessages(message, parseTestMessageCount(command.args));
+        break;
+      case "tts":
+        this.rteRuntime.handleAuthorizedCommand("chatis", command.args, message);
+        break;
+      case "azuretts":
+        this.rteRuntime.handleAuthorizedCommand("azure", command.args, message);
         break;
     }
   }
