@@ -375,6 +375,19 @@ export default function ChatSetup() {
   const [hideLinkRewards, setHideLinkRewards] = createSignal(
     DEFAULT_CHAT_CONFIG.hideLinkRewards,
   );
+  const [rteProxy, setRteProxy] = createSignal(DEFAULT_CHAT_CONFIG.rteProxy);
+  const [rteAzureTts, setRteAzureTts] = createSignal(
+    DEFAULT_CHAT_CONFIG.rteAzureTts,
+  );
+  const [rteChatIsTts, setRteChatIsTts] = createSignal(
+    DEFAULT_CHAT_CONFIG.rteChatIsTts,
+  );
+  const [rteReyohohoBadge, setRteReyohohoBadge] = createSignal(
+    DEFAULT_CHAT_CONFIG.rteReyohohoBadge,
+  );
+  const [rteCustomCosmetics, setRteCustomCosmetics] = createSignal(
+    DEFAULT_CHAT_CONFIG.rteCustomCosmetics,
+  );
 
   const [generatedUrl, setGeneratedUrl] = createSignal("");
   const [previewUrl, setPreviewUrl] = createSignal("");
@@ -448,6 +461,7 @@ export default function ChatSetup() {
     behavior: false,
     content: false,
     bots: false,
+    rte: false,
   });
 
   const setSectionOpen = (id: SetupSectionId, open: boolean) => {
@@ -592,6 +606,11 @@ export default function ChatSetup() {
     linkMode: linkMode(),
     linkColor: normalizeHexColor(linkColor(), DEFAULT_CHAT_CONFIG.linkColor),
     hideLinkRewards: hideLinkRewards(),
+    rteProxy: rteProxy(),
+    rteAzureTts: rteAzureTts(),
+    rteChatIsTts: rteChatIsTts(),
+    rteReyohohoBadge: rteReyohohoBadge(),
+    rteCustomCosmetics: rteCustomCosmetics(),
   });
 
   const buildChatUrl = (
@@ -1209,6 +1228,39 @@ export default function ChatSetup() {
     },
   ];
 
+  const rteToggles: ToggleRow[] = [
+    {
+      label: "RTE-прокси для эмоутов и бейджей",
+      checked: rteProxy,
+      onChange: setRteProxy,
+      hint: "Направляет только публичные API и CDN 7TV, BTTV и FFZ через RTE. Twitch и авторизация не проксируются.",
+    },
+    {
+      label: "Обычный TTS через ChatIS / Streamlabs",
+      checked: rteChatIsTts,
+      onChange: setRteChatIsTts,
+      hint: "Команда модератора: !chat tts [-s Voice] текст. Синтезированный аудиофайл не сохраняется.",
+    },
+    {
+      label: "Azure Neural TTS через JustDavi",
+      checked: rteAzureTts,
+      onChange: setRteAzureTts,
+      hint: "Команда модератора: !chat azuretts [-v xx-XX-VoiceNeural] текст.",
+    },
+    {
+      label: "Reyohoho-бейдж",
+      checked: rteReyohohoBadge,
+      onChange: setRteReyohohoBadge,
+      hint: "Показывает пользовательский бейдж из публичного RTE API, если он есть.",
+    },
+    {
+      label: "Кастомные пейнты RTE",
+      checked: rteCustomCosmetics,
+      onChange: setRteCustomCosmetics,
+      hint: "Подгружает персональный paint из RTE, если для пользователя нет подходящего локального источника.",
+    },
+  ];
+
   const roleBadgeMergeOptions = [
     {
       label: "Стример",
@@ -1352,6 +1404,7 @@ export default function ChatSetup() {
                       { id: "behavior" as const, label: "Поведение" },
                       { id: "content" as const, label: "Контент" },
                       { id: "bots" as const, label: "Фильтры" },
+                      { id: "rte" as const, label: "RTE" },
                     ]}
                   >
                     {(item) => (
@@ -1551,6 +1604,17 @@ export default function ChatSetup() {
                     />
                   </div>
                 </div>
+              </SectionCard>
+
+              <SectionCard
+                id="setup-section-rte"
+                title="RTE-интеграции"
+                description="Необязательные публичные сервисы для прокси, речи и пользовательской косметики."
+                collapsible
+                open={openSections().rte}
+                onOpenChange={(open) => setSectionOpen("rte", open)}
+              >
+                <ToggleRows rows={rteToggles} />
               </SectionCard>
             </div>
 

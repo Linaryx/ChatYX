@@ -20,7 +20,8 @@ export type SetupSectionId =
   | "styling"
   | "behavior"
   | "content"
-  | "bots";
+  | "bots"
+  | "rte";
 
 export type ControlRow = {
   label: string;
@@ -64,6 +65,11 @@ export const SETUP_NAV: {
     id: "bots",
     label: "Боты и фильтры",
     description: "Списки и скрытие",
+  },
+  {
+    id: "rte",
+    label: "RTE",
+    description: "Прокси, TTS и косметика",
   },
 ];
 
