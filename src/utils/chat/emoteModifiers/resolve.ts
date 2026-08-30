@@ -106,8 +106,16 @@ export function resolveEmoteModifiers(
     const resolvedEffects = Array.from(
       new Set(modifierIndexes.map((index) => tokens[index].modifier!.effect)),
     );
+    const rotationsCancel =
+      resolvedEffects.includes("rotate-left") &&
+      resolvedEffects.includes("rotate-right");
     // z! only removes spacing before the target — no visual effect.
-    const effects = resolvedEffects.filter((effect) => effect !== "zero-space");
+    const effects = resolvedEffects.filter(
+      (effect) =>
+        effect !== "zero-space" &&
+        !(rotationsCancel &&
+          (effect === "rotate-left" || effect === "rotate-right")),
+    );
     const prefixModifierIndexes = modifierIndexes.filter(
       (index) => tokens[index].modifier?.position === "prefix",
     );

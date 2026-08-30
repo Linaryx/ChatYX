@@ -98,4 +98,17 @@ describe("emote modifiers", () => {
     expect(resolved[4].accessibleText).toBe("p! p! Kappa");
     expect(resolved[8].accessibleText).toBe("s! Keepo");
   });
+
+  test("removes opposing rotations before combining them with wide", () => {
+    const resolved = resolveEmoteModifiers(
+      tokens(["r!", " ", "l!", " ", "w!", " ", "Kappa"], ["Kappa"]),
+    );
+
+    expect(resolved[6]).toEqual({
+      effects: ["wide"],
+      consumed: false,
+      accessibleText: "r! l! w! Kappa",
+    });
+    expect(resolved.slice(0, 6).every((token) => token.consumed)).toBe(true);
+  });
 });
