@@ -63,9 +63,7 @@ body {
   position: relative;
   box-sizing: border-box;
   border-radius: 0.38em;
-  background:
-    linear-gradient(90deg, var(--chat-event-background, rgba(145, 70, 255, 0.24)), rgba(255, 255, 255, 0.055)),
-    rgba(12, 9, 24, 0.34);
+  background-color: var(--chat-event-background, rgba(145, 70, 255, 0.24));
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.11),
     0 0.08em 0.42em rgba(0, 0, 0, 0.18);
@@ -127,16 +125,23 @@ body {
 .chat_line.chat-event-highlight.chat-event-subscription,
 .chat_line.chat-event-highlight.chat-event-raid,
 .chat_line.chat-event-highlight.chat-event-watch-streak,
-.chat_line.chat-event-highlight.chat-event-power-up,
-.chat_line.chat-event-highlight.chat-event-announcement {
+.chat_line.chat-event-highlight.chat-event-power-up {
   box-sizing: border-box;
   border-radius: 0.38em;
-  background:
-    linear-gradient(90deg, var(--chat-event-background, rgba(145, 70, 255, 0.22)), rgba(255, 255, 255, 0.045)),
-    rgba(12, 9, 24, 0.28);
+  background-color: var(--chat-event-background, rgba(145, 70, 255, 0.22));
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.095),
     0 0.08em 0.36em rgba(0, 0, 0, 0.14);
+}
+
+/* Match Cyan Chat's flat announcement treatment. */
+.chat_line.chat-event-highlight.chat-event-announcement {
+  box-sizing: border-box;
+  border-left: 4px solid var(--chat-event-color, #9147ff);
+  padding-left: 8px !important;
+  border-radius: 4px;
+  background-color: var(--chat-event-background, rgba(145, 71, 255, 0.15));
+  box-shadow: none;
 }
 
 .chat_line.chat-event-first-message {
@@ -160,27 +165,28 @@ body {
 }
 
 .chat_line.chat-event-highlight.chat-event-announcement-purple {
-  background:
-    linear-gradient(90deg, rgba(145, 71, 255, 0.26), rgba(255, 117, 230, 0.2)),
-    rgba(12, 9, 24, 0.28);
+  border-left-color: #9900fe;
+  background-color: rgba(153, 0, 254, 0.15);
 }
 
 .chat_line.chat-event-highlight.chat-event-announcement-blue {
-  background:
-    linear-gradient(90deg, rgba(0, 214, 214, 0.25), rgba(145, 71, 255, 0.22)),
-    rgba(12, 9, 24, 0.28);
+  border-left-color: #1f69ff;
+  background-color: rgba(31, 105, 255, 0.15);
 }
 
 .chat_line.chat-event-highlight.chat-event-announcement-green {
-  background:
-    linear-gradient(90deg, rgba(0, 219, 132, 0.25), rgba(87, 190, 230, 0.2)),
-    rgba(12, 9, 24, 0.28);
+  border-left-color: #00c800;
+  background-color: rgba(0, 200, 0, 0.15);
 }
 
 .chat_line.chat-event-highlight.chat-event-announcement-orange {
-  background:
-    linear-gradient(90deg, rgba(255, 179, 26, 0.25), rgba(224, 224, 0, 0.18)),
-    rgba(12, 9, 24, 0.28);
+  border-left-color: #ff7621;
+  background-color: rgba(255, 118, 33, 0.15);
+}
+
+.chat_line.chat-event-highlight.chat-event-announcement-primary {
+  border-left-color: #9147ff;
+  background-color: rgba(145, 71, 255, 0.15);
 }
 
 .chat-event-subscription .chat-event-summary {
@@ -296,6 +302,16 @@ body {
 
 #chat_container.layout-horizontal .chat_line.chat-event-highlight {
   width: auto;
+}
+
+#chat_container.layout-horizontal
+  .chat_line.chat-event-with-message
+  .chat-event-summary {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  margin-right: 0.38em;
+  margin-bottom: 0;
 }
 
 #chat_container.layout-horizontal .chat_line:not(.gigantified-emote) {
