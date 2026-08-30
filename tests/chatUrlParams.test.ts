@@ -163,4 +163,77 @@ describe("chat URL params", () => {
       parseChatConfigFromSearchParams(new URLSearchParams()).showPredictions,
     ).toBe(false);
   });
+
+  test("defaults every RTE integration to disabled", () => {
+    expect(DEFAULT_CHAT_CONFIG.rteProxy).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.rteAzureTts).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.rteChatIsTts).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.rteReyohohoBadge).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.rteCustomCosmetics).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.ttsReadChat).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.ttsReadBots).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.ttsVoice).toBe("ru-RU-DmitryNeural");
+    expect(DEFAULT_CHAT_CONFIG.ttsVolume).toBe(1);
+    expect(DEFAULT_CHAT_CONFIG.ttsMaxLength).toBe(400);
+  });
+
+  test("parses canonical RTE params and clear aliases", () => {
+    const canonical = parseChatConfigFromSearchParams(
+      new URLSearchParams(
+        "rtep=true&aztts=1&rtetts=on&rtebadge=yes&rtecosmetics=on&ttsread=true&ttsbots=true&ttsvoice=en-US-GuyNeural&ttsvolume=0.4&ttsmax=250",
+      ),
+    );
+    const aliases = parseChatConfigFromSearchParams(
+      new URLSearchParams(
+        "rteProxy=true&rteAzureTts=true&chatis_tts=true&rteReyohohoBadge=true&rteCustomCosmetics=true&ttsReadChat=true&ttsReadBots=true&ttsVoice=en-US-GuyNeural&ttsVolume=0.4&ttsMaxLength=250",
+      ),
+    );
+
+    expect(canonical).toEqual(aliases);
+    expect(canonical.rteProxy).toBe(true);
+    expect(canonical.rteAzureTts).toBe(true);
+    expect(canonical.rteChatIsTts).toBe(true);
+    expect(canonical.rteReyohohoBadge).toBe(true);
+    expect(canonical.rteCustomCosmetics).toBe(true);
+    expect(canonical.ttsReadChat).toBe(true);
+    expect(canonical.ttsReadBots).toBe(true);
+    expect(canonical.ttsVoice).toBe("en-US-GuyNeural");
+    expect(canonical.ttsVolume).toBe(0.4);
+    expect(canonical.ttsMaxLength).toBe(250);
+  });
+
+  test("clamps RTE TTS settings and round-trips non-defaults", () => {
+    const low = parseChatConfigFromSearchParams(
+      new URLSearchParams("ttsvolume=-2&ttsmax=0"),
+    );
+    const high = parseChatConfigFromSearchParams(
+      new URLSearchParams("ttsvolume=9&ttsmax=5000"),
+    );
+    const cfg: ChatConfig = {
+      ...DEFAULT_CHAT_CONFIG,
+      rteProxy: true,
+      rteAzureTts: true,
+      rteChatIsTts: true,
+      rteReyohohoBadge: true,
+      rteCustomCosmetics: true,
+      ttsReadChat: true,
+      ttsReadBots: true,
+      ttsVoice: "en-US-GuyNeural",
+      ttsVolume: 0.35,
+      ttsMaxLength: 250,
+    };
+
+    expect(low.ttsVolume).toBe(0);
+    expect(low.ttsMaxLength).toBe(1);
+    expect(high.ttsVolume).toBe(1);
+    expect(high.ttsMaxLength).toBe(5000);
+
+    const params = chatConfigToSearchParams(cfg);
+    expect(params.get("rtep")).toBe("true");
+    expect(params.get("aztts")).toBe("true");
+    expect(params.get("rtetts")).toBe("true");
+    expect(params.get("rtebadge")).toBe("true");
+    expect(params.get("rtecosmetics")).toBe("true");
+    expect(parseChatConfigFromSearchParams(params)).toEqual(cfg);
+  });
 });

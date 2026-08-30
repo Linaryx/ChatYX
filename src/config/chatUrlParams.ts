@@ -61,6 +61,17 @@ export interface ChatConfig {
   linkMode: LinkDisplayMode;
   linkColor: string;
   hideLinkRewards: boolean;
+  rteProxy: boolean;
+  rteAzureTts: boolean;
+  rteChatIsTts: boolean;
+  rteReyohohoBadge: boolean;
+  rteCustomCosmetics: boolean;
+  ttsReadChat: boolean;
+  ttsReadBots: boolean;
+  ttsVoice: string;
+  ttsChatIsVoice: string;
+  ttsVolume: number;
+  ttsMaxLength: number;
 }
 
 export const DEFAULT_FONT_WEIGHT = 800;
@@ -115,6 +126,17 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   linkMode: "normal",
   linkColor: "#53b7ff",
   hideLinkRewards: true,
+  rteProxy: false,
+  rteAzureTts: false,
+  rteChatIsTts: false,
+  rteReyohohoBadge: false,
+  rteCustomCosmetics: false,
+  ttsReadChat: false,
+  ttsReadBots: false,
+  ttsVoice: "ru-RU-DmitryNeural",
+  ttsChatIsVoice: "Brian",
+  ttsVolume: 1,
+  ttsMaxLength: 400,
 });
 
 export function normalizeFontWeight(
@@ -342,6 +364,61 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     kind: "bool",
     aliases: ["hide_link_rewards"],
   },
+  rteProxy: {
+    query: "rtep",
+    kind: "bool",
+    aliases: ["rte_proxy", "rteProxy"],
+  },
+  rteAzureTts: {
+    query: "aztts",
+    kind: "bool",
+    aliases: ["rte_azure_tts", "rteAzureTts"],
+  },
+  rteChatIsTts: {
+    query: "rtetts",
+    kind: "bool",
+    aliases: ["rte_chatis_tts", "rteChatIsTts", "chatis_tts"],
+  },
+  rteReyohohoBadge: {
+    query: "rtebadge",
+    kind: "bool",
+    aliases: ["rte_reyohoho_badge", "rteReyohohoBadge"],
+  },
+  rteCustomCosmetics: {
+    query: "rtecosmetics",
+    kind: "bool",
+    aliases: ["rte_custom_cosmetics", "rteCustomCosmetics"],
+  },
+  ttsReadChat: {
+    query: "ttsread",
+    kind: "bool",
+    aliases: ["tts_read_chat", "ttsReadChat"],
+  },
+  ttsReadBots: {
+    query: "ttsbots",
+    kind: "bool",
+    aliases: ["tts_read_bots", "ttsReadBots"],
+  },
+  ttsVoice: {
+    query: "ttsvoice",
+    kind: "string",
+    aliases: ["tts_voice", "ttsVoice"],
+  },
+  ttsChatIsVoice: {
+    query: "ttschatisvoice",
+    kind: "string",
+    aliases: ["tts_chatis_voice", "ttsChatIsVoice"],
+  },
+  ttsVolume: {
+    query: "ttsvolume",
+    kind: "float",
+    aliases: ["tts_volume", "ttsVolume"],
+  },
+  ttsMaxLength: {
+    query: "ttsmax",
+    kind: "int",
+    aliases: ["tts_max_length", "ttsMaxLength"],
+  },
 };
 
 function parseBool(raw: string): boolean | null {
@@ -481,6 +558,8 @@ export function parseChatConfigFromSearchParams(
   cfg.fontWeight = normalizeFontWeight(cfg.fontWeight);
   cfg.nickFontWeight = normalizeFontWeight(cfg.nickFontWeight);
   cfg.animation = normalizeChatAnimationMode(cfg.animation);
+  cfg.ttsVolume = Math.min(Math.max(cfg.ttsVolume, 0), 1);
+  cfg.ttsMaxLength = Math.max(cfg.ttsMaxLength, 1);
   if (!["normal", "hide", "highlight"].includes(cfg.linkMode)) {
     cfg.linkMode = DEFAULT_CHAT_CONFIG.linkMode;
   }
