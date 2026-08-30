@@ -1,5 +1,6 @@
 import { badgeService } from "~/services/badges";
 import { LOG_CATEGORIES, log } from "~/utils/logger";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import { channelRolesService } from "../channelRolesService";
 import { emoteService } from "../emoteService";
 import {
@@ -7,6 +8,12 @@ import {
   type CosmeticRefreshUser,
 } from "../sevenTVCosmeticsService";
 import { sevenTVEventApi } from "../sevenTVEventApi";
+import type { ChatPresentationService } from "../chatPresentationService";
+import {
+  rteCosmeticsService,
+  type RteCosmeticsLoader,
+} from "../rteCosmeticsService";
+import type { TwitchMessage } from "../twitchService";
 import {
   twitchGqlService,
   type TwitchGqlChannelProfile,
@@ -26,7 +33,10 @@ export class ChatAssetLoader {
     Promise<TwitchGqlChannelProfile | null>
   >();
 
-  constructor(private readonly channel: string) {}
+  constructor(
+    private readonly channel: string,
+    private readonly rteCosmetics: RteCosmeticsLoader = rteCosmeticsService,
+  ) {}
 
   preloadChannelRewards() {
     if (!this.channel.trim()) return;
@@ -115,6 +125,28 @@ export class ChatAssetLoader {
       sevenTVCosmeticsService.getCosmetics(),
       sevenTVCosmeticsService.getUserCosmetics(),
     );
+  }
+
+  async loadRteUserAssets(
+    config: ChatConfig,
+    message: TwitchMessage,
+    presentation: ChatPresentationService,
+  ): Promise<boolean> {
+    const userId = message.userId;
+    if (!userId || (!config.rteReyohohoBadge && !config.rteCustomCosmetics)) {
+      return false;
+    }
+
+    const [badge, paint] = await Promise.all([
+      config.rteReyohohoBadge
+        ? this.rteCosmetics.loadBadge(userId)
+        : Promise.resolve(null),
+      config.rteCustomCosmetics
+        ? this.rteCosmetics.loadPaint(userId)
+        : Promise.resolve(null),
+    ]);
+    presentation.setRteUserAssets(message.username, userId, badge, paint);
+    return badge !== null || paint !== null;
   }
 
   async resolveReward(rewardId: string): Promise<TwitchGqlCustomReward | null> {

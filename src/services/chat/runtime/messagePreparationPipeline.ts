@@ -100,6 +100,9 @@ export class MessagePreparationPipeline {
 
       if (message.platform !== "youtube") {
         this.loadUserBadges(message, userId);
+        if (config.rteReyohohoBadge || config.rteCustomCosmetics) {
+          this.loadRteUserAssets(message, config, service);
+        }
         this.registerChannelMessage(message);
       }
 
@@ -172,6 +175,27 @@ export class MessagePreparationPipeline {
         this.options.onMessageRefresh(messageId);
       })
       .catch(() => {});
+  }
+
+  private loadRteUserAssets(
+    message: TwitchMessage,
+    config: ChatConfig,
+    service: ChatPresentationService,
+  ): void {
+    const messageId = message.id;
+    if (!messageId) return;
+
+    void this.options.assetLoader
+      .loadRteUserAssets(config, message, service)
+      .then((changed) => {
+        if (
+          changed &&
+          this.options.getService() === service &&
+          this.seenMessageIds.has(messageId)
+        ) {
+          this.options.onMessageRefresh(messageId);
+        }
+      });
   }
 
   private registerChannelMessage(message: TwitchMessage) {

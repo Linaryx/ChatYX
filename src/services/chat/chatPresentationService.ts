@@ -2,8 +2,8 @@
 
 import { emoteService } from "./emoteService";
 import type { Emote } from "./emoteService";
-import { badgeService } from "../badges/badgeService";
-import { SevenTVPaintService } from "./sevenTVPaintService";
+import { badgeService, type Badge } from "../badges/badgeService";
+import { SevenTVPaintService, type Paint } from "./sevenTVPaintService";
 import { sevenTVEventApi } from "./sevenTVEventApi";
 import type { SevenTVEventApiService } from "./sevenTVEventApi";
 import { BotFilterService } from "../../utils/botFilter";
@@ -43,6 +43,8 @@ export interface ChatPresentationConfig {
     badges: boolean;
     paints: boolean;
     personalEmotes: boolean;
+    rteBadges: boolean;
+    rtePaints: boolean;
   };
 }
 
@@ -63,6 +65,8 @@ export const DEFAULT_CHAT_PRESENTATION_CONFIG: ChatPresentationConfig = {
     badges: true,
     paints: true,
     personalEmotes: true,
+    rteBadges: false,
+    rtePaints: false,
   },
 };
 
@@ -77,6 +81,8 @@ export class ChatPresentationService {
   private allowedChatters = new Set<string>();
   private fadeManager: MessageFadeManager;
   private layoutManager?: LayoutManager;
+  private readonly rteBadges = new Map<string, Badge>();
+  private readonly rtePaints = new Map<string, Paint>();
   private sevenTVPaintCssCache = new WeakMap<object, string>();
   private initialized: boolean = false;
 
@@ -290,7 +296,25 @@ export class ChatPresentationService {
       }
     }
 
+    const rteBadge = this.config.features.rteBadges
+      ? this.rteBadges.get(username.toLowerCase())
+      : undefined;
+    if (rteBadge) thirdPartyBadges.push(rteBadge);
+
     return thirdPartyBadges;
+  }
+
+  setRteUserAssets(
+    username: string,
+    userId: string,
+    badge: Badge | null,
+    paint: Paint | null,
+  ): void {
+    if (badge) this.rteBadges.set(username.toLowerCase(), badge);
+    if (paint) {
+      this.rtePaints.set(userId, paint);
+      this.rtePaints.set(username.toLowerCase(), paint);
+    }
   }
 
   /**
@@ -299,6 +323,11 @@ export class ChatPresentationService {
   getUserPaint(userId: string, username: string): string | null {
     if (!this.config.features.paints) {
       return null;
+    }
+
+    if (this.config.features.rtePaints) {
+      const rtePaint = this.rtePaints.get(userId) ?? this.rtePaints.get(username.toLowerCase());
+      if (rtePaint) return this.sevenTVPaintService.generatePaintCSS(rtePaint);
     }
 
     if (username) {
@@ -556,6 +585,8 @@ export class ChatPresentationService {
     // Clear fade timers
     this.fadeManager.clear();
     this.clearPaintCache();
+    this.rteBadges.clear();
+    this.rtePaints.clear();
 
     this.initialized = false;
     log.info(LOG_CATEGORIES.INTEGRATION, "Cleanup complete");
@@ -599,6 +630,8 @@ export function createChatPresentationConfig(
       badges: !params.hideSpecialBadges,
       paints: true,
       personalEmotes: true,
+      rteBadges: params.rteReyohohoBadge,
+      rtePaints: params.rteCustomCosmetics,
     },
   };
 }
