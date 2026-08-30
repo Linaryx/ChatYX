@@ -6,6 +6,7 @@ import {
   parseTestMessageCount,
   resolveChatCommandRole,
 } from "../src/services/chat/chatCommandService";
+import { parseRteTtsCommand } from "../src/services/chat/rteTtsCommand";
 import {
   TwitchService,
   type TwitchMessage,
@@ -44,9 +45,18 @@ describe("chat commands", () => {
     expect(parseChatCommand("!reloadchat")).toEqual({ name: "reload", args: "", targetChannels: [] });
   });
 
-  test("does not expose media or speech commands", () => {
+  test("exposes TTS without exposing unrelated media commands", () => {
     expect(parseChatCommand("!chat img Kappa")).toBeNull();
-    expect(parseChatCommand("!chat tts hello")).toBeNull();
+    expect(parseChatCommand("!chat tts hello")).toEqual({
+      name: "tts",
+      args: "hello",
+      targetChannels: [],
+    });
+    expect(parseChatCommand("!chat azuretts hello")).toEqual({
+      name: "azuretts",
+      args: "hello",
+      targetChannels: [],
+    });
     expect(parseChatCommand("!chat rickroll")).toBeNull();
     expect(parseChatCommand("!chat ytplay https://youtu.be/dQw4w9WgXcQ")).toBeNull();
     expect(parseChatCommand("!chat ytstop")).toBeNull();
@@ -64,6 +74,74 @@ describe("chat commands", () => {
     expect(
       getAuthorizedChatCommand(message("!chat reload", ["lead_moderator/1"]), "target"),
     ).toEqual({ name: "reload", args: "", targetChannels: [] });
+  });
+
+  test("authorizes TTS only through the existing moderator path", () => {
+    expect(
+      getAuthorizedChatCommand(message("!chat tts hello"), "target"),
+    ).toBeNull();
+    expect(
+      getAuthorizedChatCommand(
+        message("!chat tts hello", ["moderator/1"]),
+        "target",
+      ),
+    ).toEqual({ name: "tts", args: "hello", targetChannels: [] });
+    expect(
+      getAuthorizedChatCommand(
+        message("!chat azuretts hello", ["moderator/1"]),
+        "target",
+      ),
+    ).toEqual({ name: "azuretts", args: "hello", targetChannels: [] });
+  });
+
+  test("parses provider-specific TTS speech and shared control grammar", () => {
+    expect(parseRteTtsCommand("chatis", "hello world")).toEqual({
+      kind: "speak",
+      text: "hello world",
+      voice: null,
+    });
+    expect(parseRteTtsCommand("chatis", "-s Brian hello world")).toEqual({
+      kind: "speak",
+      text: "hello world",
+      voice: "Brian",
+    });
+    expect(parseRteTtsCommand("chatis", "привет -s Maxim")).toEqual({
+      kind: "speak",
+      text: "привет",
+      voice: "Maxim",
+    });
+    expect(parseRteTtsCommand("azure", "-v en-US-GuyNeural hello world")).toEqual({
+      kind: "speak",
+      text: "hello world",
+      voice: "en-US-GuyNeural",
+    });
+    expect(parseRteTtsCommand("azure", "--voice ru-RU-DmitryNeural привет")).toEqual({
+      kind: "speak",
+      text: "привет",
+      voice: "ru-RU-DmitryNeural",
+    });
+    expect(
+      parseRteTtsCommand("azure", "привет -s ru-RU-SvetlanaNeural"),
+    ).toEqual({
+      kind: "speak",
+      text: "привет",
+      voice: "ru-RU-SvetlanaNeural",
+    });
+    expect(parseRteTtsCommand("chatis", "skip")).toEqual({ kind: "skip" });
+    expect(parseRteTtsCommand("azure", "stop")).toEqual({ kind: "stop" });
+    expect(parseRteTtsCommand("chatis", "clear")).toEqual({ kind: "clear" });
+  });
+
+  test("rejects incomplete or extended TTS control grammar", () => {
+    expect(parseRteTtsCommand("chatis", "")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("azure", "-v en-US-GuyNeural")).toEqual({
+      kind: "invalid",
+    });
+    expect(parseRteTtsCommand("chatis", "-s Brian")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("chatis", "-v Brian hello")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("azure", "-s Brian hello")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("azure", "--voice hello")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("chatis", "skip now")).toEqual({ kind: "invalid" });
   });
 
   test("uses target-channel badges for Shared Chat command permissions", () => {
