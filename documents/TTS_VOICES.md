@@ -7,7 +7,7 @@
 | ChatIS / Streamlabs | `!chat tts [-s Voice] текст` | Provider voice name | [ChatIS reference list](https://gist.github.com/Linaryx/ccbd1314f74a2d39ecbea289b9636c15) |
 | JustDavi Azure | `!chat azuretts [-v xx-XX-VoiceNeural] текст` | Exact Azure Neural voice ID | [live voices.txt](https://cdn.justdavi.dev/voices.txt) |
 
-ChatIS uses Streamlabs TTS: ChatYX passes the selected Streamlabs voice name without a local allowlist. Azure names must match `xx-XX-NameNeural`; the setup page loads the current Azure catalog from `voices.txt`, so this document intentionally does not duplicate that mutable list.
+ChatYX serves its own three-table catalog at [`/voices.txt`](/voices.txt): ChatIS / Streamlabs, Cyan Chat / AWS Polly, and JustDavi / Azure. The local catalog is a snapshot; refresh it from the sources below when a provider changes its voice list.
 
 ## ChatIS / Streamlabs Voice Reference
 
@@ -56,6 +56,12 @@ This is the Streamlabs voice list supplied for ChatIS. Streamlabs remains author
 | Turkish | Burcu, Filiz |
 | Welsh | Gwyneth |
 
+## Are The Providers Compatible?
+
+ChatIS and Cyan Chat both use the short Amazon Polly-style names. Cyan Chat's 18 voices are a subset of the names in the ChatIS / Streamlabs reference, but Cyan sends them to its own AWS Polly backend.
+
+JustDavi uses Azure Neural voice IDs such as `ru-RU-DmitryNeural`. Those IDs are a different namespace and cannot be used with ChatIS or Cyan Chat.
+
 ## Azure: Common Russian Voices
 
 | Voice ID | Locale | Gender | Use with |
@@ -63,7 +69,7 @@ This is the Streamlabs voice list supplied for ChatIS. Streamlabs remains author
 | `ru-RU-DmitryNeural` | `ru-RU` | Male | `!chat azuretts -v ru-RU-DmitryNeural текст` |
 | `ru-RU-SvetlanaNeural` | `ru-RU` | Female | `!chat azuretts -v ru-RU-SvetlanaNeural текст` |
 
-For the complete and current Azure catalog, use the table in **Озвучка сообщений** or open [voices.txt](https://cdn.justdavi.dev/voices.txt).
+For the complete Azure table, use the local [`/voices.txt`](/voices.txt). Its JustDavi section is refreshed from the upstream [voices.txt](https://cdn.justdavi.dev/voices.txt).
 
 ## Cyan Chat Comparison
 

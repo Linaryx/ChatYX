@@ -18,7 +18,7 @@ import {
   type SetupSectionId,
   type ToggleRow,
 } from "~/components/setup/SetupLayout";
-import { AzureVoiceCatalog } from "~/components/setup/AzureVoiceCatalog";
+import { VoiceCatalog } from "~/components/setup/VoiceCatalog";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
@@ -1626,7 +1626,7 @@ export default function ChatSetup() {
                 onOpenChange={(open) => setSectionOpen("tts", open)}
               >
                 <ToggleRows rows={ttsToggles} />
-                <AzureVoiceCatalog />
+                <VoiceCatalog />
               </SectionCard>
 
               <SectionCard
