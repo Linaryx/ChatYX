@@ -66,30 +66,23 @@ function fetchWithTimeout(
 }
 
 async function fetchActiveChatters(channel: string): Promise<PreviewChatters> {
-  const urls = [
-    `https://api.markzynk.com/twitch/chatters/${encodeURIComponent(channel)}`,
-    `https://api.tackling.cc/twitch/Chatters?login=${encodeURIComponent(channel)}&limit=500`,
-  ];
+  try {
+    const response = await fetchWithTimeout(
+      `https://api.markzynk.com/twitch/chatters/${encodeURIComponent(channel)}`,
+    );
+    if (!response.ok) return parsePreviewChatters(null);
 
-  for (const url of urls) {
-    try {
-      const response = await fetchWithTimeout(url);
-      if (!response.ok) continue;
-
-      const chatters = parsePreviewChatters(await response.json());
-      const count =
-        chatters.broadcasters.length +
-        chatters.moderators.length +
-        chatters.vips.length +
-        chatters.staff.length +
-        chatters.viewers.length;
-      if (count > 0) return chatters;
-    } catch {
-      // Try the next mirror.
-    }
+    const chatters = parsePreviewChatters(await response.json());
+    const count =
+      chatters.broadcasters.length +
+      chatters.moderators.length +
+      chatters.vips.length +
+      chatters.staff.length +
+      chatters.viewers.length;
+    return count > 0 ? chatters : parsePreviewChatters(null);
+  } catch {
+    return parsePreviewChatters(null);
   }
-
-  return parsePreviewChatters(null);
 }
 
 export async function resolveChannelId(channel: string): Promise<string> {

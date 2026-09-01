@@ -33,7 +33,6 @@ type TwitchChannelSummary = {
     vips: number;
     founders: number;
     leadModerators: number;
-    artists: number;
   };
 };
 
@@ -41,7 +40,7 @@ type Metric = {
   key: string;
   label: string;
   value: number;
-  icon: "twitch" | "sevenTv" | "bttv" | "ffz" | "vip" | "mod" | "founder" | "lead" | "artist";
+  icon: "twitch" | "sevenTv" | "bttv" | "ffz" | "vip" | "mod" | "founder" | "lead";
 };
 
 const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
@@ -54,7 +53,6 @@ const METRIC_IMAGE_ICON_URLS: Partial<Record<Metric["icon"], string>> = {
   mod: "https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/3",
   vip: "https://static-cdn.jtvnw.net/badges/v1/b817aba4-fad8-49e2-b88a-7cc744dfa6ec/3",
   founder: "https://static-cdn.jtvnw.net/badges/v1/511b78a9-ab37-472f-9569-457753bbe7d3/3",
-  artist: "https://static-cdn.jtvnw.net/badges/v1/4300a897-03dc-4e83-8c0e-c332fee7057f/3",
 };
 
 function normalizeLogin(raw: string): string {
@@ -263,21 +261,6 @@ async function loadFfzEmoteCount(channelId: string): Promise<number> {
   }
 }
 
-async function loadArtistCount(login: string): Promise<number> {
-  try {
-    const data = await fetchJsonWithTimeout(
-      `https://api.tackling.cc/twitch/Artists?login=${encodeURIComponent(login)}`,
-      undefined,
-      3500,
-    );
-    const total = Number((data as { totalArtists?: unknown })?.totalArtists);
-    if (Number.isFinite(total) && total >= 0) return total;
-
-    return countArray((data as { artists?: unknown })?.artists);
-  } catch {
-    return 0;
-  }
-}
 
 async function loadRoleCounts(login: string): Promise<TwitchChannelSummary["roles"]> {
   const roles: TwitchChannelSummary["roles"] = {
@@ -285,11 +268,9 @@ async function loadRoleCounts(login: string): Promise<TwitchChannelSummary["role
     vips: 0,
     founders: 0,
     leadModerators: 0,
-    artists: 0,
   };
 
-  const [artistsResult, modVipResult, foundersResult] = await Promise.allSettled([
-    loadArtistCount(login),
+  const [modVipResult, foundersResult] = await Promise.allSettled([
     fetchJsonWithTimeout(
       `https://api.ivr.fi/v2/twitch/modvip/${encodeURIComponent(login)}`,
       undefined,
@@ -312,10 +293,6 @@ async function loadRoleCounts(login: string): Promise<TwitchChannelSummary["role
       ? foundersResult.value
       : (foundersResult.value as any)?.founders;
     roles.founders = countArray(founders);
-  }
-
-  if (artistsResult.status === "fulfilled") {
-    roles.artists = artistsResult.value;
   }
 
   return roles;
@@ -391,12 +368,6 @@ function metricIcon(type: Metric["icon"]): JSX.Element {
           <path d="M11 8.5h2v2.7h2.7v2H13V16h-2v-2.8H8.3v-2H11V8.5Z" />
         </svg>
       );
-    case "artist":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 3a9 9 0 0 0 0 18h1.8a2.4 2.4 0 0 0 1.6-4.2l-.9-.8h1.3A4.7 4.7 0 0 0 20.5 11C20.5 6.6 16.7 3 12 3ZM7.6 10.2a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm4.4-2.6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm-4.1 6.8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm4.3 2.2a1.8 1.8 0 1 1 0-3.6 1.8 1.8 0 0 1 0 3.6Z" />
-        </svg>
-      );
   }
 }
 
@@ -420,7 +391,6 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
       { key: "mods", label: "Модераторы", value: data.roles.moderators, icon: "mod" },
       { key: "founders", label: "Основатели", value: data.roles.founders, icon: "founder" },
       { key: "leadmods", label: "Лидмодеры", value: data.roles.leadModerators, icon: "lead" },
-      { key: "artists", label: "Артисты", value: data.roles.artists, icon: "artist" },
     ];
 
     return allMetrics.filter((metric) => metric.value > 0);
