@@ -1,6 +1,7 @@
 import { emoteService } from "~/services/chat";
 import { PREVIEW_USERNAME_BASES } from "~/config/previewUsernames";
 import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
+import { isReplyEligibleEvent } from "~/utils/chat/replyEligibility";
 import { previewRealUsers, type PreviewRealUser } from "./userPool";
 
 const PREVIEW_MESSAGES = [
@@ -260,10 +261,7 @@ export function nextPreviewMessage(
     ];
   const twitchEvent = getPreviewTwitchEvent(index, displayName);
   const replyTarget = lastUsername || channel;
-  const canReply =
-    !twitchEvent ||
-    twitchEvent.type === "first-message" ||
-    twitchEvent.type === "highlighted-message";
+  const canReply = isReplyEligibleEvent(twitchEvent?.type);
 
   const message: TwitchMessage = {
     id: `preview-live-${Date.now()}-${index}`,

@@ -15,6 +15,7 @@ import {
   type ChatPresentationService,
 } from "~/services/chat";
 import { getFontFamily } from "~/styles/chatStyles";
+import { getChatEventStyleVariables } from "~/styles/chatEventStyles";
 import { hasMessageEntryAnimation } from "~/utils/ui/animationUtils";
 import { ChatBadges } from "~/components/chat/ChatBadges";
 import { ChatNick } from "~/components/chat/ChatNick";
@@ -23,6 +24,7 @@ import {
   decodeParentMessageBody,
   formatReplyPreview,
 } from "~/utils/chat/replyParser";
+import { isReplyEligibleEvent } from "~/utils/chat/replyEligibility";
 
 type ChatMessageProps = {
   message: TwitchMessage;
@@ -37,17 +39,6 @@ const CSS_COLOR_PATTERN =
 
 function safeCssColor(color: string, fallback = "#e6eef7") {
   return CSS_COLOR_PATTERN.test(color) ? color : fallback;
-}
-
-function hexToRgba(color: string, opacity: number): string {
-  const normalized = color.trim().replace(/^#/, "");
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return "rgba(145, 70, 255, 0.22)";
-
-  const red = Number.parseInt(normalized.slice(0, 2), 16);
-  const green = Number.parseInt(normalized.slice(2, 4), 16);
-  const blue = Number.parseInt(normalized.slice(4, 6), 16);
-  const alpha = Math.min(Math.max(opacity, 0), 100) / 100;
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function formatEventCount(value: number | undefined): string {
@@ -98,8 +89,7 @@ function EventStar() {
     <svg
       class="chat-event-icon chat-event-star"
       viewBox="0 0 20 20"
-      aria-label="Событие"
-      role="img"
+      aria-hidden="true"
     >
       <path d="m10 1.5 2.47 5.01 5.53.8-4 3.9.94 5.49L10 14.27 5.06 16.7 6 11.21l-4-3.9 5.53-.8L10 1.5Z" />
     </svg>
@@ -201,23 +191,16 @@ export const ChatMessage = (props: ChatMessageProps) => {
         : normalizedFontWeight(),
     ),
   );
-  const eventColor = createMemo(() =>
-    safeCssColor(
-      visibleTwitchEvent()?.color || props.config.twitchEventColor,
-      "#9146ff",
-    ),
-  );
-
   const messageStyle = createMemo<JSX.CSSProperties>(() => ({
     "font-family": getFontFamily(props.config),
     "font-weight": fontWeight(),
     "word-wrap": "break-word",
     "--chat-message-enter-duration": `${props.animationDurationMs}ms`,
-    "--chat-event-color": eventColor(),
-    "--chat-event-background": hexToRgba(
-      eventColor(),
-      props.config.twitchEventBackgroundOpacity,
-    ),
+    ...getChatEventStyleVariables({
+      event: visibleTwitchEvent(),
+      fallbackAccent: props.config.twitchEventColor,
+      backgroundOpacity: props.config.twitchEventBackgroundOpacity,
+    }),
     "--chat-event-font-weight": eventFontWeight(),
     "--chat-link-color": safeCssColor(props.config.linkColor, "#53b7ff"),
     "font-style": styledTwitchEvent() && props.config.twitchEventItalic
@@ -246,10 +229,20 @@ export const ChatMessage = (props: ChatMessageProps) => {
       (paintCSS as { useGlobalCSS?: boolean }).useGlobalCSS);
 
   const messageTextColor = isAction ? userColor : "white";
-  const replyText = createMemo(() => getReplyText(message));
+  const replyText = createMemo(() =>
+    isReplyEligibleEvent(message.twitchEvent?.type)
+      ? getReplyText(message)
+      : null,
+  );
   const hasEventMessageText = createMemo(() =>
     Boolean(visibleTwitchEvent() && processedMessage.trim()),
   );
+  const eventSummary = createMemo(() => {
+    const event = visibleTwitchEvent();
+    if (!event) return undefined;
+    if (!hasEventMessageText() || event.type === "watch-streak") return event;
+    return undefined;
+  });
   const showPlatformMarker = createMemo(() =>
     Boolean(props.config.channel.trim() && props.config.youtubeChannel.trim()),
   );
@@ -292,19 +285,22 @@ export const ChatMessage = (props: ChatMessageProps) => {
           message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
         ),
         "platform-marked": showPlatformMarker(),
-	        "chat-event": Boolean(visibleTwitchEvent()),
-	        "chat-event-highlight": Boolean(
-	          visibleTwitchEvent() &&
-	            (props.config.highlightTwitchEvents ||
-	              visibleTwitchEvent()?.type === "first-message") &&
-	            !(message.isGigantifiedEmote && props.config.showGigantifiedEmotes),
-	        ),
-	        "chat-event-with-message": hasEventMessageText(),
-	        [`chat-event-${visibleTwitchEvent()?.type}`]: Boolean(visibleTwitchEvent()),
-	        [`chat-event-announcement-${visibleTwitchEvent()?.level?.toLowerCase()}`]:
-	          visibleTwitchEvent()?.type === "announcement" &&
-	          Boolean(visibleTwitchEvent()?.level),
-	      }}
+        "chat-event": Boolean(visibleTwitchEvent()),
+        "chat-event-highlight": Boolean(
+          visibleTwitchEvent() &&
+            props.config.highlightTwitchEvents &&
+            !(message.isGigantifiedEmote && props.config.showGigantifiedEmotes),
+        ),
+        "chat-event-with-message": hasEventMessageText(),
+        "chat-event-authored": hasEventMessageText(),
+        "chat-event-notice": Boolean(
+          visibleTwitchEvent() && !hasEventMessageText(),
+        ),
+        [`chat-event-${visibleTwitchEvent()?.type}`]: Boolean(visibleTwitchEvent()),
+        [`chat-event-announcement-${visibleTwitchEvent()?.level?.toLowerCase()}`]:
+          visibleTwitchEvent()?.type === "announcement" &&
+          Boolean(visibleTwitchEvent()?.level),
+      }}
       style={messageStyle()}
       data-nick={message.username}
       data-user-id={message.userId || ""}
@@ -330,23 +326,13 @@ export const ChatMessage = (props: ChatMessageProps) => {
           <span class="reply_text">{replyText()}</span>
         </div>
       )}
-      <Show
-        when={
-          visibleTwitchEvent()?.type === "first-message" ||
-          visibleTwitchEvent()?.type === "highlighted-message" ||
-          visibleTwitchEvent()?.type === "power-up" ||
-          visibleTwitchEvent()?.type === "announcement"
-            ? undefined
-            : visibleTwitchEvent()
-        }
-      >
+      <Show when={eventSummary()}>
         {(event) => (
           <span class="chat-event-summary">
             <Switch
               fallback={
                 <>
                   <EventStar />
-                  <span class="chat-event-label">{event().label}</span>
                   <Show when={event().detail}>
                     <span class="chat-event-detail">{event().detail}</span>
                   </Show>
@@ -360,6 +346,9 @@ export const ChatMessage = (props: ChatMessageProps) => {
                     <span class="chat-subscription-months">{months()}</span>
                   )}
                 </Show>
+                <Show when={!hasEventMessageText() && event().detail}>
+                  <span class="chat-event-detail">{event().detail}</span>
+                </Show>
               </Match>
               <Match when={event().type === "watch-streak"}>
                 <span class="chat-watch-streak">
@@ -367,69 +356,88 @@ export const ChatMessage = (props: ChatMessageProps) => {
                     class="chat-event-icon chat-watch-streak-gem"
                     viewBox="0 0 24 24"
                     aria-hidden="true"
-	                  >
-	                    <path d="M12 7.2a4.8 4.8 0 0 1 4.8 4.8h-2.4a2.4 2.4 0 0 0-2.4-2.4V7.2Z" />
-	                    <path fill-rule="evenodd" d="M21.6 12A9.6 9.6 0 1 1 2.4 12a9.6 9.6 0 0 1 19.2 0Zm-2.4 0a7.2 7.2 0 1 1-14.4 0 7.2 7.2 0 0 1 14.4 0Z" clip-rule="evenodd" />
-	                  </svg>
-	                  <Show when={event().points !== undefined}>
-	                    <span
-	                      class="chat-watch-streak-points"
-	                      title={`${formatEventCount(event().points)} баллов канала`}
-	                    >
-	                      +{formatEventCount(event().points)}
-	                    </span>
-	                  </Show>
-	                  <span class="chat-watch-streak-copy">
-	                    <Show
-	                      when={hasEventMessageText()}
-	                      fallback={
-	                        <>
-	                          <span class="chat-watch-streak-user" style={{ color: userColor }}>
-	                            {message.displayName || event().detail}
-	                          </span>
-	                          {` · ${formatWatchStreakCount(event().count)}`}
-	                        </>
-	                      }
-	                    >
-	                      {`${event().points !== undefined ? " · " : ""}${formatWatchStreakCount(event().count)}`}
-	                    </Show>
-	                  </span>
-	                </span>
+                  >
+                    <path d="M12 7.2a4.8 4.8 0 0 1 4.8 4.8h-2.4a2.4 2.4 0 0 0-2.4-2.4V7.2Z" />
+                    <path
+                      fill-rule="evenodd"
+                      d="M21.6 12A9.6 9.6 0 1 1 2.4 12a9.6 9.6 0 0 1 19.2 0Zm-2.4 0a7.2 7.2 0 1 1-14.4 0 7.2 7.2 0 0 1 14.4 0Z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  <Show when={event().points !== undefined}>
+                    <span
+                      class="chat-watch-streak-points"
+                      title={`${formatEventCount(event().points)} баллов канала`}
+                    >
+                      +{formatEventCount(event().points)}
+                    </span>
+                  </Show>
+                  <span class="chat-watch-streak-copy">
+                    <Show
+                      when={hasEventMessageText()}
+                      fallback={
+                        <>
+                          <span
+                            class="chat-watch-streak-user"
+                            style={{ color: userColor }}
+                          >
+                            {message.displayName || event().detail}
+                          </span>
+                          {` · ${formatWatchStreakCount(event().count)}`}
+                        </>
+                      }
+                    >
+                      {`${event().points !== undefined ? " · " : ""}${formatWatchStreakCount(event().count)}`}
+                    </Show>
+                  </span>
+                </span>
               </Match>
-	              <Match when={event().type === "raid"}>
-	                <img
-	                  class="chat-event-icon"
-	                  src="https://static-cdn.jtvnw.net/emoticons/v2/62836/default/dark/3.0"
-	                  alt="Рейд"
-	                />
-	                <span class="chat-event-label">
-	                  {event().detail || event().label}
-	                </span>
-	                <span class="chat-event-detail">
-	                  {`проводит рейд${formatRaidViewers(event().count)}!`}
-	                </span>
-	              </Match>
+              <Match when={event().type === "raid"}>
+                <img
+                  class="chat-event-icon"
+                  src="https://static-cdn.jtvnw.net/emoticons/v2/62836/default/dark/3.0"
+                  alt="Рейд"
+                />
+                <span class="chat-event-fact">
+                  {event().detail || event().label}
+                </span>
+                <span class="chat-event-detail">
+                  {`проводит рейд${formatRaidViewers(event().count)}!`}
+                </span>
+              </Match>
               <Match when={event().type === "reward"}>
                 <svg
                   class="chat-event-icon"
                   viewBox="0 0 24 24"
-                  aria-label="Награда за баллы"
-                  role="img"
+                  aria-hidden="true"
                 >
                   <path d="M12 7.2a4.8 4.8 0 0 1 4.8 4.8h-2.4a2.4 2.4 0 0 0-2.4-2.4V7.2Z" />
-                  <path fill-rule="evenodd" d="M21.6 12A9.6 9.6 0 1 1 2.4 12a9.6 9.6 0 0 1 19.2 0Zm-2.4 0a7.2 7.2 0 1 1-14.4 0 7.2 7.2 0 0 1 14.4 0Z" clip-rule="evenodd" />
+                  <path
+                    fill-rule="evenodd"
+                    d="M21.6 12A9.6 9.6 0 1 1 2.4 12a9.6 9.6 0 0 1 19.2 0Zm-2.4 0a7.2 7.2 0 1 1-14.4 0 7.2 7.2 0 0 1 14.4 0Z"
+                    clip-rule="evenodd"
+                  />
                 </svg>
-	                <Show when={event().count !== undefined}>
-	                  <span class="chat-event-detail">
-	                    {formatEventCount(event().count)}
-	                  </span>
-	                </Show>
-	                <Show when={event().count !== undefined && (event().detail || event().label)}>
-	                  <span class="chat-event-separator">•</span>
-	                </Show>
-	                <span class="chat-event-label">
-	                  {event().detail || event().label}
-	                </span>
+                <Show when={event().count !== undefined}>
+                  <span class="chat-event-detail">
+                    {formatEventCount(event().count)}
+                  </span>
+                </Show>
+                <Show when={event().count !== undefined && event().detail}>
+                  <span class="chat-event-separator">•</span>
+                </Show>
+                <Show when={event().detail}>
+                  <span class="chat-event-fact">{event().detail}</span>
+                </Show>
+              </Match>
+              <Match when={event().type === "announcement"}>
+                <svg
+                  class="chat-event-icon chat-event-announcement-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M3 9v6h4l2 4h3l-2-4h2l7 3V6l-7 3H3Zm2 2h7l5-2v6l-5-2H5v-2Z" />
+                </svg>
               </Match>
             </Switch>
           </span>
