@@ -7,11 +7,11 @@
 | ChatIS / Streamlabs | `!chat tts [-s Voice] текст` | Provider voice name | [ChatIS reference list](https://gist.github.com/Linaryx/ccbd1314f74a2d39ecbea289b9636c15) |
 | JustDavi Azure | `!chat azuretts [-v xx-XX-VoiceNeural] текст` | Exact Azure Neural voice ID | [live voices.txt](https://cdn.justdavi.dev/voices.txt) |
 
-ChatYX passes a ChatIS voice name to the provider without a local allowlist. Azure names must match `xx-XX-NameNeural`; the setup page loads the current Azure catalog from `voices.txt`, so this document intentionally does not duplicate that mutable list.
+ChatIS uses Streamlabs TTS: ChatYX passes the selected Streamlabs voice name without a local allowlist. Azure names must match `xx-XX-NameNeural`; the setup page loads the current Azure catalog from `voices.txt`, so this document intentionally does not duplicate that mutable list.
 
 ## ChatIS / Streamlabs Voice Reference
 
-This is a readable table of the named voices in the supplied ChatIS reference list. The provider remains authoritative: a name can be unavailable or change independently of ChatYX.
+This is the Streamlabs voice list supplied for ChatIS. Streamlabs remains authoritative: a name can be unavailable or change independently of ChatYX.
 
 | Locale | Voices |
 | --- | --- |
