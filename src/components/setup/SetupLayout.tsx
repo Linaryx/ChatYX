@@ -21,6 +21,7 @@ export type SetupSectionId =
   | "behavior"
   | "content"
   | "bots"
+  | "tts"
   | "rte";
 
 export type ControlRow = {
@@ -49,7 +50,7 @@ export const SETUP_NAV: {
   {
     id: "styling",
     label: "Внешний вид",
-    description: "Тень, фон, цвета",
+    description: "Фон, тень и цвет",
   },
   {
     id: "behavior",
@@ -59,7 +60,7 @@ export const SETUP_NAV: {
   {
     id: "content",
     label: "Контент и бейджи",
-    description: "Что показывать",
+    description: "Сообщения и бейджи",
   },
   {
     id: "bots",
@@ -67,9 +68,14 @@ export const SETUP_NAV: {
     description: "Списки и скрытие",
   },
   {
+    id: "tts",
+    label: "Озвучка сообщений",
+    description: "TTS через ChatIS и Azure",
+  },
+  {
     id: "rte",
     label: "RTE",
-    description: "Прокси, TTS и косметика",
+    description: "Прокси и косметика",
   },
 ];
 
@@ -137,8 +143,8 @@ function SectionHeader(props: {
   return (
     <CardHeader
       class={cn(
-        "space-y-1",
-        props.compact ? "p-3.5" : "p-4 xl:p-5",
+        "space-y-1.5",
+        props.compact ? "p-4" : "p-4 xl:p-5",
         props.collapsible
           ? props.compact
             ? "cursor-pointer select-none pb-3.5"
@@ -148,18 +154,18 @@ function SectionHeader(props: {
     >
       <div class="flex items-start justify-between gap-2.5">
         <div class="min-w-0 space-y-0.5">
-          <CardTitle class="text-[11px] font-bold uppercase tracking-[0.08em] sm:text-xs">
+          <CardTitle class="text-sm font-semibold tracking-tight text-foreground">
             {props.title}
           </CardTitle>
           <Show when={props.description}>
-            <CardDescription class="text-[11px] leading-snug sm:text-xs sm:leading-relaxed">
+            <CardDescription class="text-xs leading-relaxed text-muted-foreground">
               {props.description}
             </CardDescription>
           </Show>
         </div>
         <Show when={props.collapsible}>
           <span
-            class="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-md border border-border/80 bg-background/40 text-muted-foreground transition-transform duration-200 group-data-[expanded]:rotate-180 sm:size-7"
+            class="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.03] text-muted-foreground transition-transform duration-200 group-data-[expanded]:rotate-180 sm:size-7"
             aria-hidden="true"
           >
             <svg
@@ -205,7 +211,7 @@ export function SectionCard(props: {
         <Card
           id={props.id}
           class={cn(
-            "scroll-mt-4 border-border/80 bg-card/80 shadow-none",
+            "scroll-mt-4 border-transparent bg-card shadow-[0_0_0_1px_rgba(255,255,255,0.08)]",
             props.class,
           )}
         >
@@ -229,7 +235,7 @@ export function SectionCard(props: {
         <Card
           id={props.id}
           class={cn(
-            "scroll-mt-4 border-border/80 bg-card/80 shadow-none",
+            "scroll-mt-4 border-transparent bg-card shadow-[0_0_0_1px_rgba(255,255,255,0.08)]",
             props.class,
           )}
         >
@@ -255,7 +261,7 @@ export function SetupNav(props: {
   onSelect: (id: SetupSectionId) => void;
 }) {
   return (
-    <nav class="flex flex-col gap-0.5">
+    <nav class="flex flex-col gap-1">
       <For each={SETUP_NAV}>
         {(item) => {
           const active = () => props.active === item.id;
@@ -264,19 +270,19 @@ export function SetupNav(props: {
               type="button"
               onClick={() => props.onSelect(item.id)}
               class={cn(
-                "rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                "block w-full rounded-md px-3 py-2 text-left transition-colors duration-150",
                 active()
-                  ? "border-border bg-secondary text-foreground"
-                  : "border-transparent bg-transparent text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                  ? "bg-white/[0.09] text-foreground"
+                  : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
               )}
               aria-current={active() ? "location" : undefined}
             >
-              <div class="text-xs font-medium leading-tight xl:text-sm">
+              <span class="block text-xs font-medium leading-tight xl:text-sm">
                 {item.label}
-              </div>
-              <div class="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+              </span>
+              <span class="mt-0.5 block text-[11px] font-normal leading-snug text-muted-foreground">
                 {item.description}
-              </div>
+              </span>
             </button>
           );
         }}

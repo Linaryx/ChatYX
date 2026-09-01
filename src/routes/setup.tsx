@@ -461,6 +461,7 @@ export default function ChatSetup() {
     behavior: false,
     content: false,
     bots: false,
+    tts: false,
     rte: false,
   });
 
@@ -1228,13 +1229,7 @@ export default function ChatSetup() {
     },
   ];
 
-  const rteToggles: ToggleRow[] = [
-    {
-      label: "RTE-прокси для эмоутов и бейджей",
-      checked: rteProxy,
-      onChange: setRteProxy,
-      hint: "Направляет только публичные API и CDN 7TV, BTTV и FFZ через RTE. Twitch и авторизация не проксируются.",
-    },
+  const ttsToggles: ToggleRow[] = [
     {
       label: "Обычный TTS через ChatIS / Streamlabs",
       checked: rteChatIsTts,
@@ -1246,6 +1241,15 @@ export default function ChatSetup() {
       checked: rteAzureTts,
       onChange: setRteAzureTts,
       hint: "Команда модератора: !chat azuretts [-v xx-XX-VoiceNeural] текст.",
+    },
+  ];
+
+  const rteToggles: ToggleRow[] = [
+    {
+      label: "RTE-прокси для эмоутов и бейджей",
+      checked: rteProxy,
+      onChange: setRteProxy,
+      hint: "Направляет только публичные API и CDN 7TV, BTTV и FFZ через RTE. Twitch и авторизация не проксируются.",
     },
     {
       label: "Reyohoho-бейдж",
@@ -1348,19 +1352,24 @@ export default function ChatSetup() {
 
       <div class="setup-root dark flex h-dvh max-h-dvh w-full flex-col overflow-hidden">
         <div class="mx-auto flex h-full min-h-0 w-full max-w-[1760px] flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:px-5 xl:px-6">
-          <header class="flex shrink-0 flex-col items-center gap-0.5 text-center">
-            <h1 class="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-              Настройка чат-оверлея
-            </h1>
-            <p class="text-[11px] text-muted-foreground sm:text-xs">
-              Собери ссылку для OBS — превью обновляется сразу
+          <header class="flex shrink-0 flex-col gap-1.5 border-b border-border/70 pb-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 class="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+                Чат-оверлей
+              </h1>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                Настрой параметры и проверь их в живом превью.
+              </p>
+            </div>
+            <p class="hidden text-xs text-muted-foreground sm:block">
+              Изменения применяются сразу.
             </p>
           </header>
 
           <div class="shrink-0">
             <SectionCard
-              title="Каналы"
-              description="Twitch и YouTube для оверлея."
+              title="Подключение чата"
+              description="Укажи Twitch и YouTube, если нужен общий оверлей."
               compact
             >
               <div class="setup-channel-row grid grid-cols-1 items-center gap-2 md:grid-cols-2">
@@ -1382,7 +1391,7 @@ export default function ChatSetup() {
             ≥1100: settings | preview (compact)
             ≥1280: nav | settings | preview
           */}
-          <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto overflow-x-hidden min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(300px,38%)] min-[1100px]:gap-3 min-[1100px]:overflow-hidden xl:grid-cols-[168px_minmax(0,1fr)_minmax(320px,400px)] xl:gap-4">
+          <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto overflow-x-hidden min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(300px,38%)] min-[1100px]:gap-3 min-[1100px]:overflow-hidden xl:grid-cols-[196px_minmax(0,1fr)_minmax(320px,400px)] xl:gap-4">
             <aside class="hidden min-h-0 xl:block">
               <div class="setup-pane-scroll h-full max-h-full overflow-y-auto overscroll-contain rounded-lg border border-border/80 bg-card/60 p-1.5">
                 <SetupNav active={activeSection()} onSelect={scrollToSection} />
@@ -1404,6 +1413,7 @@ export default function ChatSetup() {
                       { id: "behavior" as const, label: "Поведение" },
                       { id: "content" as const, label: "Контент" },
                       { id: "bots" as const, label: "Фильтры" },
+                      { id: "tts" as const, label: "Озвучка" },
                       { id: "rte" as const, label: "RTE" },
                     ]}
                   >
@@ -1607,9 +1617,20 @@ export default function ChatSetup() {
               </SectionCard>
 
               <SectionCard
+                id="setup-section-tts"
+                title="Озвучка сообщений"
+                description="Включи один или оба сервиса синтеза речи для команд модератора."
+                collapsible
+                open={openSections().tts}
+                onOpenChange={(open) => setSectionOpen("tts", open)}
+              >
+                <ToggleRows rows={ttsToggles} />
+              </SectionCard>
+
+              <SectionCard
                 id="setup-section-rte"
                 title="RTE-интеграции"
-                description="Необязательные публичные сервисы для прокси, речи и пользовательской косметики."
+                description="Необязательный прокси для публичных ресурсов и пользовательской косметики."
                 collapsible
                 open={openSections().rte}
                 onOpenChange={(open) => setSectionOpen("rte", open)}
