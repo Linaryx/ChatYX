@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { adaptRteProxyUrl } from "../src/services/chat/rteProxy";
+import {
+  adaptRteProxyUrl,
+  fetchWithRteProxy,
+  setRteProxyEnabled,
+} from "../src/services/chat/rteProxy";
 
 const RTE_PROXY_BASE = "https://ext.rte.net.ru:8443/";
 
@@ -40,5 +44,56 @@ describe("RTE proxy URL adapter", () => {
     expect(rejected.map((target) => adaptRteProxyUrl(target, true))).toEqual(
       rejected,
     );
+  });
+
+  test("does not retry a failed proxy request against the original host", async () => {
+    const target = "https://7tv.io/v3/emote-sets/global";
+    const requested: string[] = [];
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = (async (input) => {
+      requested.push(String(input));
+      return new Response(null, { status: 503 });
+    }) as typeof fetch;
+
+    try {
+      const response = await fetchWithRteProxy(target, undefined, true);
+
+      expect(response.status).toBe(503);
+      expect(requested).toEqual([`${RTE_PROXY_BASE}${target}`]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("does not fall back to the original host when the proxy rejects", async () => {
+    const target = "https://7tv.io/v3/emote-sets/global";
+    const requested: string[] = [];
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = (async (input) => {
+      requested.push(String(input));
+      throw new Error("proxy unavailable");
+    }) as typeof fetch;
+
+    try {
+      await expect(fetchWithRteProxy(target, undefined, true)).rejects.toThrow(
+        "proxy unavailable",
+      );
+      expect(requested).toEqual([`${RTE_PROXY_BASE}${target}`]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("uses the configured proxy state for eligible URLs", () => {
+    const target = "https://7tv.io/v3/emote-sets/global";
+
+    setRteProxyEnabled(true);
+    try {
+      expect(adaptRteProxyUrl(target)).toBe(`${RTE_PROXY_BASE}${target}`);
+    } finally {
+      setRteProxyEnabled(false);
+    }
   });
 });

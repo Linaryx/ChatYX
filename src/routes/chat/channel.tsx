@@ -23,6 +23,7 @@ import {
   emoteService,
   mentionStyleService,
   sevenTVCosmeticsService,
+  setRteProxyEnabled,
   type TwitchMessage,
 } from "~/services/chat";
 import { badgeService } from "~/services/badges";
@@ -276,6 +277,7 @@ export default function ChatOverlay() {
       return;
     }
 
+    setRteProxyEnabled(nextConfig.rteProxy);
     const speedChanged =
       activePreviewConfig.messageSpeed !== nextConfig.messageSpeed;
     activePreviewConfig = nextConfig;
@@ -377,6 +379,7 @@ export default function ChatOverlay() {
     if (isPreview) {
       const previewConfig = parseChatConfigFromSearchParams(urlParams, { channel });
       activePreviewConfig = previewConfig;
+      setRteProxyEnabled(previewConfig.rteProxy);
       previewService = new ChatPresentationService(
         createChatPresentationConfig(previewConfig),
       );

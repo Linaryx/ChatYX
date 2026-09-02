@@ -1,4 +1,5 @@
 const RTE_PROXY_BASE = "https://ext.rte.net.ru:8443/";
+const RTE_PROXY_TIMEOUT_MS = 5000;
 
 const RTE_PROXY_HTTP_HOSTS: Record<string, true> = {
   "7tv.io": true,
@@ -47,11 +48,6 @@ export function adaptRteProxyWsUrl(target: string, enabled: boolean = rteProxyEn
   return isAllowed ? `${RTE_PROXY_BASE}${target}` : target;
 }
 
-/**
- * Fetch through the RTE proxy first; on proxy failure (or CORS rejection of
- * the original host) fall back to the direct URL. Only proxy-eligible hosts
- * are touched, everything else goes straight to the network.
- */
 export async function fetchWithRteProxy(
   target: string,
   init?: RequestInit,
@@ -62,14 +58,20 @@ export async function fetchWithRteProxy(
   const proxied = adaptRteProxyUrl(target, true);
   if (proxied === target) return fetch(target, init);
 
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), RTE_PROXY_TIMEOUT_MS);
+  const externalSignal = init?.signal;
+  const abortFromExternalSignal = () => controller.abort();
+
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener("abort", abortFromExternalSignal, { once: true });
+  }
+
   try {
-    const response = await fetch(proxied, init);
-    // The proxy signals upstream problems with 5xx; retry direct in that case.
-    if (response.status >= 500) {
-      return fetch(target, init);
-    }
-    return response;
-  } catch {
-    return fetch(target, init);
+    return await fetch(proxied, { ...init, signal: controller.signal });
+  } finally {
+    globalThis.clearTimeout(timeout);
+    externalSignal?.removeEventListener("abort", abortFromExternalSignal);
   }
 }

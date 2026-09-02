@@ -9,6 +9,7 @@ import {
   emoteService,
   mentionStyleService,
   chatFeatureIntegration,
+  setRteProxyEnabled,
   type TwitchMessage,
 } from "~/services/chat";
 import { fetchRecentMessages } from "~/services/chat/recentMessagesService";
@@ -227,6 +228,7 @@ export class OverlayRuntime {
 
   updateConfig(config: ChatConfig) {
     this.activeConfig = config;
+    setRteProxyEnabled(config.rteProxy);
     this.rteRuntime.updateConfig(config);
     this.hooks.onConfigResolved(config);
     this.styleManager.apply(config);
@@ -266,6 +268,7 @@ export class OverlayRuntime {
     const hasTwitchChannel = Boolean(this.channel.trim());
 
     this.activeConfig = chatConfig;
+    setRteProxyEnabled(chatConfig.rteProxy);
     this.rteRuntime.updateConfig(chatConfig);
     this.hooks.onConfigResolved(chatConfig);
     this.setLoading("Подготовка стилей...", 25);
