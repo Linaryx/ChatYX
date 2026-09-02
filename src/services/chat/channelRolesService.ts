@@ -1,4 +1,5 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
+import { networkClient } from "~/services/network/networkClient";
 // Сервис для загрузки ролей пользователей канала (модераторы, VIP, founders)
 
 export interface ChannelRole {
@@ -41,7 +42,10 @@ class ChannelRolesService {
         const vips = new Map<string, ChannelRole>();
 
         try {
-            const response = await fetch(`https://api.ivr.fi/v2/twitch/modvip/${encodeURIComponent(channelName)}?skipCache=true`);
+            const response = await networkClient.request(
+                `https://api.ivr.fi/v2/twitch/modvip/${encodeURIComponent(channelName)}?skipCache=true`,
+                { route: "rte" },
+            );
             
             if (response.ok) {
                 const data = await response.json();
@@ -79,7 +83,10 @@ class ChannelRolesService {
         const founders = new Map<string, ChannelRole>();
 
         try {
-            const response = await fetch(`https://api.ivr.fi/v2/twitch/founders/${encodeURIComponent(channelName)}`);
+            const response = await networkClient.request(
+                `https://api.ivr.fi/v2/twitch/founders/${encodeURIComponent(channelName)}`,
+                { route: "rte" },
+            );
             
             if (response.ok) {
                 const data = await response.json();

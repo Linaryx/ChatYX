@@ -6,6 +6,7 @@ import {
   setRteProxyEnabled,
 } from "../src/services/network/rteProxyTransport";
 import { networkClient } from "../src/services/network/networkClient";
+import { badgeService } from "../src/services/badges/badgeService";
 
 const RTE_PROXY_BASE = "https://ext.rte.net.ru:8443/";
 
@@ -21,6 +22,7 @@ describe("RTE proxy transport", () => {
       "https://7tv.io/v3/emote-sets/global",
       "https://gql.twitch.tv/gql",
       "https://static-cdn.jtvnw.net/badges/v1/example/3",
+      "https://api.ivr.fi/v2/twitch/badges/global",
       "https://cdn.7tv.app/emote/1/3x.webp",
       "https://api.betterttv.net/3/cached/emotes/global",
       "https://cdn.betterttv.net/emote/1/3x",
@@ -102,6 +104,17 @@ describe("RTE proxy transport", () => {
     setRteProxyEnabled(true);
     try {
       expect(rewriteRteHttpUrl(target)).toBe(`${RTE_PROXY_BASE}${target}`);
+    } finally {
+      setRteProxyEnabled(false);
+    }
+  });
+
+  test("resolves the lead moderator fallback without GQL metadata", () => {
+    setRteProxyEnabled(true);
+    try {
+      expect(badgeService.getTwitchBadge("lead_moderator", "1")).toBe(
+        `${RTE_PROXY_BASE}https://static-cdn.jtvnw.net/badges/v1/0822047b-65e0-46f2-94a9-d1091d685d33/3`,
+      );
     } finally {
       setRteProxyEnabled(false);
     }

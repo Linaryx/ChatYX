@@ -6,6 +6,7 @@ import {
   onCleanup,
   type JSX,
 } from "solid-js";
+import { networkClient } from "~/services/network/networkClient";
 import "./TwitchChannelField.css";
 
 type TwitchChannelFieldProps = {
@@ -151,11 +152,19 @@ async function loadChannelProfile(login: string): Promise<TwitchChannelProfile |
   }
 
   try {
-    const payload = await fetchJsonWithTimeout(
-      `https://api.ivr.fi/v2/twitch/user?login=${encodeURIComponent(login)}`,
-      undefined,
-      8000,
-    );
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    let payload: unknown;
+    try {
+      const response = await networkClient.request(
+        `https://api.ivr.fi/v2/twitch/user?login=${encodeURIComponent(login)}`,
+        { route: "rte", init: { signal: controller.signal } },
+      );
+      if (!response.ok) return null;
+      payload = await response.json();
+    } finally {
+      window.clearTimeout(timeout);
+    }
     const user = Array.isArray(payload) ? payload[0] : null;
     if (!user || typeof user !== "object") return null;
 

@@ -189,6 +189,8 @@ class BadgeService {
       // Локальные fallback баджи с Twitch CDN (работают всегда)
       "broadcaster:1":
         "https://static-cdn.jtvnw.net/badges/v1/5527c58c-fb7d-422d-b71b-f309dcb85cc1/3",
+      "lead_moderator:1":
+        "https://static-cdn.jtvnw.net/badges/v1/0822047b-65e0-46f2-94a9-d1091d685d33/3",
       "moderator:1":
         "https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/3",
       "vip:1":

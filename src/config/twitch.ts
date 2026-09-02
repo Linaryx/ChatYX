@@ -1,3 +1,5 @@
+import { networkClient } from "~/services/network/networkClient";
+
 // Production only uses a backend when explicitly configured.
 const API_BASE = (
   import.meta.env.VITE_API_URL ||
@@ -45,8 +47,11 @@ export async function fetchWithFallback(
   fallbackUrl: string | null = null,
   options?: RequestInit,
 ): Promise<Response> {
+  const requestFallback = (url: string) =>
+    networkClient.request(url, { route: "rte", init: options });
+
   if (!API_BASE && primaryUrl.startsWith("/")) {
-    if (fallbackUrl) return fetch(fallbackUrl, options);
+    if (fallbackUrl) return requestFallback(fallbackUrl);
     return new Response(JSON.stringify({ error: "API unavailable" }), {
       status: 503,
       headers: { "Content-Type": "application/json" },
@@ -58,7 +63,7 @@ export async function fetchWithFallback(
   if (isBackendRequest) {
     const available = await checkBackendApi();
     if (!available) {
-      if (fallbackUrl) return fetch(fallbackUrl, options);
+      if (fallbackUrl) return requestFallback(fallbackUrl);
       return new Response(JSON.stringify({ error: "API unavailable" }), {
         status: 503,
         headers: { "Content-Type": "application/json" },
@@ -71,7 +76,7 @@ export async function fetchWithFallback(
     if (response.ok) return response;
 
     if (fallbackUrl) {
-      const fallback = await fetch(fallbackUrl, options);
+      const fallback = await requestFallback(fallbackUrl);
       if (fallback.ok) return fallback;
     }
 
@@ -79,7 +84,7 @@ export async function fetchWithFallback(
   } catch (error) {
     if (fallbackUrl) {
       try {
-        const fallback = await fetch(fallbackUrl, options);
+        const fallback = await requestFallback(fallbackUrl);
         if (fallback.ok) return fallback;
       } catch { /* fallback also failed, fall through */ }
     }

@@ -16,7 +16,7 @@ describe("domain checks", () => {
   test("selects only RTE-supported endpoints for the proxy status route", () => {
     const checks = getRteProxyDomainChecks();
 
-    expect(checks.length).toBe(13);
+    expect(checks.length).toBe(14);
     expect(checks.every((check) =>
       canRouteThroughRte(check.url, check.kind === "websocket" ? "websocket" : "http"),
     )).toBeTrue();
