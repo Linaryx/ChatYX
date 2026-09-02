@@ -3,6 +3,7 @@ import type { ChatConfig } from "~/utils/chat";
 import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { bitsService } from "~/services/chat";
 import { mentionStyleService } from "~/services/chat";
+import { networkClient } from "~/services/network/networkClient";
 import {
   createMessageTokenSnapshot,
   parseGoogleEmoji,
@@ -184,7 +185,7 @@ export function renderMessageWithEmotes(
 
           replacements[emoteCode] = {
             kind: "html",
-            html: `<span class="emote-container"><img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0" alt="" title="${escapeAttr(emoteCode)}"${twitchEmoteImageAttrs(config, size)} /></span>`,
+            html: `<span class="emote-container"><img class="emote" src="${networkClient.resolveHttpUrl(`https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0`, "rte")}" alt="" title="${escapeAttr(emoteCode)}"${twitchEmoteImageAttrs(config, size)} /></span>`,
             isOverlayTarget: true,
           };
         });

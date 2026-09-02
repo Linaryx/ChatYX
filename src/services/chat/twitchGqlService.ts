@@ -1,4 +1,5 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
+import { networkClient } from "~/services/network/networkClient";
 
 const GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_WEB_CLIENT_ID =
@@ -436,23 +437,26 @@ class TwitchGqlService {
   ): Promise<any> {
     const response = await withTimeout(
       (signal) =>
-        fetch(GQL_ENDPOINT, {
-          method: "POST",
-          headers: {
-            "Client-ID": TWITCH_WEB_CLIENT_ID,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            operationName,
-            variables,
-            extensions: {
-              persistedQuery: {
-                version: 1,
-                sha256Hash: PERSISTED_QUERIES[operationName],
-              },
+        networkClient.request(GQL_ENDPOINT, {
+          route: "rte",
+          init: {
+            method: "POST",
+            headers: {
+              "Client-ID": TWITCH_WEB_CLIENT_ID,
+              "Content-Type": "application/json",
             },
-          }),
-          signal,
+            body: JSON.stringify({
+              operationName,
+              variables,
+              extensions: {
+                persistedQuery: {
+                  version: 1,
+                  sha256Hash: PERSISTED_QUERIES[operationName],
+                },
+              },
+            }),
+            signal,
+          },
         }),
       3000,
     );
@@ -475,14 +479,17 @@ class TwitchGqlService {
   ): Promise<any> {
     const response = await withTimeout(
       (signal) =>
-        fetch(GQL_ENDPOINT, {
-          method: "POST",
-          headers: {
-            "Client-ID": TWITCH_WEB_CLIENT_ID,
-            "Content-Type": "application/json",
+        networkClient.request(GQL_ENDPOINT, {
+          route: "rte",
+          init: {
+            method: "POST",
+            headers: {
+              "Client-ID": TWITCH_WEB_CLIENT_ID,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ operationName, query, variables }),
+            signal,
           },
-          body: JSON.stringify({ operationName, query, variables }),
-          signal,
         }),
       3000,
     );
@@ -506,25 +513,28 @@ class TwitchGqlService {
 
     const response = await withTimeout(
       (signal) =>
-        fetch(GQL_ENDPOINT, {
-          method: "POST",
-          headers: {
-            "Client-ID": TWITCH_WEB_CLIENT_ID,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(
-            variables.map((operationVariables) => ({
-              operationName,
-              variables: operationVariables,
-              extensions: {
-                persistedQuery: {
-                  version: 1,
-                  sha256Hash: PERSISTED_QUERIES[operationName],
+        networkClient.request(GQL_ENDPOINT, {
+          route: "rte",
+          init: {
+            method: "POST",
+            headers: {
+              "Client-ID": TWITCH_WEB_CLIENT_ID,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(
+              variables.map((operationVariables) => ({
+                operationName,
+                variables: operationVariables,
+                extensions: {
+                  persistedQuery: {
+                    version: 1,
+                    sha256Hash: PERSISTED_QUERIES[operationName],
+                  },
                 },
-              },
-            })),
-          ),
-          signal,
+              })),
+            ),
+            signal,
+          },
         }),
       3000,
     );

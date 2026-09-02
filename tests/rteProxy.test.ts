@@ -19,6 +19,8 @@ describe("RTE proxy transport", () => {
   test("proxies only the hardcoded public provider hosts", () => {
     const targets = [
       "https://7tv.io/v3/emote-sets/global",
+      "https://gql.twitch.tv/gql",
+      "https://static-cdn.jtvnw.net/badges/v1/example/3",
       "https://cdn.7tv.app/emote/1/3x.webp",
       "https://api.betterttv.net/3/cached/emotes/global",
       "https://cdn.betterttv.net/emote/1/3x",
@@ -40,7 +42,7 @@ describe("RTE proxy transport", () => {
 
   test("never proxies lookalikes, credentials, ports, or non-HTTPS URLs", () => {
     const rejected = [
-      "https://gql.twitch.tv/gql",
+      "https://cdn.jtvnw.net/emoticons/v2/25/default/dark/3.0",
       "https://7tv.io.evil.example/data",
       "https://sub.7tv.io/data",
       "https://user:secret@7tv.io/data",
@@ -107,7 +109,7 @@ describe("RTE proxy transport", () => {
 
   test("required RTE routes reject unsupported hosts instead of going direct", async () => {
     await expect(
-      networkClient.request("https://gql.twitch.tv/gql", {
+      networkClient.request("https://cdn.jtvnw.net/emoticons/v2/25/default/dark/3.0", {
         route: "rte-required",
       }),
     ).rejects.toThrow("RTE route is not available");

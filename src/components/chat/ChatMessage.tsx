@@ -16,6 +16,7 @@ import {
 } from "~/services/chat";
 import { getFontFamily } from "~/styles/chatStyles";
 import { getChatEventStyleVariables } from "~/styles/chatEventStyles";
+import { networkClient } from "~/services/network/networkClient";
 import { hasMessageEntryAnimation } from "~/utils/ui/animationUtils";
 import { ChatBadges } from "~/components/chat/ChatBadges";
 import { ChatNick } from "~/components/chat/ChatNick";
@@ -395,7 +396,10 @@ export const ChatMessage = (props: ChatMessageProps) => {
               <Match when={event().type === "raid"}>
                 <img
                   class="chat-event-icon"
-                  src="https://static-cdn.jtvnw.net/emoticons/v2/62836/default/dark/3.0"
+                  src={networkClient.resolveHttpUrl(
+                    "https://static-cdn.jtvnw.net/emoticons/v2/62836/default/dark/3.0",
+                    "rte",
+                  )}
                   alt="Рейд"
                 />
                 <span class="chat-event-fact">

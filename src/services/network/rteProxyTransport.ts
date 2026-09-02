@@ -4,6 +4,8 @@ const RTE_PROXY_TIMEOUT_MS = 5000;
 
 const RTE_PROXY_HTTP_HOSTS: Record<string, true> = {
   "7tv.io": true,
+  "gql.twitch.tv": true,
+  "static-cdn.jtvnw.net": true,
   "cdn.7tv.app": true,
   "api.betterttv.net": true,
   "cdn.betterttv.net": true,

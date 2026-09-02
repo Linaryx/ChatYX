@@ -654,7 +654,8 @@ class BadgeService {
   }
 
   getTwitchBadge(badgeName: string, badgeVersion: string): string | undefined {
-    return this.badgeData.badges[`${badgeName}:${badgeVersion}`];
+    const url = this.badgeData.badges[`${badgeName}:${badgeVersion}`];
+    return url ? networkClient.resolveHttpUrl(url, "rte") : undefined;
   }
 
   getUserBadges(username: string): Badge[] {
