@@ -585,19 +585,19 @@ img.badge {
 
 .emote-container[data-zw-group],
 .emoji-container[data-zw-group] {
-  display: inline-grid;
+  display: inline-block;
   position: relative;
   vertical-align: middle;
 }
 
 .emote-container[data-zw-group] > img.zerowidth,
 .emoji-container[data-zw-group] > img.zerowidth,
-.emote-container[data-zw-group] > .emote-modified,
-.emoji-container[data-zw-group] > .emote-modified,
-.emote-container[data-zw-group] > .emote-transform-layer,
-.emoji-container[data-zw-group] > .emote-transform-layer {
-  grid-area: 1 / 1;
-  place-self: center;
+.emote-container[data-zw-group] > .emote-zero-width-overlay,
+.emoji-container[data-zw-group] > .emote-zero-width-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 1;
   line-height: 0;
 }

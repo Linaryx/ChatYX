@@ -43,11 +43,19 @@ export function attachZeroWidthOverlay(
   segments.length = index + 1;
 
   const inheritedEffects = target.effects;
-  const overlays = [...pendingOverlays, overlayHtml].map((overlay) =>
-    inheritedEffects?.length
-      ? wrapEmoteModifierContent(overlay, inheritedEffects, target.accessibleText)
-      : overlay,
-  );
+  const overlays = [...pendingOverlays, overlayHtml].map((overlay) => {
+    if (!inheritedEffects?.length) return overlay;
+
+    const wrapped = wrapEmoteModifierContent(
+      overlay,
+      inheritedEffects,
+      target.accessibleText,
+    );
+    return wrapped.replace(
+      '<span class="emote-container emote-modified ',
+      '<span class="emote-container emote-zero-width-overlay emote-modified ',
+    );
+  });
 
   const nextHtml = insertZeroWidthOverlays(target.html, overlays);
   if (nextHtml === null) return false;

@@ -46,7 +46,7 @@ type Metric = {
 const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_WEB_CLIENT_ID =
   import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
-const SUMMARY_TIMEOUT_MS = 4000;
+const SUMMARY_TIMEOUT_MS = 10000;
 const METRIC_IMAGE_ICON_URLS: Partial<Record<Metric["icon"], string>> = {
   bttv: "https://betterttv.com/favicon.png",
   ffz: "https://www.frankerfacez.com/static/images/favicon-32.png",
@@ -154,7 +154,7 @@ async function loadChannelProfile(login: string): Promise<TwitchChannelProfile |
     const payload = await fetchJsonWithTimeout(
       `https://api.ivr.fi/v2/twitch/user?login=${encodeURIComponent(login)}`,
       undefined,
-      3000,
+      8000,
     );
     const user = Array.isArray(payload) ? payload[0] : null;
     if (!user || typeof user !== "object") return null;
@@ -218,7 +218,7 @@ async function loadSevenTvEmoteCount(channelId: string): Promise<number> {
     const data = await fetchJsonWithTimeout(
       `https://7tv.io/v3/users/twitch/${encodeURIComponent(channelId)}`,
       undefined,
-      3500,
+      10000,
     );
     return countArray((data as any)?.emote_set?.emotes);
   } catch {
@@ -231,7 +231,7 @@ async function loadBttvEmoteCount(channelId: string): Promise<number> {
     const data = await fetchJsonWithTimeout(
       `https://api.betterttv.net/3/cached/users/twitch/${encodeURIComponent(channelId)}`,
       undefined,
-      3500,
+      10000,
     );
     return (
       countArray((data as any)?.channelEmotes) +
@@ -247,7 +247,7 @@ async function loadFfzEmoteCount(channelId: string): Promise<number> {
     const data = await fetchJsonWithTimeout(
       `https://api.frankerfacez.com/v1/room/id/${encodeURIComponent(channelId)}`,
       undefined,
-      3500,
+      10000,
     );
     const sets = (data as any)?.sets;
     if (!sets || typeof sets !== "object") return 0;
@@ -274,12 +274,12 @@ async function loadRoleCounts(login: string): Promise<TwitchChannelSummary["role
     fetchJsonWithTimeout(
       `https://api.ivr.fi/v2/twitch/modvip/${encodeURIComponent(login)}`,
       undefined,
-      3500,
+      10000,
     ),
     fetchJsonWithTimeout(
       `https://api.ivr.fi/v2/twitch/founders/${encodeURIComponent(login)}`,
       undefined,
-      3500,
+      10000,
     ),
   ]);
 

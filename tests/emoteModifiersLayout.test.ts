@@ -121,5 +121,6 @@ describe("emote modifier layout", () => {
     expect(segments[0].html.indexOf("emote-modifier-flip-x")).toBeLessThan(
       segments[0].html.indexOf("emote-modifier-party"),
     );
+    expect(overlay).toContain("emote-zero-width-overlay");
   });
 });

@@ -17,7 +17,7 @@ const PREVIEW_COLORS = [
 ];
 
 const IVR_CHUNK = 50;
-const PREVIEW_FETCH_TIMEOUT_MS = 3500;
+const PREVIEW_FETCH_TIMEOUT_MS = 10000;
 const MAX_ACTIVE_PREVIEW_VIEWERS = 40;
 
 export type PreviewChatters = {
@@ -90,7 +90,7 @@ export async function resolveChannelId(channel: string): Promise<string> {
     const resp = await fetchWithTimeout(
       `https://api.ivr.fi/v2/twitch/user?login=${encodeURIComponent(channel)}`,
       undefined,
-      2500,
+      8000,
     );
     if (resp.ok) {
       const data = await resp.json();

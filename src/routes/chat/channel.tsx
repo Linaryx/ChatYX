@@ -410,7 +410,7 @@ export default function ChatOverlay() {
         setLoadingProgress(25);
 
         previewChannelId = isRealChannel
-          ? await withTimeout(resolveChannelId(channel), 2500, "0")
+          ? await withTimeout(resolveChannelId(channel), 8000, "0")
           : "0";
 
         setLoadingStatus("Loading preview data...");
@@ -422,19 +422,19 @@ export default function ChatOverlay() {
             emoteService.loadEmotes(previewChannelId, channel, {
               show7tvUnlisted: previewConfig.show7tvUnlisted,
             }),
-            5000,
+            12000,
             undefined,
           ),
           ...(isRealChannel && hasResolvedChannelId
             ? [
                 withTimeout(
                   badgeService.loadBadges(channel, previewChannelId),
-                  4500,
+                  10000,
                   undefined,
                 ),
                 withTimeout(
                   sevenTVCosmeticsService.loadCosmetics(previewChannelId),
-                  4500,
+                  10000,
                   undefined,
                 ),
               ]
@@ -444,7 +444,7 @@ export default function ChatOverlay() {
         if (isRealChannel) {
           await withTimeout(
             fetchChannelUsers(channel, hasResolvedChannelId ? previewChannelId : "0"),
-            4500,
+            10000,
             undefined,
           );
         }

@@ -110,10 +110,14 @@ export function wrapZeroWidthModifiers(
   accessibleText?: string,
 ): string {
   if (effects.length === 0) return imageHtml;
-  return wrapEmoteModifiers(
+  const wrapped = wrapEmoteModifiers(
     `<span class="emote-container">${imageHtml}</span>`,
     effects,
     accessibleText,
+  );
+  return wrapped.replace(
+    '<span class="emote-container emote-modified ',
+    '<span class="emote-container emote-zero-width-overlay emote-modified ',
   );
 }
 
