@@ -16,8 +16,10 @@ describe("domain checks", () => {
   test("selects only RTE-supported endpoints for the proxy status route", () => {
     const checks = getRteProxyDomainChecks();
 
-    expect(checks.length).toBe(4);
-    expect(checks.every((check) => canRouteThroughRte(check.url))).toBeTrue();
+    expect(checks.length).toBe(12);
+    expect(checks.every((check) =>
+      canRouteThroughRte(check.url, check.kind === "websocket" ? "websocket" : "http"),
+    )).toBeTrue();
   });
 
   test("records successful response status and latency", async () => {

@@ -40,7 +40,10 @@ export class BTTVBadgeService {
         badge: {
           type: 1,
           description: "BTTV Pro",
-          svg: "https://cdn.betterttv.net/tags/developer.png",
+          svg: networkClient.resolveHttpUrl(
+            "https://cdn.betterttv.net/tags/developer.png",
+            "rte",
+          ),
         },
       };
 

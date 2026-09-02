@@ -4,6 +4,7 @@
  */
 
 import { log, LOG_CATEGORIES } from "../../utils/logger";
+import { networkClient } from "../network/networkClient";
 
 export interface ChatterinoBadge {
     tooltip: string;
@@ -23,7 +24,7 @@ export class ChatterinoBadgeService {
         try {
             log.info(LOG_CATEGORIES.INTEGRATION, 'Loading Chatterino badges...');
             
-            const response = await fetch('https://api.chatterino.com/badges');
+            const response = await networkClient.request('https://api.chatterino.com/badges', { route: "rte" });
             if (!response.ok) {
                 throw new Error(`Failed to load Chatterino badges: ${response.status}`);
             }
@@ -33,7 +34,15 @@ export class ChatterinoBadgeService {
             if (data.badges) {
                 Object.entries(data.badges).forEach(([username, badges]) => {
                     if (Array.isArray(badges) && badges.length > 0) {
-                        this.userBadges.set(username.toLowerCase(), badges as ChatterinoBadge[]);
+                this.userBadges.set(
+                    username.toLowerCase(),
+                    (badges as ChatterinoBadge[]).map((badge) => ({
+                        ...badge,
+                        image1: networkClient.resolveHttpUrl(badge.image1, "rte"),
+                        image2: networkClient.resolveHttpUrl(badge.image2, "rte"),
+                        image3: networkClient.resolveHttpUrl(badge.image3, "rte"),
+                    })),
+                );
                     }
                 });
             }

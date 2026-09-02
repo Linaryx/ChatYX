@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   requestThroughRte,
   rewriteRteHttpUrl,
+  rewriteRteWebSocketUrl,
   setRteProxyEnabled,
 } from "../src/services/network/rteProxyTransport";
 import { networkClient } from "../src/services/network/networkClient";
@@ -28,6 +29,12 @@ describe("RTE proxy transport", () => {
 
     expect(targets.map((target) => rewriteRteHttpUrl(target, true))).toEqual(
       targets.map((target) => `${RTE_PROXY_BASE}${target}`),
+    );
+  });
+
+  test("uses the dedicated RTE WebSocket endpoint for 7TV events", () => {
+    expect(rewriteRteWebSocketUrl("wss://events.7tv.io/v3", true)).toBe(
+      "wss://ext.rte.net.ru:8443/7tv-proxy",
     );
   });
 

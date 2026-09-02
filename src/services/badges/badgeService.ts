@@ -41,6 +41,11 @@ export type ThirdPartyBadgeIndex = {
   byUsername: Map<string, Badge[]>;
 };
 
+function resolveThirdPartyBadgeUrl(value: unknown): string {
+  const url = String(value ?? "");
+  return url ? networkClient.resolveHttpUrl(url, "rte") : "";
+}
+
 const THIRD_PARTY_BADGE_ORDER: Record<string, number> = {
   ffzap: 0,
   bttv: 1,
@@ -94,7 +99,7 @@ export function buildThirdPartyBadgeIndex(
       addIndexedBadge(index.byUserId, userId, {
         source: "ffzap",
         description: "FFZ:AP Badge",
-        url: `https://api.ffzap.com/v1/user/badge/${userId}/3`,
+        url: resolveThirdPartyBadgeUrl(`https://api.ffzap.com/v1/user/badge/${userId}/3`),
         color,
       });
     }
@@ -106,7 +111,7 @@ export function buildThirdPartyBadgeIndex(
       addIndexedBadge(index.byUsername, username, {
         source: "bttv",
         description: String(user?.badge?.description ?? "BTTV Badge"),
-        url: String(user?.badge?.svg ?? ""),
+        url: resolveThirdPartyBadgeUrl(user?.badge?.svg),
       });
     }
   }
@@ -118,7 +123,7 @@ export function buildThirdPartyBadgeIndex(
       const indexedBadge: Badge = {
         source: "chatterino",
         description: String(badge.tooltip ?? "Chatterino Badge"),
-        url: String(badge.image3 || badge.image2 || badge.image1 || ""),
+        url: resolveThirdPartyBadgeUrl(badge.image3 || badge.image2 || badge.image1),
       };
       for (const userId of badge.users) {
         addIndexedBadge(index.byUserId, String(userId), indexedBadge);
@@ -136,7 +141,7 @@ export function buildThirdPartyBadgeIndex(
       const indexedBadge: Badge = {
         source: "homies",
         description: String(badge.tooltip || "Homies Badge"),
-        url: String(badge.image3 || ""),
+        url: resolveThirdPartyBadgeUrl(badge.image3),
       };
       for (const userId of badge.users) {
         addIndexedBadge(index.byUserId, String(userId), indexedBadge);
@@ -149,7 +154,7 @@ export function buildThirdPartyBadgeIndex(
       addIndexedBadge(index.byUserId, String(badge?.userId ?? ""), {
         source: "homies",
         description: String(badge?.tooltip || "Homies Badge"),
-        url: String(badge?.image3 || ""),
+        url: resolveThirdPartyBadgeUrl(badge?.image3),
       });
     }
   }
@@ -441,19 +446,19 @@ class BadgeService {
         r.ok ? r.json() : [],
       ),
       // Chatterino баджи
-      fetch("https://api.chatterino.com/badges").then((r) =>
+      networkClient.request("https://api.chatterino.com/badges", { route: "rte" }).then((r) =>
         r.ok ? r.json().then((d) => d.badges) : [],
       ),
       // Homies баджи 1
-      fetch("https://itzalex.github.io/badges").then((r) =>
+      networkClient.request("https://itzalex.github.io/badges", { route: "rte" }).then((r) =>
         r.ok ? r.json().then((d) => d.badges) : [],
       ),
       // Homies баджи 2
-      fetch("https://itzalex.github.io/badges2").then((r) =>
+      networkClient.request("https://itzalex.github.io/badges2", { route: "rte" }).then((r) =>
         r.ok ? r.json().then((d) => d.badges) : [],
       ),
       // Homies баджи 3
-      fetch("https://chatterinohomies.com/api/badges/list").then((r) =>
+      networkClient.request("https://chatterinohomies.com/api/badges/list", { route: "rte" }).then((r) =>
         r.ok ? r.json().then((d) => d.badges || []) : [],
       ),
     ]);
@@ -663,7 +668,7 @@ class BadgeService {
   addSevenTVBadge(id: string, data: any): void {
     // Добавляем 7TV badge в структуру данных
     if (data && data.host && data.host.url) {
-      const badgeUrl = `https:${data.host.url}/4x.webp`;
+      const badgeUrl = resolveThirdPartyBadgeUrl(`https:${data.host.url}/4x.webp`);
       this.badgeData.badges[`7tv:${id}`] = badgeUrl;
       this.badgeData.seventvBadges[id] = data;
     } else {

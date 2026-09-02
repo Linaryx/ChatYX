@@ -6,6 +6,7 @@ export type DomainCheckDefinition = {
   id: string;
   label: string;
   url: string;
+  kind?: "http" | "websocket";
   init?: RequestInit;
 };
 
@@ -56,6 +57,15 @@ export function getDomainChecks(
     { id: "ffz", label: "FrankerFaceZ API", url: "https://api.frankerfacez.com/v1/set/global" },
     { id: "ivr", label: "IVR API", url: "https://api.ivr.fi/v2/twitch/user?login=twitch" },
     { id: "youtube", label: "YouTube bridge", url: "https://ytwss.ruina.team/health" },
+    { id: "chatterino", label: "Chatterino API", url: "https://api.chatterino.com/badges" },
+    { id: "homies-1", label: "Homies API 1", url: "https://itzalex.github.io/badges" },
+    { id: "homies-2", label: "Homies API 2", url: "https://itzalex.github.io/badges2" },
+    { id: "homies-3", label: "Homies API 3", url: "https://chatterinohomies.com/api/badges/list" },
+    { id: "chatterino-cdn", label: "Chatterino CDN", url: "https://fourtf.com/chatterino/badges/topd.png", init: { mode: "no-cors" } },
+    { id: "homies-cdn", label: "Homies CDN", url: "https://cdn.chatterinohomies.com/badges/90b5d49e-b5fd-4a0a-bc92-6a74408bee82/18.webp", init: { mode: "no-cors" } },
+    { id: "itzalex-cdn", label: "itzalex CDN", url: "https://itzalex.github.io/badgesusers/dev/badge.png", init: { mode: "no-cors" } },
+    { id: "seven-tv-ws", label: "7TV EventAPI", url: "wss://events.7tv.io/v3", kind: "websocket" },
+    { id: "youtube-ws", label: "YouTube bridge WS", url: "wss://ytwss.ruina.team/c/twitch", kind: "websocket" },
     {
       id: "rte-proxy",
       label: "RTE proxy",
@@ -66,7 +76,10 @@ export function getDomainChecks(
 
 export function getRteProxyDomainChecks(): DomainCheckDefinition[] {
   const proxyChecks = getDomainChecks().filter(
-    (definition) => canRouteThroughRte(definition.url),
+    (definition) => canRouteThroughRte(
+      definition.url,
+      definition.kind === "websocket" ? "websocket" : "http",
+    ),
   );
 
   return [
@@ -88,6 +101,41 @@ function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
+function checkWebSocket(
+  definition: DomainCheckDefinition,
+  resolveUrl: (target: string) => string,
+  timeoutMs: number,
+): Promise<DomainCheckResult> {
+  const startedAt = performance.now();
+
+  return new Promise((resolve) => {
+    let socket: WebSocket | null = null;
+    let settled = false;
+    const timeout = globalThis.setTimeout(() => {
+      if (socket) socket.close();
+      finish("error", `таймаут > ${timeoutMs >= 1000 ? timeoutMs / 1000 + " с" : timeoutMs + " ms"}`);
+    }, timeoutMs);
+
+    const finish = (state: DomainCheckState, error: string | null) => {
+      if (settled) return;
+      settled = true;
+      globalThis.clearTimeout(timeout);
+      const durationMs = Math.round(performance.now() - startedAt);
+      if (socket && socket.readyState < WebSocket.CLOSING) socket.close(1000, "probe complete");
+      resolve({ definition, state: state === "ok" && durationMs >= DOMAIN_CHECK_SLOW_MS ? "slow" : state, durationMs, status: null, error });
+    };
+
+    try {
+      socket = new WebSocket(resolveUrl(definition.url));
+      socket.onopen = () => finish("ok", null);
+      socket.onerror = () => finish("error", "сетевой сбой");
+      socket.onclose = () => finish("error", "соединение закрыто");
+    } catch {
+      finish("error", "не удалось открыть WebSocket");
+    }
+  });
+}
+
 function formatTimeout(timeoutMs: number): string {
   return timeoutMs >= 1000
     ? `таймаут > ${timeoutMs / 1000} с`
@@ -98,7 +146,12 @@ export async function checkDomain(
   definition: DomainCheckDefinition,
   fetcher: Fetcher = fetch,
   timeoutMs = DOMAIN_CHECK_TIMEOUT_MS,
+  webSocketResolver: (target: string) => string = (target) => target,
 ): Promise<DomainCheckResult> {
+  if (definition.kind === "websocket") {
+    return checkWebSocket(definition, webSocketResolver, timeoutMs);
+  }
+
   const controller = new AbortController();
   const startedAt = performance.now();
   const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
@@ -152,6 +205,11 @@ export function createCheckingResult(
 export async function checkAllDomains(
   definitions: DomainCheckDefinition[],
   fetcher?: Fetcher,
+  webSocketResolver?: (target: string) => string,
 ): Promise<DomainCheckResult[]> {
-  return Promise.all(definitions.map((definition) => checkDomain(definition, fetcher)));
+  return Promise.all(
+    definitions.map((definition) =>
+      checkDomain(definition, fetcher, DOMAIN_CHECK_TIMEOUT_MS, webSocketResolver),
+    ),
+  );
 }

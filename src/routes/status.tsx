@@ -61,6 +61,9 @@ export function StatusOverlay(props: StatusOverlayProps = {}) {
         viaRte
           ? (input, init) => networkClient.request(String(input), { route: "rte-required", init })
           : undefined,
+        viaRte
+          ? (input) => networkClient.resolveWebSocketUrl(input, "rte-required")
+          : undefined,
       );
       if (stopped) return;
       setResults(nextResults);

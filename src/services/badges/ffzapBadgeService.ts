@@ -47,7 +47,14 @@ export class FFZAPBadgeService {
             
             if (data.badges && Array.isArray(data.badges)) {
                 data.badges.forEach((badge: FFZAPBadge) => {
-                    this.badges.set(badge.id, badge);
+                        this.badges.set(badge.id, {
+                            ...badge,
+                            urls: {
+                                '1': networkClient.resolveHttpUrl(badge.urls['1'], "rte"),
+                                '2': networkClient.resolveHttpUrl(badge.urls['2'], "rte"),
+                                '4': networkClient.resolveHttpUrl(badge.urls['4'], "rte"),
+                            },
+                        });
                 });
             }
 

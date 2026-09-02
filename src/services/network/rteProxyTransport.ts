@@ -1,4 +1,5 @@
 const RTE_PROXY_BASE = "https://ext.rte.net.ru:8443/";
+const RTE_PROXY_WS_URL = "wss://ext.rte.net.ru:8443/7tv-proxy";
 const RTE_PROXY_TIMEOUT_MS = 5000;
 
 const RTE_PROXY_HTTP_HOSTS: Record<string, true> = {
@@ -9,6 +10,11 @@ const RTE_PROXY_HTTP_HOSTS: Record<string, true> = {
   "api.frankerfacez.com": true,
   "cdn.frankerfacez.com": true,
   "api.ffzap.com": true,
+  "api.chatterino.com": true,
+  "itzalex.github.io": true,
+  "chatterinohomies.com": true,
+  "fourtf.com": true,
+  "cdn.chatterinohomies.com": true,
 };
 
 const RTE_PROXY_WS_HOSTS: Record<string, true> = {
@@ -45,11 +51,17 @@ export function rewriteRteWebSocketUrl(target: string, enabled: boolean = rtePro
   const url = new URL(target);
   const isAllowed = isPlainUrl(url, "wss:") && RTE_PROXY_WS_HOSTS[url.hostname];
 
-  return isAllowed ? `${RTE_PROXY_BASE}${target}` : target;
+  return isAllowed ? RTE_PROXY_WS_URL : target;
 }
 
-export function canRouteThroughRte(target: string): boolean {
-  return rewriteRteHttpUrl(target, true) !== target;
+export function canRouteThroughRte(
+  target: string,
+  protocol: "http" | "websocket" = "http",
+): boolean {
+  const rewritten = protocol === "websocket"
+    ? rewriteRteWebSocketUrl(target, true)
+    : rewriteRteHttpUrl(target, true);
+  return rewritten !== target;
 }
 
 export async function requestThroughRte(
