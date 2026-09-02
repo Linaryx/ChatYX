@@ -24,6 +24,7 @@ import {
   CHATYX_DEVELOPER_CHANNEL,
   getAuthorizedChatCommand,
   isDeveloperChatMessage,
+  parseChatRefreshScope,
   parseTestMessageCount,
 } from "./chatCommandService";
 import { createBrowserRteRuntime } from "./browserRteTts";
@@ -102,6 +103,8 @@ export class OverlayRuntime {
   private activeConfig: ChatConfig | null = null;
   private recentMessageLimit = DEFAULT_RECENT_MESSAGE_LIMIT;
   private commandStatusTimer: number | null = null;
+  private refreshInProgress = false;
+  private reloadInProgress = false;
   private initializationGeneration = 0;
   private readonly eventHandlers = {
     messageDeleted: (event: Event) => {
@@ -365,7 +368,7 @@ export class OverlayRuntime {
     log.info(LOG_CATEGORIES.CHAT, "Chat overlay initialized");
   }
 
-  destroy() {
+  destroy(preserveRteRuntime = false) {
     this.initializationGeneration += 1;
     for (const id of this.pendingTimers) window.clearTimeout(id);
     this.pendingTimers.length = 0;
@@ -374,7 +377,8 @@ export class OverlayRuntime {
     this.removeEventListeners();
     this.connectionManager.destroy();
     this.commandFeedback.destroy();
-    this.rteRuntime.destroy();
+    if (preserveRteRuntime) this.rteRuntime.cancelAll();
+    else this.rteRuntime.destroy();
     this.setCommandStatus(null);
     chatFeatureIntegration.destroy();
     this.chatService?.cleanup();
@@ -499,8 +503,23 @@ export class OverlayRuntime {
 
     switch (command.name) {
       case "refresh": {
+        if (this.refreshInProgress || this.reloadInProgress) {
+          this.setCommandStatus({ text: "Операция уже выполняется" }, 2500);
+          break;
+        }
+
+        const refreshScope = parseChatRefreshScope(command.args);
+        if (!refreshScope) {
+          this.setCommandStatus(
+            { text: "Используй: refresh [all|emotes|badges|cosmetics]" },
+            4000,
+          );
+          break;
+        }
+
+        this.refreshInProgress = true;
         this.setCommandStatus({
-          text: "Обновляем эмоуты, бейджи и 7TV-косметику...",
+          text: `Обновляем ${refreshScope === "all" ? "ассеты" : refreshScope}...`,
         });
         const visibleMessages = this.messageQueue.captureVisibleMessages();
         const cosmeticUsers = [
@@ -526,9 +545,12 @@ export class OverlayRuntime {
               show7tvUnlisted: this.activeConfig.show7tvUnlisted,
             },
             cosmeticUsers,
+            refreshScope,
           )
           .then(() => {
-            this.chatService?.clearPaintCache();
+            if (refreshScope === "all" || refreshScope === "cosmetics") {
+              this.chatService?.clearPaintCache();
+            }
             this.refreshRenderedMessages();
             this.setCommandStatus(null);
           })
@@ -538,10 +560,16 @@ export class OverlayRuntime {
               { text: "Не удалось обновить данные" },
               3500,
             );
+          })
+          .finally(() => {
+            this.refreshInProgress = false;
           });
         break;
       }
       case "reload":
+        void this.softReload();
+        break;
+      case "hardreload":
         window.location.reload();
         break;
       case "show": {
@@ -570,6 +598,27 @@ export class OverlayRuntime {
       case "tts":
         this.rteRuntime.handleAuthorizedCommand(command.args, message);
         break;
+    }
+  }
+
+  private async softReload(): Promise<void> {
+    if (this.reloadInProgress || this.refreshInProgress) {
+      this.setCommandStatus({ text: "Операция уже выполняется" }, 2500);
+      return;
+    }
+
+    this.reloadInProgress = true;
+    this.destroy(true);
+    this.setCommandStatus({ text: "Перезапускаем чат без перезагрузки страницы..." });
+
+    try {
+      await this.initialize();
+      this.setCommandStatus(null);
+    } catch (error) {
+      log.error(LOG_CATEGORIES.CHAT, "Failed to soft reload chat", error);
+      this.setCommandStatus({ text: "Не удалось перезапустить чат" }, 4000);
+    } finally {
+      this.reloadInProgress = false;
     }
   }
 

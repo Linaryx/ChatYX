@@ -3,6 +3,7 @@ import {
   getAuthorizedChatCommand,
   isDeveloperChatMessage,
   parseChatCommand,
+  parseChatRefreshScope,
   parseTestMessageCount,
   resolveChatCommandRole,
 } from "../src/services/chat/chatCommandService";
@@ -43,6 +44,17 @@ describe("chat commands", () => {
     expect(parseChatCommand("!update -c channel")).toEqual({ name: "refresh", args: "", targetChannels: ["channel"] });
     expect(parseChatCommand("!clearcache")).toEqual({ name: "refresh", args: "", targetChannels: [] });
     expect(parseChatCommand("!reloadchat")).toEqual({ name: "reload", args: "", targetChannels: [] });
+    expect(parseChatCommand("!chat hardreload")).toEqual({ name: "hardreload", args: "", targetChannels: [] });
+    expect(parseChatCommand("!hardreload")).toEqual({ name: "hardreload", args: "", targetChannels: [] });
+  });
+
+  test("parses refresh scopes", () => {
+    expect(parseChatRefreshScope("")).toBe("all");
+    expect(parseChatRefreshScope("all")).toBe("all");
+    expect(parseChatRefreshScope("emotes")).toBe("emotes");
+    expect(parseChatRefreshScope("badges")).toBe("badges");
+    expect(parseChatRefreshScope("cosmetics")).toBe("cosmetics");
+    expect(parseChatRefreshScope("unknown")).toBeNull();
   });
 
   test("exposes TTS without exposing unrelated media commands", () => {

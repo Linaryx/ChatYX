@@ -27,6 +27,8 @@ type ChatAssetOptions = {
   show7tvUnlisted: boolean;
 };
 
+export type ChatAssetRefreshScope = "all" | "emotes" | "badges" | "cosmetics";
+
 export class ChatAssetLoader {
   private readonly sharedChannelLoads = new Map<
     string,
@@ -110,21 +112,31 @@ export class ChatAssetLoader {
   async refresh(
     options: ChatAssetOptions,
     cosmeticUsers: CosmeticRefreshUser[],
+    scope: ChatAssetRefreshScope = "all",
   ) {
-    await Promise.all([
-      emoteService.reloadEmotes(options.channelId, this.channel, {
-        show7tvUnlisted: options.show7tvUnlisted,
-      }),
-      options.channelId
-        ? badgeService.loadBadges(this.channel, options.channelId)
-        : undefined,
-      sevenTVCosmeticsService.reloadCosmetics(cosmeticUsers),
-    ]);
+    const refreshes: Promise<void>[] = [];
+    if (scope === "all" || scope === "emotes") {
+      refreshes.push(
+        emoteService.reloadEmotes(options.channelId, this.channel, {
+          show7tvUnlisted: options.show7tvUnlisted,
+        }),
+      );
+    }
+    if ((scope === "all" || scope === "badges") && options.channelId) {
+      refreshes.push(badgeService.loadBadges(this.channel, options.channelId));
+    }
+    if (scope === "all" || scope === "cosmetics") {
+      refreshes.push(sevenTVCosmeticsService.reloadCosmetics(cosmeticUsers));
+    }
 
-    sevenTVEventApi.replacePaintCosmetics(
-      sevenTVCosmeticsService.getCosmetics(),
-      sevenTVCosmeticsService.getUserCosmetics(),
-    );
+    await Promise.all(refreshes);
+
+    if (scope === "all" || scope === "cosmetics") {
+      sevenTVEventApi.replacePaintCosmetics(
+        sevenTVCosmeticsService.getCosmetics(),
+        sevenTVCosmeticsService.getUserCosmetics(),
+      );
+    }
   }
 
   async loadRteUserAssets(

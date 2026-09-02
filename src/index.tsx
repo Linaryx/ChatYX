@@ -48,6 +48,14 @@ render(
             component={lazy(() => import("./routes/status"))}
           />
           <Route
+            path="/rtestatus"
+            component={lazy(() => import("./routes/rtestatus"))}
+          />
+          <Route
+            path="/rtestatus/"
+            component={lazy(() => import("./routes/rtestatus"))}
+          />
+          <Route
             path="/dev/messages"
             component={lazy(() => import("./routes/dev/messages"))}
           />

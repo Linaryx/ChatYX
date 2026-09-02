@@ -62,6 +62,24 @@ export function getDomainChecks(
   ];
 }
 
+export function getRteProxyDomainChecks(): DomainCheckDefinition[] {
+  const proxyChecks = getDomainChecks().filter(
+    (definition) => adaptRteProxyUrl(definition.url, true) !== definition.url,
+  );
+
+  return [
+    ...proxyChecks.map((definition) => ({
+      ...definition,
+      label: `${definition.label} через RTE`,
+    })),
+    {
+      id: "ffzap",
+      label: "FFZ:AP через RTE",
+      url: "https://api.ffzap.com/v1/supporters",
+    },
+  ];
+}
+
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 function isAbortError(error: unknown): boolean {
@@ -135,3 +153,4 @@ export async function checkAllDomains(
 ): Promise<DomainCheckResult[]> {
   return Promise.all(definitions.map((definition) => checkDomain(definition, fetcher)));
 }
+import { adaptRteProxyUrl } from "~/services/chat/rteProxy";

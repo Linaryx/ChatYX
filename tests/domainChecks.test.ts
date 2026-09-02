@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   checkDomain,
+  getRteProxyDomainChecks,
   type DomainCheckDefinition,
 } from "../src/services/diagnostics/domainChecks";
+import { adaptRteProxyUrl } from "../src/services/chat/rteProxy";
 
 const definition: DomainCheckDefinition = {
   id: "test",
@@ -11,6 +13,13 @@ const definition: DomainCheckDefinition = {
 };
 
 describe("domain checks", () => {
+  test("selects only RTE-supported endpoints for the proxy status route", () => {
+    const checks = getRteProxyDomainChecks();
+
+    expect(checks.length).toBe(4);
+    expect(checks.every((check) => adaptRteProxyUrl(check.url, true) !== check.url)).toBeTrue();
+  });
+
   test("records successful response status and latency", async () => {
     const result = await checkDomain(
       definition,

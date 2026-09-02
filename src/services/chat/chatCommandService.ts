@@ -10,6 +10,7 @@ export type ChatCommandRole =
 export type ChatCommandName =
   | "refresh"
   | "reload"
+  | "hardreload"
   | "show"
   | "hide"
   | "clear"
@@ -26,6 +27,7 @@ export type ParsedChatCommand = {
 const COMMAND_ALIASES: Record<string, ChatCommandName> = {
   refresh: "refresh",
   reload: "reload",
+  hardreload: "hardreload",
   show: "show",
   hide: "hide",
   clear: "clear",
@@ -62,6 +64,9 @@ export function parseChatCommand(input: string): ParsedChatCommand | null {
   }
   if (/^!reloadchat(?:\s|$)/i.test(text)) {
     return buildParsedCommand("reload", text.slice("!reloadchat".length));
+  }
+  if (/^!hardreload(?:\s|$)/i.test(text)) {
+    return buildParsedCommand("hardreload", text.slice("!hardreload".length));
   }
 
   const match = text.match(/^!(?:chat|chatis|chatyx)\s+(\S+)(?:\s+([\s\S]*))?$/i);
@@ -146,6 +151,24 @@ function targetsChannel(targets: string[], activeChannel: string): boolean {
 export function parseTestMessageCount(args: string): number {
   const count = Number.parseInt(args, 10);
   return Number.isFinite(count) && count > 0 ? Math.min(count, 50) : 5;
+}
+
+export type ChatRefreshScope = "all" | "emotes" | "badges" | "cosmetics";
+
+export function parseChatRefreshScope(args: string): ChatRefreshScope | null {
+  switch (args.trim().toLowerCase()) {
+    case "":
+    case "all":
+      return "all";
+    case "emotes":
+      return "emotes";
+    case "badges":
+      return "badges";
+    case "cosmetics":
+      return "cosmetics";
+    default:
+      return null;
+  }
 }
 
 export class ChatCommandFeedback {

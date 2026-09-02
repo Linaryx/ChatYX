@@ -4,8 +4,10 @@ import {
   checkAllDomains,
   createCheckingResult,
   getDomainChecks,
+  getRteProxyDomainChecks,
   type DomainCheckResult,
 } from "~/services/diagnostics/domainChecks";
+import { fetchWithRteProxy } from "~/services/chat/rteProxy";
 import "~/styles/status.css";
 
 const REFRESH_INTERVAL_MS = 15_000;
@@ -31,8 +33,13 @@ function checkedLabel(checkedAt: number | null): string {
   }).format(checkedAt)}`;
 }
 
-export default function StatusOverlay() {
-  const checks = getDomainChecks();
+type StatusOverlayProps = {
+  viaRte?: boolean;
+};
+
+export function StatusOverlay(props: StatusOverlayProps = {}) {
+  const viaRte = props.viaRte ?? false;
+  const checks = viaRte ? getRteProxyDomainChecks() : getDomainChecks();
   const [results, setResults] = createSignal(
     checks.map(createCheckingResult),
   );
@@ -49,7 +56,12 @@ export default function StatusOverlay() {
     setIsChecking(true);
 
     try {
-      const nextResults = await checkAllDomains(checks);
+      const nextResults = await checkAllDomains(
+        checks,
+        viaRte
+          ? (input, init) => fetchWithRteProxy(String(input), init, true)
+          : undefined,
+      );
       if (stopped) return;
       setResults(nextResults);
       setCheckedAt(Date.now());
@@ -75,8 +87,8 @@ export default function StatusOverlay() {
         <section class="status-card">
           <header class="status-header">
             <div>
-              <p class="status-kicker">ChatYX / network</p>
-              <h1 id="status-title">Домены</h1>
+              <p class="status-kicker">ChatYX / {viaRte ? "RTE proxy" : "network"}</p>
+              <h1 id="status-title">{viaRte ? "RTE proxy" : "Домены"}</h1>
             </div>
             <p class="status-summary">{healthyCount()}/{checks.length} online</p>
           </header>
@@ -114,4 +126,8 @@ export default function StatusOverlay() {
       </main>
     </>
   );
+}
+
+export default function StatusRoute() {
+  return <StatusOverlay />;
 }
