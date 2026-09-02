@@ -17,6 +17,7 @@ Setup is a compact operational interface for producing an OBS overlay URL. It pr
 - `SetupNav`: desktop section navigation and its compact mobile equivalent.
 - `SectionCard`: collapsible settings group with title and description.
 - `ToggleRows`: one settings choice per row, with a clear label and a concise operational hint.
+- `SetupImportCard`: the first setup section; imports only equivalent URL parameters and reports unsupported source fields without approximation.
 
 ## Accessibility
 

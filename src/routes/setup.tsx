@@ -19,6 +19,8 @@ import {
   type ToggleRow,
 } from "~/components/setup/SetupLayout";
 import { VoiceCatalog } from "~/components/setup/VoiceCatalog";
+import { SetupImportCard } from "~/components/setup/SetupImportCard";
+import { applySetupImport } from "~/components/setup/setupImportAdapter";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
@@ -453,11 +455,12 @@ export default function ChatSetup() {
   });
 
   const [activeSection, setActiveSection] =
-    createSignal<SetupSectionId>("appearance");
+    createSignal<SetupSectionId>("import");
   const [openSections, setOpenSections] = createSignal<
     Record<SetupSectionId, boolean>
   >({
-    appearance: true,
+    import: true,
+    appearance: false,
     styling: false,
     behavior: false,
     content: false,
@@ -468,6 +471,37 @@ export default function ChatSetup() {
 
   const setSectionOpen = (id: SetupSectionId, open: boolean) => {
     setOpenSections((prev) => ({ ...prev, [id]: open }));
+  };
+
+  const importSettings = (patch: Parameters<typeof applySetupImport>[0]) => {
+    applySetupImport(patch, {
+      channel: setChannel,
+      youtubeChannel: setYoutubeChannel,
+      animation: setAnimation,
+      bots: setBots,
+      commands: setCommands,
+      hideSpecialBadges: setHideSpecialBadges,
+      showHomies: setShowHomies,
+      fade: setFade,
+      size: setSize,
+      font: setFont,
+      fontWeight: setFontWeight,
+      fontCustom: setFontCustom,
+      stroke: setStroke,
+      shadow: setShadow,
+      emoteScale: setEmoteScale,
+      smallCaps: setSmallCaps,
+      nlAfterName: setNlAfterName,
+      hideNames: setHideNames,
+      botNames: setBotNames,
+      reverseLineOrder: setReverseLineOrder,
+      horizontal: setHorizontal,
+      singleChatter: setAllowedChatters,
+      show7tvUnlisted: setShow7tvUnlisted,
+      showHighlightedMessages: setShowHighlightedMessages,
+      showGigantifiedEmotes: setShowGigantifiedEmotes,
+      showChannelPointRewards: setShowChannelPointRewards,
+    });
   };
 
   const scrollToSection = (id: SetupSectionId) => {
@@ -1232,16 +1266,16 @@ export default function ChatSetup() {
 
   const ttsToggles: ToggleRow[] = [
     {
-      label: "Обычный TTS через ChatIS / Streamlabs",
+      label: "Русский TTS через ChatIS / Streamlabs",
       checked: rteChatIsTts,
       onChange: setRteChatIsTts,
-      hint: "Команда модератора: !chat tts [-s Voice] текст. Синтезированный аудиофайл не сохраняется.",
+      hint: "Команда модератора: !chat tts [-s Maxim|Tatyana] текст. Синтезированный аудиофайл не сохраняется.",
     },
     {
-      label: "Azure Neural TTS через JustDavi",
+      label: "Русский TTS через JustDavi / Azure",
       checked: rteAzureTts,
       onChange: setRteAzureTts,
-      hint: "Команда модератора: !chat azuretts [-v xx-XX-VoiceNeural] текст.",
+      hint: "Команда модератора: !chat tts [-s Dmitriy|Dmitry|Svetlana] текст.",
     },
   ];
 
@@ -1409,6 +1443,7 @@ export default function ChatSetup() {
                 <div class="flex gap-1 overflow-x-auto pb-0.5">
                   <For
                     each={[
+                      { id: "import" as const, label: "Импорт" },
                       { id: "appearance" as const, label: "Текст" },
                       { id: "styling" as const, label: "Вид" },
                       { id: "behavior" as const, label: "Поведение" },
@@ -1434,6 +1469,12 @@ export default function ChatSetup() {
                   </For>
                 </div>
               </div>
+
+              <SetupImportCard
+                open={openSections().import}
+                onOpenChange={(open) => setSectionOpen("import", open)}
+                onImport={importSettings}
+              />
 
               <SectionCard
                 id="setup-section-appearance"
@@ -1620,7 +1661,7 @@ export default function ChatSetup() {
               <SectionCard
                 id="setup-section-tts"
                 title="Озвучка сообщений"
-                description="Включи один или оба сервиса синтеза речи для команд модератора."
+                description="Включи один или оба сервиса синтеза речи для единой команды модератора."
                 collapsible
                 open={openSections().tts}
                 onOpenChange={(open) => setSectionOpen("tts", open)}

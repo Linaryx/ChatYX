@@ -52,11 +52,7 @@ describe("chat commands", () => {
       args: "hello",
       targetChannels: [],
     });
-    expect(parseChatCommand("!chat azuretts hello")).toEqual({
-      name: "azuretts",
-      args: "hello",
-      targetChannels: [],
-    });
+    expect(parseChatCommand("!chat azuretts hello")).toBeNull();
     expect(parseChatCommand("!chat rickroll")).toBeNull();
     expect(parseChatCommand("!chat ytplay https://youtu.be/dQw4w9WgXcQ")).toBeNull();
     expect(parseChatCommand("!chat ytstop")).toBeNull();
@@ -86,62 +82,59 @@ describe("chat commands", () => {
         "target",
       ),
     ).toEqual({ name: "tts", args: "hello", targetChannels: [] });
-    expect(
-      getAuthorizedChatCommand(
-        message("!chat azuretts hello", ["moderator/1"]),
-        "target",
-      ),
-    ).toEqual({ name: "azuretts", args: "hello", targetChannels: [] });
   });
 
-  test("parses provider-specific TTS speech and shared control grammar", () => {
-    expect(parseRteTtsCommand("chatis", "hello world")).toEqual({
+  test("parses unified TTS speech and shared control grammar", () => {
+    expect(parseRteTtsCommand("hello world")).toEqual({
       kind: "speak",
       text: "hello world",
       voice: null,
     });
-    expect(parseRteTtsCommand("chatis", "-s Brian hello world")).toEqual({
+    expect(parseRteTtsCommand("-s Maxim hello world")).toEqual({
       kind: "speak",
       text: "hello world",
-      voice: "Brian",
+      voice: "Maxim",
     });
-    expect(parseRteTtsCommand("chatis", "привет -s Maxim")).toEqual({
+    expect(parseRteTtsCommand("привет -s Tatyana")).toEqual({
+      kind: "speak",
+      text: "привет",
+      voice: "Tatyana",
+    });
+    expect(parseRteTtsCommand("-v Dmitriy hello world")).toEqual({
+      kind: "speak",
+      text: "hello world",
+      voice: "Dmitriy",
+    });
+    expect(parseRteTtsCommand("-s Dmitry hello world")).toEqual({
+      kind: "speak",
+      text: "hello world",
+      voice: "Dmitry",
+    });
+    expect(parseRteTtsCommand("--voice Svetlana привет")).toEqual({
+      kind: "speak",
+      text: "привет",
+      voice: "Svetlana",
+    });
+    expect(
+      parseRteTtsCommand("привет -s Maxim"),
+    ).toEqual({
       kind: "speak",
       text: "привет",
       voice: "Maxim",
     });
-    expect(parseRteTtsCommand("azure", "-v en-US-GuyNeural hello world")).toEqual({
-      kind: "speak",
-      text: "hello world",
-      voice: "en-US-GuyNeural",
-    });
-    expect(parseRteTtsCommand("azure", "--voice ru-RU-DmitryNeural привет")).toEqual({
-      kind: "speak",
-      text: "привет",
-      voice: "ru-RU-DmitryNeural",
-    });
-    expect(
-      parseRteTtsCommand("azure", "привет -s ru-RU-SvetlanaNeural"),
-    ).toEqual({
-      kind: "speak",
-      text: "привет",
-      voice: "ru-RU-SvetlanaNeural",
-    });
-    expect(parseRteTtsCommand("chatis", "skip")).toEqual({ kind: "skip" });
-    expect(parseRteTtsCommand("azure", "stop")).toEqual({ kind: "stop" });
-    expect(parseRteTtsCommand("chatis", "clear")).toEqual({ kind: "clear" });
+    expect(parseRteTtsCommand("skip")).toEqual({ kind: "skip" });
+    expect(parseRteTtsCommand("stop")).toEqual({ kind: "stop" });
+    expect(parseRteTtsCommand("clear")).toEqual({ kind: "clear" });
   });
 
   test("rejects incomplete or extended TTS control grammar", () => {
-    expect(parseRteTtsCommand("chatis", "")).toEqual({ kind: "invalid" });
-    expect(parseRteTtsCommand("azure", "-v en-US-GuyNeural")).toEqual({
+    expect(parseRteTtsCommand("")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("-s Dmitriy")).toEqual({
       kind: "invalid",
     });
-    expect(parseRteTtsCommand("chatis", "-s Brian")).toEqual({ kind: "invalid" });
-    expect(parseRteTtsCommand("chatis", "-v Brian hello")).toEqual({ kind: "invalid" });
-    expect(parseRteTtsCommand("azure", "-s Brian hello")).toEqual({ kind: "invalid" });
-    expect(parseRteTtsCommand("azure", "--voice hello")).toEqual({ kind: "invalid" });
-    expect(parseRteTtsCommand("chatis", "skip now")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("-s Brian hello")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("привет -s Brian")).toEqual({ kind: "invalid" });
+    expect(parseRteTtsCommand("skip now")).toEqual({ kind: "invalid" });
   });
 
   test("uses target-channel badges for Shared Chat command permissions", () => {

@@ -3,6 +3,7 @@ const CHATIS_TTS_ENDPOINT = "https://chatis.is2511.com/v2/tts/";
 const RTE_PROXY_BASE = "https://ext.rte.net.ru:8443/";
 const DEFAULT_MAX_QUEUE_SIZE = 20;
 
+import { resolveBackendTtsVoice } from "./rteTtsVoices";
 import type {
   RteTtsAudio,
   RteTtsConfig,
@@ -45,8 +46,8 @@ export class RteTtsService {
   private config: RteTtsConfig = {
     azureEnabled: false,
     chatisEnabled: false,
-    azureVoice: "ru-RU-DmitryNeural",
-    chatisVoice: "Brian",
+    azureVoice: "Dmitriy",
+    chatisVoice: "Maxim",
     volume: 1,
     maxLength: 400,
   };
@@ -260,7 +261,10 @@ export class RteTtsService {
       return this.environment.fetch(
         buildAzureTtsUrl(
           active.request.text,
-          active.request.voice ?? this.config.azureVoice,
+          resolveBackendTtsVoice(
+            "azure",
+            active.request.voice ?? this.config.azureVoice,
+          ),
         ),
         { signal: active.controller.signal, credentials: "omit" },
       );
@@ -271,7 +275,10 @@ export class RteTtsService {
       headers: { "content-type": "text/plain;charset=UTF-8" },
       body: JSON.stringify({
         text: active.request.text,
-        voice: active.request.voice ?? this.config.chatisVoice,
+        voice: resolveBackendTtsVoice(
+          "chatis",
+          active.request.voice ?? this.config.chatisVoice,
+        ),
       }),
       signal: active.controller.signal,
       credentials: "omit",

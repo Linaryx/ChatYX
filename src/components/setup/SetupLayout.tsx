@@ -16,6 +16,7 @@ import { cn } from "~/lib/utils";
 import { SetupSwitch } from "./SetupSwitch";
 
 export type SetupSectionId =
+  | "import"
   | "appearance"
   | "styling"
   | "behavior"
@@ -42,6 +43,11 @@ export const SETUP_NAV: {
   label: string;
   description: string;
 }[] = [
+  {
+    id: "import",
+    label: "Импорт настроек",
+    description: "ChatIS, Cyan и Davii",
+  },
   {
     id: "appearance",
     label: "Текст и размер",

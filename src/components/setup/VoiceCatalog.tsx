@@ -7,17 +7,12 @@ const PROVIDERS = [
   {
     id: "ChatIS / Streamlabs",
     title: "ChatIS / Streamlabs",
-    command: "!chat tts -s Voice текст",
-  },
-  {
-    id: "Cyan Chat / AWS Polly",
-    title: "Cyan Chat / AWS Polly",
-    command: "Справочно: ChatYX не вызывает Cyan TTS",
+    command: "!chat tts -s Maxim текст",
   },
   {
     id: "JustDavi / Azure",
     title: "JustDavi / Azure",
-    command: "!chat azuretts -v xx-XX-VoiceNeural текст",
+    command: "!chat tts -s Dmitriy текст",
   },
 ] as const;
 
@@ -105,7 +100,7 @@ export function VoiceCatalog() {
             Каталог голосов
           </h3>
           <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            Локальный <code class="text-foreground">/voices.txt</code> разделяет голоса ChatIS, Cyan Chat и JustDavi. В ChatYX доступны только ChatIS и JustDavi; Cyan Chat показан для сравнения.
+            В ChatYX доступны пять русских вариантов имён голосов. Команда одна: <code class="text-foreground">!chat tts</code>.
           </p>
         </div>
         <a

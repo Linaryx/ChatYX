@@ -90,7 +90,7 @@ describe("RTE runtime controller", () => {
 
     controller.updateConfig(
       config({
-        ttsVoice: "en-US-GuyNeural",
+        ttsVoice: "Dmitriy",
         ttsVolume: 0.25,
         ttsMaxLength: 250,
       }),
@@ -100,8 +100,8 @@ describe("RTE runtime controller", () => {
       {
         azureEnabled: true,
         chatisEnabled: false,
-        azureVoice: "en-US-GuyNeural",
-        chatisVoice: "Brian",
+        azureVoice: "Dmitriy",
+        chatisVoice: "Maxim",
         volume: 0.25,
         maxLength: 250,
       },
@@ -132,10 +132,10 @@ describe("RTE runtime controller", () => {
     controller.updateConfig(config());
     const source = message();
 
-    controller.handleAuthorizedCommand("azure", "-v en-US-GuyNeural hello", source);
-    controller.handleAuthorizedCommand("azure", "skip", source);
-    controller.handleAuthorizedCommand("azure", "clear", source);
-    controller.handleAuthorizedCommand("azure", "stop", source);
+    controller.handleAuthorizedCommand("-s Dmitriy hello", source);
+    controller.handleAuthorizedCommand("skip", source);
+    controller.handleAuthorizedCommand("clear", source);
+    controller.handleAuthorizedCommand("stop", source);
 
     expect(tts.requests[0]).toEqual({
       provider: "azure",
@@ -143,7 +143,7 @@ describe("RTE runtime controller", () => {
       userId: "user-1",
       username: "moderator",
       text: "hello",
-      voice: "en-US-GuyNeural",
+      voice: "ru-RU-DmitryNeural",
     });
     expect(tts.skipCalls).toBe(1);
     expect(tts.clearCalls).toBe(1);
@@ -156,7 +156,7 @@ describe("RTE runtime controller", () => {
     controller.updateConfig(config({ rteAzureTts: false, rteChatIsTts: true }));
     const source = message();
 
-    controller.handleAuthorizedCommand("chatis", "-s Brian hello", source);
+    controller.handleAuthorizedCommand("-s Maxim hello", source);
     controller.handleDisplayedMessage(message({ id: "message-2", message: "all chat" }));
 
     expect(tts.requests).toEqual([
@@ -166,7 +166,7 @@ describe("RTE runtime controller", () => {
         userId: "user-1",
         username: "moderator",
         text: "hello",
-        voice: "Brian",
+        voice: "Maxim",
       },
       {
         provider: "chatis",

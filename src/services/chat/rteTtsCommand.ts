@@ -1,3 +1,5 @@
+import { resolveRussianTtsVoice } from "./rteTtsVoices";
+
 export type RteTtsCommand =
   | { readonly kind: "speak"; readonly text: string; readonly voice: string | null }
   | { readonly kind: "skip" }
@@ -6,12 +8,7 @@ export type RteTtsCommand =
   | { readonly kind: "invalid" };
 
 const CONTROL_COMMAND = /^(skip|stop|clear)(?:\s|$)/i;
-const AZURE_VOICE = /^[a-z]{2,3}-[A-Z]{2}-[A-Za-z0-9]+Neural$/;
-
-export function parseRteTtsCommand(
-  provider: RteTtsProvider,
-  args: string,
-): RteTtsCommand {
+export function parseRteTtsCommand(args: string): RteTtsCommand {
   const value = args.trim();
   if (!value) return { kind: "invalid" };
 
@@ -25,10 +22,7 @@ export function parseRteTtsCommand(
     return { kind: "invalid" };
   }
 
-  const voiceFlag =
-    provider === "azure"
-      ? "(?:-v|-s|--voice|--speaker)"
-      : "(?:-s|--speaker)";
+  const voiceFlag = "(?:-s|--speaker|-v|--voice)";
   const voiceMatch = new RegExp(
     `^${voiceFlag}\\s+(\\S+)(?:\\s+([\\s\\S]+))?$`,
     "i",
@@ -40,7 +34,7 @@ export function parseRteTtsCommand(
   if (trailingVoiceMatch) {
     const text = trailingVoiceMatch[1]?.trim() ?? "";
     const voice = trailingVoiceMatch[2] ?? "";
-    if (!text || (provider === "azure" && !AZURE_VOICE.test(voice))) {
+    if (!text || !isSupportedVoice(voice)) {
       return { kind: "invalid" };
     }
     return { kind: "speak", text, voice };
@@ -53,9 +47,12 @@ export function parseRteTtsCommand(
 
   const voice = voiceMatch[1] ?? "";
   const text = voiceMatch[2]?.trim() ?? "";
-  if (!text || (provider === "azure" && !AZURE_VOICE.test(voice))) {
+  if (!text || !isSupportedVoice(voice)) {
     return { kind: "invalid" };
   }
   return { kind: "speak", text, voice };
 }
-import type { RteTtsProvider } from "./rteTtsTypes";
+
+function isSupportedVoice(voice: string): boolean {
+  return Boolean(resolveRussianTtsVoice(voice));
+}

@@ -1,6 +1,7 @@
 import type { ChatConfig } from "~/config/chatUrlParams";
 import { parseRteTtsCommand } from "./rteTtsCommand";
 import { getRteChatSpeechRequest } from "./rteTtsMessagePolicy";
+import { resolveRussianTtsVoice } from "./rteTtsVoices";
 import type {
   RteTtsConfig,
   RteTtsEnqueueResult,
@@ -25,11 +26,7 @@ export interface RteTtsRuntime {
 export interface RteRuntime {
   updateConfig(config: ChatConfig): void;
   handleDisplayedMessage(message: TwitchMessage): void;
-  handleAuthorizedCommand(
-    provider: RteTtsProvider,
-    args: string,
-    source: TwitchMessage,
-  ): void;
+  handleAuthorizedCommand(args: string, source: TwitchMessage): void;
   cancelMessage(messageId: string): void;
   cancelUser(user: RteTtsUser): void;
   cancelAll(): void;
@@ -59,22 +56,32 @@ export class RteRuntimeController {
     if (request) this.tts.enqueue(request);
   }
 
-  handleAuthorizedCommand(
-    provider: RteTtsProvider,
-    args: string,
-    source: TwitchMessage,
-  ): void {
-    if (!this.config || (provider === "azure" ? !this.config.rteAzureTts : !this.config.rteChatIsTts)) {
+  handleAuthorizedCommand(args: string, source: TwitchMessage): void {
+    if (!this.config || (!this.config.rteAzureTts && !this.config.rteChatIsTts)) {
       return;
     }
 
-    const command = parseRteTtsCommand(provider, args);
+    const command = parseRteTtsCommand(args);
     switch (command.kind) {
-      case "speak":
+      case "speak": {
+        const selectedVoice = command.voice
+          ? resolveRussianTtsVoice(command.voice)
+          : null;
+        const provider: RteTtsProvider = selectedVoice?.provider ?? (
+          this.config.rteChatIsTts ? "chatis" : "azure"
+        );
+        if (provider === "azure" && !this.config.rteAzureTts) return;
+        if (provider === "chatis" && !this.config.rteChatIsTts) return;
         this.tts.enqueue(
-          this.createCommandRequest(source, provider, command.text, command.voice),
+          this.createCommandRequest(
+            source,
+            provider,
+            command.text,
+            selectedVoice?.backendName ?? null,
+          ),
         );
         return;
+      }
       case "skip":
         this.tts.skip();
         return;

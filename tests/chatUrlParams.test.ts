@@ -172,7 +172,8 @@ describe("chat URL params", () => {
     expect(DEFAULT_CHAT_CONFIG.rteCustomCosmetics).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.ttsReadChat).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.ttsReadBots).toBe(false);
-    expect(DEFAULT_CHAT_CONFIG.ttsVoice).toBe("ru-RU-DmitryNeural");
+    expect(DEFAULT_CHAT_CONFIG.ttsVoice).toBe("Dmitriy");
+    expect(DEFAULT_CHAT_CONFIG.ttsChatIsVoice).toBe("Maxim");
     expect(DEFAULT_CHAT_CONFIG.ttsVolume).toBe(1);
     expect(DEFAULT_CHAT_CONFIG.ttsMaxLength).toBe(400);
   });

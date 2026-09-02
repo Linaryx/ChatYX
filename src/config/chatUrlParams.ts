@@ -133,8 +133,8 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   rteCustomCosmetics: false,
   ttsReadChat: false,
   ttsReadBots: false,
-  ttsVoice: "ru-RU-DmitryNeural",
-  ttsChatIsVoice: "Brian",
+  ttsVoice: "Dmitriy",
+  ttsChatIsVoice: "Maxim",
   ttsVolume: 1,
   ttsMaxLength: 400,
 });

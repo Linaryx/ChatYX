@@ -2,20 +2,18 @@ import { describe, expect, test } from "bun:test";
 import { parseVoiceCatalog } from "../src/components/setup/VoiceCatalog";
 
 describe("voice catalog", () => {
-  test("parses and sorts separate provider tables", () => {
+  test("parses and sorts the Russian provider tables", () => {
     const voices = parseVoiceCatalog(`
 [JustDavi / Azure]
 | Voice | Locale | Gender | Features |
 | --- | --- | --- | --- |
-| ru-RU-SvetlanaNeural | ru-RU | Female | General |
+| Dmitry | Russian | Male | Azure Neural |
+| Svetlana | Russian | Female | Azure Neural |
 [ChatIS / Streamlabs]
 | Voice | Locale | Gender | Features |
 | --- | --- | --- | --- |
-| Maxim | Russian | N/A | Streamlabs |
-[Cyan Chat / AWS Polly]
-| Voice | Locale | Gender | Features |
-| --- | --- | --- | --- |
-| Maxim | Russian | N/A | AWS Polly subset |
+| Maxim | Russian | Male | Streamlabs |
+| Tatyana | Russian | Female | Streamlabs |
 
 `);
     expect(voices).toEqual([
@@ -23,22 +21,29 @@ describe("voice catalog", () => {
         provider: "ChatIS / Streamlabs",
         voice: "Maxim",
         locale: "Russian",
-        gender: "N/A",
+        gender: "Male",
         features: "Streamlabs",
       },
       {
-        provider: "Cyan Chat / AWS Polly",
-        voice: "Maxim",
+        provider: "ChatIS / Streamlabs",
+        voice: "Tatyana",
         locale: "Russian",
-        gender: "N/A",
-        features: "AWS Polly subset",
+        gender: "Female",
+        features: "Streamlabs",
       },
       {
         provider: "JustDavi / Azure",
-        voice: "ru-RU-SvetlanaNeural",
-        locale: "ru-RU",
+        voice: "Dmitry",
+        locale: "Russian",
+        gender: "Male",
+        features: "Azure Neural",
+      },
+      {
+        provider: "JustDavi / Azure",
+        voice: "Svetlana",
+        locale: "Russian",
         gender: "Female",
-        features: "General",
+        features: "Azure Neural",
       },
     ]);
   });

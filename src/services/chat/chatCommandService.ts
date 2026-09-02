@@ -15,8 +15,7 @@ export type ChatCommandName =
   | "clear"
   | "ping"
   | "test"
-  | "tts"
-  | "azuretts";
+  | "tts";
 
 export type ParsedChatCommand = {
   name: ChatCommandName;
@@ -33,7 +32,6 @@ const COMMAND_ALIASES: Record<string, ChatCommandName> = {
   ping: "ping",
   test: "test",
   tts: "tts",
-  azuretts: "azuretts",
 };
 
 function badgeNames(message: TwitchMessage): Set<string> {

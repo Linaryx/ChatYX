@@ -565,10 +565,7 @@ export class OverlayRuntime {
         this.appendTestMessages(message, parseTestMessageCount(command.args));
         break;
       case "tts":
-        this.rteRuntime.handleAuthorizedCommand("chatis", command.args, message);
-        break;
-      case "azuretts":
-        this.rteRuntime.handleAuthorizedCommand("azure", command.args, message);
+        this.rteRuntime.handleAuthorizedCommand(command.args, message);
         break;
     }
   }
