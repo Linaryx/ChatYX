@@ -90,15 +90,22 @@ export function parseLeaderboardUsers(data: any): TwitchGqlLeaderboardUser[] {
   return Array.from(users.values());
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
+function withTimeout<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  const controller = new AbortController();
+  let timeout: number | undefined;
+  const request = Promise.resolve().then(() => operation(controller.signal));
+  const timeoutRequest = new Promise<never>((_, reject) => {
+    timeout = window.setTimeout(() => {
+      controller.abort();
       reject(new Error("Twitch GQL request timed out"));
     }, timeoutMs);
+  });
 
-    promise
-      .then(resolve, reject)
-      .finally(() => window.clearTimeout(timeout));
+  return Promise.race([request, timeoutRequest]).finally(() => {
+    if (timeout !== undefined) window.clearTimeout(timeout);
   });
 }
 
@@ -428,23 +435,25 @@ class TwitchGqlService {
     variables: Record<string, unknown>,
   ): Promise<any> {
     const response = await withTimeout(
-      fetch(GQL_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Client-ID": TWITCH_WEB_CLIENT_ID,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          operationName,
-          variables,
-          extensions: {
-            persistedQuery: {
-              version: 1,
-              sha256Hash: PERSISTED_QUERIES[operationName],
-            },
+      (signal) =>
+        fetch(GQL_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Client-ID": TWITCH_WEB_CLIENT_ID,
+            "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            operationName,
+            variables,
+            extensions: {
+              persistedQuery: {
+                version: 1,
+                sha256Hash: PERSISTED_QUERIES[operationName],
+              },
+            },
+          }),
+          signal,
         }),
-      }),
       3000,
     );
 
@@ -465,14 +474,16 @@ class TwitchGqlService {
     variables: Record<string, unknown>,
   ): Promise<any> {
     const response = await withTimeout(
-      fetch(GQL_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Client-ID": TWITCH_WEB_CLIENT_ID,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ operationName, query, variables }),
-      }),
+      (signal) =>
+        fetch(GQL_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Client-ID": TWITCH_WEB_CLIENT_ID,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ operationName, query, variables }),
+          signal,
+        }),
       3000,
     );
 
@@ -494,25 +505,27 @@ class TwitchGqlService {
     if (variables.length === 0) return [];
 
     const response = await withTimeout(
-      fetch(GQL_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Client-ID": TWITCH_WEB_CLIENT_ID,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(
-          variables.map((operationVariables) => ({
-            operationName,
-            variables: operationVariables,
-            extensions: {
-              persistedQuery: {
-                version: 1,
-                sha256Hash: PERSISTED_QUERIES[operationName],
+      (signal) =>
+        fetch(GQL_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Client-ID": TWITCH_WEB_CLIENT_ID,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            variables.map((operationVariables) => ({
+              operationName,
+              variables: operationVariables,
+              extensions: {
+                persistedQuery: {
+                  version: 1,
+                  sha256Hash: PERSISTED_QUERIES[operationName],
+                },
               },
-            },
-          })),
-        ),
-      }),
+            })),
+          ),
+          signal,
+        }),
       3000,
     );
 

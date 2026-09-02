@@ -9,9 +9,9 @@ import {
   emoteService,
   mentionStyleService,
   chatFeatureIntegration,
-  setRteProxyEnabled,
   type TwitchMessage,
 } from "~/services/chat";
+import { setRteProxyEnabled } from "~/services/network/networkClient";
 import { fetchRecentMessages } from "~/services/chat/recentMessagesService";
 import {
   getAnimationScrollBehavior,

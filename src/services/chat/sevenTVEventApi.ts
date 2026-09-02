@@ -1,9 +1,5 @@
 import { emoteService } from "./emoteService";
-import {
-  adaptRteProxyUrl,
-  adaptRteProxyWsUrl,
-  fetchWithRteProxy,
-} from "./rteProxy";
+import { networkClient } from "../network/networkClient";
 import { log, LOG_CATEGORIES } from "../../utils/logger";
 
 // 7TV EventAPI v3 WebSocket service for real-time updates
@@ -131,9 +127,9 @@ export class SevenTVEventApiService {
     );
 
     try {
-      const response = await fetchWithRteProxy(
+      const response = await networkClient.request(
         `https://7tv.io/v3/users/twitch/${channelId}`,
-        { signal: controller.signal },
+        { route: "rte", init: { signal: controller.signal } },
       );
       if (!response.ok) {
         throw new Error(`7TV channel data HTTP ${response.status}`);
@@ -168,7 +164,9 @@ export class SevenTVEventApiService {
       return;
     }
 
-    const ws = new WebSocket(adaptRteProxyWsUrl("wss://events.7tv.io/v3"));
+    const ws = new WebSocket(
+      networkClient.resolveWebSocketUrl("wss://events.7tv.io/v3", "rte"),
+    );
     this.ws = ws;
 
     ws.onopen = () => {};
@@ -409,7 +407,7 @@ export class SevenTVEventApiService {
               const normalizedEmote = {
                 id: emoteData.id,
                 name: emoteName,
-                url: adaptRteProxyUrl(`https://cdn.7tv.app/emote/${emoteData.id}/4x.webp`),
+                url: networkClient.resolveHttpUrl(`https://cdn.7tv.app/emote/${emoteData.id}/4x.webp`, "rte"),
                 source: "7tv" as const,
                 zero_width: (emoteData.flags & 256) !== 0,
               };
@@ -690,7 +688,7 @@ export class SevenTVEventApiService {
 
     try {
       // Fetch user data from 7TV
-      const response = await fetchWithRteProxy(`https://7tv.io/v3/users/${actorId}`);
+      const response = await networkClient.request(`https://7tv.io/v3/users/${actorId}`, { route: "rte" });
       if (!response.ok) return null;
 
       const userData = await response.json();
@@ -725,8 +723,9 @@ export class SevenTVEventApiService {
     emoteSetId: string,
   ): Promise<void> {
     try {
-      const response = await fetchWithRteProxy(
+      const response = await networkClient.request(
         `https://7tv.io/v3/emote-sets/${emoteSetId}`,
+        { route: "rte" },
       );
       if (!response.ok) {
         log.warn(LOG_CATEGORIES.SEVENTV_API, `Failed to load personal emote set ${emoteSetId}: ${response.status}`);
@@ -748,7 +747,7 @@ export class SevenTVEventApiService {
         const normalizedEmote = {
           id: emote.id,
           name: activeName,
-          url: adaptRteProxyUrl(`https://cdn.7tv.app/emote/${emote.id}/4x.webp`),
+          url: networkClient.resolveHttpUrl(`https://cdn.7tv.app/emote/${emote.id}/4x.webp`, "rte"),
           source: "7tv" as const,
           zero_width: (emote.flags & 256) !== 0, // EmoteFlagsZeroWidth = 256
           original_name: activeName !== originalName ? originalName : undefined,

@@ -30,7 +30,7 @@ function isPlainUrl(url: URL, protocol: string): boolean {
   );
 }
 
-export function adaptRteProxyUrl(target: string, enabled: boolean = rteProxyEnabled): string {
+export function rewriteRteHttpUrl(target: string, enabled: boolean = rteProxyEnabled): string {
   if (!enabled || !URL.canParse(target)) return target;
 
   const url = new URL(target);
@@ -39,7 +39,7 @@ export function adaptRteProxyUrl(target: string, enabled: boolean = rteProxyEnab
   return isAllowed ? `${RTE_PROXY_BASE}${target}` : target;
 }
 
-export function adaptRteProxyWsUrl(target: string, enabled: boolean = rteProxyEnabled): string {
+export function rewriteRteWebSocketUrl(target: string, enabled: boolean = rteProxyEnabled): string {
   if (!enabled || !URL.canParse(target)) return target;
 
   const url = new URL(target);
@@ -48,14 +48,18 @@ export function adaptRteProxyWsUrl(target: string, enabled: boolean = rteProxyEn
   return isAllowed ? `${RTE_PROXY_BASE}${target}` : target;
 }
 
-export async function fetchWithRteProxy(
+export function canRouteThroughRte(target: string): boolean {
+  return rewriteRteHttpUrl(target, true) !== target;
+}
+
+export async function requestThroughRte(
   target: string,
   init?: RequestInit,
   enabled: boolean = rteProxyEnabled,
 ): Promise<Response> {
   if (!enabled) return fetch(target, init);
 
-  const proxied = adaptRteProxyUrl(target, true);
+  const proxied = rewriteRteHttpUrl(target, true);
   if (proxied === target) return fetch(target, init);
 
   const controller = new AbortController();

@@ -24,7 +24,6 @@ export type {
   TwitchGqlSender,
 } from "./twitchGqlService";
 export { chatFeatureIntegration } from "./chatFeatureIntegration";
-export { setRteProxyEnabled } from "./rteProxy";
 export { YouTubeChatService } from "./youtubeChatService";
 export { OverlayRuntime } from "./overlayRuntime";
 export type { ChatCommandStatus } from "./overlayRuntime";

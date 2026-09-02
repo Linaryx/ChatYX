@@ -4,7 +4,7 @@ import {
   fetchWithFallback,
   TWITCH_CONFIG,
 } from "~/config/twitch";
-import { adaptRteProxyUrl, fetchWithRteProxy } from "./rteProxy";
+import { networkClient } from "../network/networkClient";
 
 // Сервис для загрузки эмодзи из 7TV, FFZ, BTTV
 
@@ -218,8 +218,9 @@ class EmoteService {
     try {
       // Канальные 7TV эмодзи - use specific set ID if provided to avoid race conditions
       if (emoteSetId) {
-        const setResponse = await fetchWithRteProxy(
+        const setResponse = await networkClient.request(
           `https://7tv.io/v3/emote-sets/${emoteSetId}`,
+          { route: "rte" },
         );
         if (setResponse.ok) {
           const setData = await setResponse.json();
@@ -247,8 +248,9 @@ class EmoteService {
         }
       } else {
         // Fall back to user endpoint if no set ID provided
-        const channelResponse = await fetchWithRteProxy(
+        const channelResponse = await networkClient.request(
           `https://7tv.io/v3/users/twitch/${channelId}`,
+          { route: "rte" },
         );
         if (channelResponse.ok) {
           const channelData = await channelResponse.json();
@@ -278,7 +280,7 @@ class EmoteService {
 
   private async load7TVGlobalEmotes(): Promise<void> {
     try {
-      const globalResponse = await fetchWithRteProxy("https://7tv.io/v3/emote-sets/global");
+      const globalResponse = await networkClient.request("https://7tv.io/v3/emote-sets/global", { route: "rte" });
       if (!globalResponse.ok) return;
       const globalData = await globalResponse.json();
 
@@ -318,8 +320,9 @@ class EmoteService {
     isGlobal = false,
   ): Promise<void> {
     try {
-      const response = await fetchWithRteProxy(
+      const response = await networkClient.request(
         "https://api.betterttv.net/3/cached/frankerfacez/" + endpoint,
+        { route: "rte" },
       );
       if (!response.ok) return;
       const data = await response.json();
@@ -379,8 +382,9 @@ class EmoteService {
     isGlobal = false,
   ): Promise<void> {
     try {
-      const response = await fetchWithRteProxy(
+      const response = await networkClient.request(
         "https://api.betterttv.net/3/cached/" + endpoint,
+        { route: "rte" },
       );
       if (!response.ok) return;
       let data = await response.json();
@@ -405,7 +409,7 @@ class EmoteService {
           this.emoteData.emotes[emote.code] = {
             id: emote.id,
             name: emote.code,
-            url: adaptRteProxyUrl("https://cdn.betterttv.net/emote/" + emote.id + "/3x"),
+            url: networkClient.resolveHttpUrl("https://cdn.betterttv.net/emote/" + emote.id + "/3x", "rte"),
             source: "bttv",
             zero_width: bttvZerowidth.includes(emote.id),
             width: emote.width,
@@ -417,7 +421,7 @@ class EmoteService {
           this.emoteData.channelEmotes[channelId][emote.code] = {
             id: emote.id,
             name: emote.code,
-            url: adaptRteProxyUrl("https://cdn.betterttv.net/emote/" + emote.id + "/3x"),
+            url: networkClient.resolveHttpUrl("https://cdn.betterttv.net/emote/" + emote.id + "/3x", "rte"),
             source: "bttv",
             zero_width: bttvZerowidth.includes(emote.id),
             width: emote.width,
@@ -650,7 +654,7 @@ class EmoteService {
     return {
       id: seventvEmote.id,
       name: seventvEmote.name,
-      url: adaptRteProxyUrl("https:" + seventvEmote.host.url + "/" + (maxSizeFile?.name || "4x.webp")),
+      url: networkClient.resolveHttpUrl("https:" + seventvEmote.host.url + "/" + (maxSizeFile?.name || "4x.webp"), "rte"),
       source: "7tv",
       zero_width: (seventvEmote.flags & 256) !== 0, // EmoteFlagsZeroWidth = 256
       width: maxSizeFile?.width,

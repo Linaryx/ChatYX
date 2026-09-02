@@ -1,5 +1,5 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
-import { fetchWithRteProxy } from "./rteProxy";
+import { networkClient } from "../network/networkClient";
 
 // 7TV cosmetics / paint loader and cache.
 export interface PaintGradient {
@@ -89,7 +89,7 @@ export class SevenTVCosmeticsService {
 
     private async loadChannelUserPaints(channelId: string): Promise<void> {
         try {
-            const response = await fetchWithRteProxy(`https://7tv.io/v3/users/twitch/${channelId}`);
+            const response = await networkClient.request(`https://7tv.io/v3/users/twitch/${channelId}`, { route: "rte" });
             
             if (response.ok) {
                 const data = await response.json();
@@ -135,7 +135,7 @@ export class SevenTVCosmeticsService {
         username = username.toLowerCase();
         
         try {
-            const response = await fetchWithRteProxy(`https://7tv.io/v3/users/twitch/${userId}`);
+            const response = await networkClient.request(`https://7tv.io/v3/users/twitch/${userId}`, { route: "rte" });
             
             if (response.ok) {
                 const data = await response.json();
@@ -179,10 +179,12 @@ export class SevenTVCosmeticsService {
     }
 
     private async loadPaintCatalog(): Promise<void> {
-        const response = await fetchWithRteProxy("https://7tv.io/v3/gql", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+        const response = await networkClient.request("https://7tv.io/v3/gql", {
+            route: "rte",
+            init: {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
                 query: `
                     query GetPaintCatalog {
                         cosmetics {
@@ -201,7 +203,8 @@ export class SevenTVCosmeticsService {
                         }
                     }
                 `,
-            }),
+              }),
+            },
         });
         if (!response.ok) {
             throw new Error(`7TV paint catalog HTTP ${response.status}`);

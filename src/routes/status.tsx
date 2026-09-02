@@ -7,7 +7,7 @@ import {
   getRteProxyDomainChecks,
   type DomainCheckResult,
 } from "~/services/diagnostics/domainChecks";
-import { fetchWithRteProxy } from "~/services/chat/rteProxy";
+import { networkClient } from "~/services/network/networkClient";
 import "~/styles/status.css";
 
 const REFRESH_INTERVAL_MS = 15_000;
@@ -59,7 +59,7 @@ export function StatusOverlay(props: StatusOverlayProps = {}) {
       const nextResults = await checkAllDomains(
         checks,
         viaRte
-          ? (input, init) => fetchWithRteProxy(String(input), init, true)
+          ? (input, init) => networkClient.request(String(input), { route: "rte-required", init })
           : undefined,
       );
       if (stopped) return;

@@ -1,7 +1,7 @@
 import { TWITCH_CONFIG, FALLBACK_APIS, fetchWithFallback } from "~/config/twitch";
 import { twitchGqlService, type TwitchGqlBadge } from "~/services/chat/twitchGqlService";
 import { log, LOG_CATEGORIES } from "~/utils/logger";
-import { adaptRteProxyUrl, fetchWithRteProxy } from "~/services/chat/rteProxy";
+import { networkClient } from "~/services/network/networkClient";
 
 export interface Badge {
   source: string;
@@ -396,19 +396,20 @@ class BadgeService {
 
       // FFZ комнатные баджи
       try {
-        const ffzRoomResponse = await fetchWithRteProxy(
+        const ffzRoomResponse = await networkClient.request(
           `https://api.frankerfacez.com/v1/_room/id/${encodeURIComponent(channelId)}`,
+          { route: "rte" },
         );
         if (ffzRoomResponse.ok) {
           const ffzRoomData = await ffzRoomResponse.json();
 
           if (ffzRoomData.room?.moderator_badge) {
             this.badgeData.badges["moderator:1"] =
-              adaptRteProxyUrl(`https://cdn.frankerfacez.com/room-badge/mod/${channelName}/4/rounded`);
+              networkClient.resolveHttpUrl(`https://cdn.frankerfacez.com/room-badge/mod/${channelName}/4/rounded`, "rte");
           }
           if (ffzRoomData.room?.vip_badge) {
             this.badgeData.badges["vip:1"] =
-              adaptRteProxyUrl(`https://cdn.frankerfacez.com/room-badge/vip/${channelName}/4`);
+              networkClient.resolveHttpUrl(`https://cdn.frankerfacez.com/room-badge/vip/${channelName}/4`, "rte");
           }
 
           if (ffzRoomData.room?.user_badges) {
@@ -428,20 +429,15 @@ class BadgeService {
     // Загружаем все баджи параллельно для оптимизации
     const results = await Promise.allSettled([
       // FFZ badges (for bot/other global user badges)
-      fetchWithRteProxy("https://api.frankerfacez.com/v1/badges/ids").then((r) =>
+      networkClient.request("https://api.frankerfacez.com/v1/badges/ids", { route: "rte" }).then((r) =>
         r.ok ? r.json() : null,
       ),
-      // FFZ:AP баджи (fallback на corsproxy.io при CORS блокировке)
-      fetchWithRteProxy("https://api.ffzap.com/v1/supporters")
+      // FFZ:AP badges stay on the RTE path when the proxy is enabled.
+      networkClient.request("https://api.ffzap.com/v1/supporters", { route: "rte" })
         .then((r) => (r.ok ? r.json() : []))
-        .catch(() =>
-          fetch(
-            "https://corsproxy.io/?url=https://api.ffzap.com/v1/supporters",
-          ).then((r) => (r.ok ? r.json() : [])),
-        )
         .catch(() => []),
       // BTTV баджи
-      fetchWithRteProxy("https://api.betterttv.net/3/cached/badges").then((r) =>
+      networkClient.request("https://api.betterttv.net/3/cached/badges", { route: "rte" }).then((r) =>
         r.ok ? r.json() : [],
       ),
       // Chatterino баджи
@@ -740,12 +736,14 @@ class BadgeService {
 
   private async loadMissingBadge(badgeId: string): Promise<void> {
     try {
-      const response = await fetch("https://7tv.io/v3/gql", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await networkClient.request("https://7tv.io/v3/gql", {
+        route: "rte",
+        init: {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
           query: `
                         query GetBadge($id: ObjectID!) {
                             badge(id: $id) {
@@ -760,7 +758,8 @@ class BadgeService {
           variables: {
             id: badgeId,
           },
-        }),
+          }),
+        },
       });
 
       if (response.ok) {

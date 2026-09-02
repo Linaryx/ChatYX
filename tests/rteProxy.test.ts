@@ -1,17 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import {
-  adaptRteProxyUrl,
-  fetchWithRteProxy,
+  requestThroughRte,
+  rewriteRteHttpUrl,
   setRteProxyEnabled,
-} from "../src/services/chat/rteProxy";
+} from "../src/services/network/rteProxyTransport";
+import { networkClient } from "../src/services/network/networkClient";
 
 const RTE_PROXY_BASE = "https://ext.rte.net.ru:8443/";
 
-describe("RTE proxy URL adapter", () => {
+describe("RTE proxy transport", () => {
   test("returns the original URL when the adapter is disabled", () => {
     const target = "https://7tv.io/v3/emote-sets/global?limit=1";
 
-    expect(adaptRteProxyUrl(target, false)).toBe(target);
+    expect(rewriteRteHttpUrl(target, false)).toBe(target);
   });
 
   test("proxies only the hardcoded public provider hosts", () => {
@@ -25,7 +26,7 @@ describe("RTE proxy URL adapter", () => {
       "https://api.ffzap.com/v1/supporters",
     ];
 
-    expect(targets.map((target) => adaptRteProxyUrl(target, true))).toEqual(
+    expect(targets.map((target) => rewriteRteHttpUrl(target, true))).toEqual(
       targets.map((target) => `${RTE_PROXY_BASE}${target}`),
     );
   });
@@ -41,7 +42,7 @@ describe("RTE proxy URL adapter", () => {
       "not a URL",
     ];
 
-    expect(rejected.map((target) => adaptRteProxyUrl(target, true))).toEqual(
+    expect(rejected.map((target) => rewriteRteHttpUrl(target, true))).toEqual(
       rejected,
     );
   });
@@ -57,7 +58,7 @@ describe("RTE proxy URL adapter", () => {
     }) as typeof fetch;
 
     try {
-      const response = await fetchWithRteProxy(target, undefined, true);
+      const response = await requestThroughRte(target, undefined, true);
 
       expect(response.status).toBe(503);
       expect(requested).toEqual([`${RTE_PROXY_BASE}${target}`]);
@@ -77,7 +78,7 @@ describe("RTE proxy URL adapter", () => {
     }) as typeof fetch;
 
     try {
-      await expect(fetchWithRteProxy(target, undefined, true)).rejects.toThrow(
+      await expect(requestThroughRte(target, undefined, true)).rejects.toThrow(
         "proxy unavailable",
       );
       expect(requested).toEqual([`${RTE_PROXY_BASE}${target}`]);
@@ -91,9 +92,17 @@ describe("RTE proxy URL adapter", () => {
 
     setRteProxyEnabled(true);
     try {
-      expect(adaptRteProxyUrl(target)).toBe(`${RTE_PROXY_BASE}${target}`);
+      expect(rewriteRteHttpUrl(target)).toBe(`${RTE_PROXY_BASE}${target}`);
     } finally {
       setRteProxyEnabled(false);
     }
+  });
+
+  test("required RTE routes reject unsupported hosts instead of going direct", async () => {
+    await expect(
+      networkClient.request("https://gql.twitch.tv/gql", {
+        route: "rte-required",
+      }),
+    ).rejects.toThrow("RTE route is not available");
   });
 });

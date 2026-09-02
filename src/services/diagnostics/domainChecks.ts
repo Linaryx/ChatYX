@@ -1,3 +1,5 @@
+import { canRouteThroughRte } from "~/services/network/networkClient";
+
 export type DomainCheckState = "checking" | "ok" | "slow" | "error";
 
 export type DomainCheckDefinition = {
@@ -64,7 +66,7 @@ export function getDomainChecks(
 
 export function getRteProxyDomainChecks(): DomainCheckDefinition[] {
   const proxyChecks = getDomainChecks().filter(
-    (definition) => adaptRteProxyUrl(definition.url, true) !== definition.url,
+    (definition) => canRouteThroughRte(definition.url),
   );
 
   return [
@@ -153,4 +155,3 @@ export async function checkAllDomains(
 ): Promise<DomainCheckResult[]> {
   return Promise.all(definitions.map((definition) => checkDomain(definition, fetcher)));
 }
-import { adaptRteProxyUrl } from "~/services/chat/rteProxy";

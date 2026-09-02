@@ -4,7 +4,7 @@ import {
   getRteProxyDomainChecks,
   type DomainCheckDefinition,
 } from "../src/services/diagnostics/domainChecks";
-import { adaptRteProxyUrl } from "../src/services/chat/rteProxy";
+import { canRouteThroughRte } from "../src/services/network/networkClient";
 
 const definition: DomainCheckDefinition = {
   id: "test",
@@ -17,7 +17,7 @@ describe("domain checks", () => {
     const checks = getRteProxyDomainChecks();
 
     expect(checks.length).toBe(4);
-    expect(checks.every((check) => adaptRteProxyUrl(check.url, true) !== check.url)).toBeTrue();
+    expect(checks.every((check) => canRouteThroughRte(check.url))).toBeTrue();
   });
 
   test("records successful response status and latency", async () => {

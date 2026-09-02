@@ -23,9 +23,9 @@ import {
   emoteService,
   mentionStyleService,
   sevenTVCosmeticsService,
-  setRteProxyEnabled,
   type TwitchMessage,
 } from "~/services/chat";
+import { setRteProxyEnabled } from "~/services/network/networkClient";
 import { badgeService } from "~/services/badges";
 import {
   createTwitchPredictionsClient,
