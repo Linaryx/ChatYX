@@ -4,6 +4,7 @@
  */
 
 import { log, LOG_CATEGORIES } from "../../utils/logger";
+import { fetchWithRteProxy } from "../chat/rteProxy";
 
 export interface BTTVBadge {
   id: string;
@@ -66,7 +67,7 @@ export class BTTVBadgeService {
   async checkUserBadges(userId: string): Promise<void> {
     try {
       // BTTV API endpoint (unofficial)
-      const response = await fetch(
+      const response = await fetchWithRteProxy(
         `https://api.betterttv.net/3/cached/users/twitch/${userId}`,
       );
       if (!response.ok) {

@@ -1,6 +1,7 @@
 import { TWITCH_CONFIG, FALLBACK_APIS, fetchWithFallback } from "~/config/twitch";
 import { twitchGqlService, type TwitchGqlBadge } from "~/services/chat/twitchGqlService";
 import { log, LOG_CATEGORIES } from "~/utils/logger";
+import { adaptRteProxyUrl, fetchWithRteProxy } from "~/services/chat/rteProxy";
 
 export interface Badge {
   source: string;
@@ -395,7 +396,7 @@ class BadgeService {
 
       // FFZ комнатные баджи
       try {
-        const ffzRoomResponse = await fetch(
+        const ffzRoomResponse = await fetchWithRteProxy(
           `https://api.frankerfacez.com/v1/_room/id/${encodeURIComponent(channelId)}`,
         );
         if (ffzRoomResponse.ok) {
@@ -403,11 +404,11 @@ class BadgeService {
 
           if (ffzRoomData.room?.moderator_badge) {
             this.badgeData.badges["moderator:1"] =
-              `https://cdn.frankerfacez.com/room-badge/mod/${channelName}/4/rounded`;
+              adaptRteProxyUrl(`https://cdn.frankerfacez.com/room-badge/mod/${channelName}/4/rounded`);
           }
           if (ffzRoomData.room?.vip_badge) {
             this.badgeData.badges["vip:1"] =
-              `https://cdn.frankerfacez.com/room-badge/vip/${channelName}/4`;
+              adaptRteProxyUrl(`https://cdn.frankerfacez.com/room-badge/vip/${channelName}/4`);
           }
 
           if (ffzRoomData.room?.user_badges) {
@@ -427,11 +428,11 @@ class BadgeService {
     // Загружаем все баджи параллельно для оптимизации
     const results = await Promise.allSettled([
       // FFZ badges (for bot/other global user badges)
-      fetch("https://api.frankerfacez.com/v1/badges/ids").then((r) =>
+      fetchWithRteProxy("https://api.frankerfacez.com/v1/badges/ids").then((r) =>
         r.ok ? r.json() : null,
       ),
       // FFZ:AP баджи (fallback на corsproxy.io при CORS блокировке)
-      fetch("https://api.ffzap.com/v1/supporters")
+      fetchWithRteProxy("https://api.ffzap.com/v1/supporters")
         .then((r) => (r.ok ? r.json() : []))
         .catch(() =>
           fetch(
@@ -440,7 +441,7 @@ class BadgeService {
         )
         .catch(() => []),
       // BTTV баджи
-      fetch("https://api.betterttv.net/3/cached/badges").then((r) =>
+      fetchWithRteProxy("https://api.betterttv.net/3/cached/badges").then((r) =>
         r.ok ? r.json() : [],
       ),
       // Chatterino баджи

@@ -4,6 +4,7 @@
  */
 
 import { log, LOG_CATEGORIES } from "../../utils/logger";
+import { fetchWithRteProxy } from "../chat/rteProxy";
 
 export interface FFZAPBadge {
     id: number;
@@ -37,7 +38,7 @@ export class FFZAPBadgeService {
             log.info(LOG_CATEGORIES.INTEGRATION, 'Loading FFZ:AP badges...');
             
             // Load global badge definitions
-            const response = await fetch('https://api.frankerfacez.com/v1/badges');
+            const response = await fetchWithRteProxy('https://api.frankerfacez.com/v1/badges');
             if (!response.ok) {
                 throw new Error(`Failed to load FFZ:AP badges: ${response.status}`);
             }

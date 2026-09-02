@@ -1,4 +1,5 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
+import { fetchWithRteProxy } from "./rteProxy";
 
 // 7TV cosmetics / paint loader and cache.
 export interface PaintGradient {
@@ -88,7 +89,7 @@ export class SevenTVCosmeticsService {
 
     private async loadChannelUserPaints(channelId: string): Promise<void> {
         try {
-            const response = await fetch(`https://7tv.io/v3/users/twitch/${channelId}`);
+            const response = await fetchWithRteProxy(`https://7tv.io/v3/users/twitch/${channelId}`);
             
             if (response.ok) {
                 const data = await response.json();
@@ -134,7 +135,7 @@ export class SevenTVCosmeticsService {
         username = username.toLowerCase();
         
         try {
-            const response = await fetch(`https://7tv.io/v3/users/twitch/${userId}`);
+            const response = await fetchWithRteProxy(`https://7tv.io/v3/users/twitch/${userId}`);
             
             if (response.ok) {
                 const data = await response.json();
@@ -178,7 +179,7 @@ export class SevenTVCosmeticsService {
     }
 
     private async loadPaintCatalog(): Promise<void> {
-        const response = await fetch("https://7tv.io/v3/gql", {
+        const response = await fetchWithRteProxy("https://7tv.io/v3/gql", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
