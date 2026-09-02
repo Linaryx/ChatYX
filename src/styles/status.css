@@ -1,0 +1,163 @@
+.status-page {
+  width: min(360px, 100%);
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  color: #f4f4f5;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background: transparent;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.status-card {
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.status-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.status-kicker {
+  margin: 0 0 1px;
+  color: #d4d4d8;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.status-header h1 {
+  display: inline;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.status-summary,
+.status-live,
+.status-footer {
+  color: #d4d4d8;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.status-summary {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.status-live {
+  min-height: 11px;
+  margin-top: 3px;
+}
+
+.status-list {
+  display: grid;
+  gap: 1px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-row {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr) 42px 48px;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  padding: 1px 0;
+  box-sizing: border-box;
+}
+
+.status-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a1a1aa;
+  box-shadow: 0 0 0 2px rgba(161, 161, 170, 0.2);
+}
+
+.status-row--ok .status-indicator {
+  background: #34d399;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
+}
+
+.status-row--slow .status-indicator {
+  background: #fbbf24;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+}
+
+.status-row--error .status-indicator {
+  background: #fb7185;
+  box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.2);
+}
+
+.status-service {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.status-service strong,
+.status-service span,
+.status-state,
+.status-latency {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-service strong {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.status-service span {
+  min-width: 0;
+  color: #a1a1aa;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9px;
+}
+
+.status-state,
+.status-latency {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.status-state {
+  color: #a1a1aa;
+}
+
+.status-row--ok .status-state {
+  color: #6ee7b7;
+}
+
+.status-row--slow .status-state {
+  color: #fcd34d;
+}
+
+.status-row--error .status-state {
+  color: #fda4af;
+}
+
+.status-latency {
+  color: #f4f4f5;
+  text-align: end;
+}
+
+.status-footer {
+  margin-top: 4px;
+  color: #a1a1aa;
+}

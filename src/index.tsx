@@ -40,6 +40,14 @@ render(
             component={lazy(() => import("./routes/predictions"))}
           />
           <Route
+            path="/status"
+            component={lazy(() => import("./routes/status"))}
+          />
+          <Route
+            path="/status/"
+            component={lazy(() => import("./routes/status"))}
+          />
+          <Route
             path="/dev/messages"
             component={lazy(() => import("./routes/dev/messages"))}
           />
