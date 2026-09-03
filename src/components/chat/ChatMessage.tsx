@@ -136,6 +136,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
   const { message, service } = props;
   let rootRef: HTMLDivElement | undefined;
   let animationTimer: number | undefined;
+  let onEntryAnimationEnd: ((event: AnimationEvent) => void) | undefined;
 
   const actionPrefix = "\x01ACTION";
   const actionSuffix = "\x01";
@@ -263,15 +264,27 @@ export const ChatMessage = (props: ChatMessageProps) => {
 
     if (hasMessageEntryAnimation(props.config.animation)) {
       rootRef.classList.add("message-enter");
-      animationTimer = window.setTimeout(() => {
+      const clearEntryAnimation = () => {
         rootRef?.classList.remove("message-enter");
+        rootRef?.removeEventListener("animationend", onEntryAnimationEnd!);
         animationTimer = undefined;
-      }, props.animationDurationMs + 40);
+      };
+      onEntryAnimationEnd = (event) => {
+        if (event.target === rootRef) clearEntryAnimation();
+      };
+      rootRef.addEventListener("animationend", onEntryAnimationEnd);
+      animationTimer = window.setTimeout(
+        clearEntryAnimation,
+        props.animationDurationMs + 100,
+      );
     }
   });
 
   onCleanup(() => {
     if (animationTimer !== undefined) window.clearTimeout(animationTimer);
+    if (rootRef && onEntryAnimationEnd) {
+      rootRef.removeEventListener("animationend", onEntryAnimationEnd);
+    }
     if (rootRef) props.service.cancelMessageFade(rootRef);
   });
 
