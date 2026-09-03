@@ -38,3 +38,32 @@ describe("ChatPresentationService chatter filter", () => {
     expect(service.shouldDisplayMessage("BETA", "hello")).toBe(true);
   });
 });
+
+describe("ChatPresentationService bot filter", () => {
+  test("hides listed bots when filter is enabled", () => {
+    const service = new ChatPresentationService({
+      botFilter: {
+        enabled: true,
+        hideCommands: true,
+        customBots: ["mybot"],
+        singleChatter: "",
+      },
+    });
+
+    expect(service.shouldDisplayMessage("MyBot", "announcement text")).toBe(false);
+    expect(service.shouldDisplayMessage("regularviewer", "hello")).toBe(true);
+  });
+
+  test("shows listed bots when filter is disabled", () => {
+    const service = new ChatPresentationService({
+      botFilter: {
+        enabled: false,
+        hideCommands: false,
+        customBots: ["mybot"],
+        singleChatter: "",
+      },
+    });
+
+    expect(service.shouldDisplayMessage("MyBot", "announcement text")).toBe(true);
+  });
+});
