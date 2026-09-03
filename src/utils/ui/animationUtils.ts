@@ -91,6 +91,11 @@ export function getAnimationStyles(options: AnimationOptions): string {
           transform-origin: center;
           will-change: transform, opacity;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .message-enter {
+            animation: none;
+          }
+        }
       `;
 
     case "flow":
@@ -98,17 +103,21 @@ export function getAnimationStyles(options: AnimationOptions): string {
         @keyframes flowIn {
           from {
             opacity: 0;
-            transform: translateY(12px);
+            clip-path: inset(100% 0 0 0);
           }
           to {
             opacity: 1;
-            transform: translateY(0);
+            clip-path: inset(0 0 0 0);
           }
         }
         .message-enter {
           animation: flowIn var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.22, 1, 0.36, 1) both;
-          transform-origin: center bottom;
-          will-change: transform, opacity;
+          will-change: opacity;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .message-enter {
+            animation: none;
+          }
         }
       `;
 

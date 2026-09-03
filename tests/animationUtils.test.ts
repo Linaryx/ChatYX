@@ -13,8 +13,14 @@ const options = {
 
 describe("chat animation modes", () => {
   test("generates distinct entry animations", () => {
-    expect(getAnimationStyles({ ...options, type: "fade" })).toContain("fadeIn");
-    expect(getAnimationStyles({ ...options, type: "flow" })).toContain("flowIn");
+    const fadeStyles = getAnimationStyles({ ...options, type: "fade" });
+    expect(fadeStyles).toContain("fadeIn");
+    expect(fadeStyles).toContain("prefers-reduced-motion: reduce");
+    const flowStyles = getAnimationStyles({ ...options, type: "flow" });
+    expect(flowStyles).toContain("flowIn");
+    expect(flowStyles).toContain("clip-path: inset(100% 0 0 0)");
+    expect(flowStyles).not.toContain("translateY");
+    expect(flowStyles).toContain("prefers-reduced-motion: reduce");
     expect(getAnimationStyles({ ...options, type: "scroll" })).toBe("");
     expect(getAnimationStyles({ ...options, type: "none" })).toBe("");
   });
