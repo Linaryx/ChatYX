@@ -18,6 +18,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   let flowObserver: MutationObserver | undefined;
   let flowResizeObserver: ResizeObserver | undefined;
   let flowFrame: number | undefined;
+  let flowResizeTimeout: number | undefined;
   let flowPositions = new Map<HTMLElement, { left: number; top: number }>();
   const flowAnimations = new Map<HTMLElement, Animation>();
   const orderedMessages = createMemo(() => {
@@ -92,7 +93,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 ],
                 {
                   duration: props.animationDurationMs,
-                  easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+                  easing: "cubic-bezier(0.22, 1, 0.36, 1)",
                 },
               );
               flowAnimations.set(element, animation);
@@ -114,9 +115,14 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
       flowPositions = capturePositions();
       if ("ResizeObserver" in window) {
         flowResizeObserver = new ResizeObserver(() => {
-          if (props.config?.animation === "flow") {
-            scheduleFlowReconciliation();
+          if (props.config?.animation !== "flow") return;
+          if (flowResizeTimeout !== undefined) {
+            window.clearTimeout(flowResizeTimeout);
           }
+          flowResizeTimeout = window.setTimeout(() => {
+            flowResizeTimeout = undefined;
+            scheduleFlowReconciliation();
+          }, 80);
         });
         for (const element of observedMessages) flowResizeObserver.observe(element);
       }
@@ -133,6 +139,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     flowObserver?.disconnect();
     flowResizeObserver?.disconnect();
     if (flowFrame !== undefined) window.cancelAnimationFrame(flowFrame);
+    if (flowResizeTimeout !== undefined) window.clearTimeout(flowResizeTimeout);
     for (const animation of flowAnimations.values()) animation.cancel();
   });
 

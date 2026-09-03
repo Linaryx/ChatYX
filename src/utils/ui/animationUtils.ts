@@ -98,13 +98,17 @@ export function getAnimationStyles(options: AnimationOptions): string {
         @keyframes flowIn {
           from {
             opacity: 0;
+            transform: translateY(12px);
           }
           to {
             opacity: 1;
+            transform: translateY(0);
           }
         }
         .message-enter {
-          animation: flowIn var(--chat-message-enter-duration, ${duration}ms) ${easing} both;
+          animation: flowIn var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+          transform-origin: center bottom;
+          will-change: transform, opacity;
         }
       `;
 

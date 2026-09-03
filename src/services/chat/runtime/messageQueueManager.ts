@@ -30,8 +30,8 @@ function getAdaptiveAnimationDuration(
   messagesPerSecond: number,
 ) {
   if (messagesPerSecond <= 6) return baseDuration;
-  const scale = Math.max(0.38, 1 - (messagesPerSecond - 6) * 0.045);
-  return Math.round(baseDuration * scale);
+  const scale = Math.max(0.55, 1 - (messagesPerSecond - 6) * 0.035);
+  return Math.max(120, Math.round(baseDuration * scale));
 }
 
 export class MessageQueueManager {
