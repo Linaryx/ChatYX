@@ -612,17 +612,15 @@ export class TwitchService {
       const sourceChannel = match[2].toLowerCase();
       const message = match[3] || "";
 
-      // Извлекаем username из IRC формата
-      const usernameMatch = line.match(/:([^!]+)!/);
-      const username = usernameMatch
-        ? usernameMatch[1]
-        : tags.login || tags["display-name"] || "twitch";
+      // USERNOTICE всегда приходит от :tmi.twitch.tv, поэтому отправителя
+      // берем из tags.login/display-name, а не из IRC-префикса.
+      const username = tags.login || tags["display-name"] || "twitch";
 
       // Очищаем username от лишних символов
       const cleanUsername = username.replace(/[^\w]/g, "");
       const finalUsername =
         cleanUsername.length > 50
-          ? tags.username || tags["display-name"] || "unknown"
+          ? tags.login || tags["display-name"] || "unknown"
           : cleanUsername;
 
       // Проверяем, является ли это Cheer событием

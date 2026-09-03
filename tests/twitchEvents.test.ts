@@ -173,6 +173,16 @@ describe("Twitch IRC event classification", () => {
     });
   });
 
+  test("extracts the sender username from tags for USERNOTICE", () => {
+    const message = service.parseMessageLine(
+      "@tmi-sent-ts=1788427906550;mod=1;id=8e7f6cd8-7e35-4d71-9254-0dd169ea9605;room-id=170934291;user-id=870280719;login=twirapp;display-name=TwirApp;badges=moderator/1;badge-info=;color=#8A2BE2;flags=;user-type=mod;emotes=;msg-param-color=PRIMARY;system-msg=;msg-id=announcement :tmi.twitch.tv USERNOTICE #jacklooney :Нарезчик? Хочешь заработать денег!",
+    );
+
+    expect(message?.username).toBe("twirapp");
+    expect(message?.displayName).toBe("TwirApp");
+    expect(message?.twitchEvent?.type).toBe("announcement");
+  });
+
   test("parses Shared Chat metadata from PRIVMSG", () => {
     const message = service.parseMessageLine(
       "@badges=moderator/1;color=#00ff00;display-name=SharedViewer;id=delivered-1;mod=1;room-id=100;source-badges=subscriber/12;source-id=original-1;source-room-id=200;subscriber=0;user-id=7 :sharedviewer!sharedviewer@sharedviewer.tmi.twitch.tv PRIVMSG #target :hello from shared chat",
