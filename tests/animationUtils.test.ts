@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   getAnimationScrollBehavior,
   getAnimationStyles,
+  getMessageEntryAnimationDuration,
   normalizeChatAnimationMode,
 } from "../src/utils/ui/animationUtils";
 
@@ -19,7 +20,9 @@ describe("chat animation modes", () => {
     const flowStyles = getAnimationStyles({ ...options, type: "flow" });
     expect(flowStyles).toContain("flowIn");
     expect(flowStyles).toContain("clip-path: inset(100% 0 0 0)");
-    expect(flowStyles).not.toContain("translateY");
+    expect(flowStyles).toContain("scale: 1 0.82");
+    expect(flowStyles).toContain("transform-origin: center bottom");
+    expect(flowStyles).toContain("cubic-bezier(0.2, 0, 0, 1)");
     expect(flowStyles).toContain("prefers-reduced-motion: reduce");
     expect(getAnimationStyles({ ...options, type: "scroll" })).toBe("");
     expect(getAnimationStyles({ ...options, type: "none" })).toBe("");
@@ -30,5 +33,11 @@ describe("chat animation modes", () => {
     expect(normalizeChatAnimationMode("unknown")).toBe("fade");
     expect(getAnimationScrollBehavior("scroll")).toBe("smooth");
     expect(getAnimationScrollBehavior("flow")).toBe("auto");
+  });
+
+  test("gives flow enough time to read while keeping fade compact", () => {
+    expect(getMessageEntryAnimationDuration("flow")).toBe(300);
+    expect(getMessageEntryAnimationDuration("fade")).toBe(200);
+    expect(getMessageEntryAnimationDuration("none")).toBe(200);
   });
 });

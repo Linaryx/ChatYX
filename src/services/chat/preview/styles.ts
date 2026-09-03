@@ -5,6 +5,7 @@ import {
   generateVariantStyles,
 } from "~/styles/chatStyles";
 import {
+  getMessageEntryAnimationDuration,
   hasMessageEntryAnimation,
   injectAnimationStyles,
 } from "~/utils/ui/animationUtils";
@@ -56,7 +57,7 @@ export function injectPreviewStyles(config: ChatConfig) {
   if (hasMessageEntryAnimation(config.animation)) {
     injectAnimationStyles({
       enabled: true,
-      duration: 200,
+      duration: getMessageEntryAnimationDuration(config.animation),
       easing: "ease-out",
       type: config.animation,
     });

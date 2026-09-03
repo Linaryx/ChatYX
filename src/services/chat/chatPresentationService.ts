@@ -19,6 +19,7 @@ import {
 import type { LayoutOptions } from "../../utils/ui/layoutUtils";
 import {
   DEFAULT_ANIMATION_OPTIONS,
+  getMessageEntryAnimationDuration,
   hasMessageEntryAnimation,
   injectAnimationStyles,
 } from "../../utils/ui/animationUtils";
@@ -604,7 +605,7 @@ export function createChatPresentationConfig(
     userId: "",
     animation: {
       enabled: hasMessageEntryAnimation(params.animation),
-      duration: DEFAULT_ANIMATION_OPTIONS.duration,
+      duration: getMessageEntryAnimationDuration(params.animation),
       easing: "ease-in-out",
       type: params.animation,
     },

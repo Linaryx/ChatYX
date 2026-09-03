@@ -6,7 +6,7 @@ import {
   generateVariantStyles,
 } from "~/styles/chatStyles";
 import {
-  DEFAULT_ANIMATION_OPTIONS,
+  getMessageEntryAnimationDuration,
   hasMessageEntryAnimation,
   updateAnimationStyles,
 } from "~/utils/ui/animationUtils";
@@ -57,7 +57,7 @@ export class OverlayStyleManager {
     if (hasMessageEntryAnimation(config.animation)) {
       updateAnimationStyles({
         enabled: true,
-        duration: DEFAULT_ANIMATION_OPTIONS.duration,
+        duration: getMessageEntryAnimationDuration(config.animation),
         easing: "ease-out",
         type: config.animation,
       });
