@@ -199,9 +199,10 @@ export class LayoutManager {
   /**
    * Scroll to latest message if auto-scroll enabled
    */
-  scrollIfNeeded(behavior: ScrollBehavior = "auto"): void {
+  scrollIfNeeded(behavior: ScrollBehavior = "auto", force = false): void {
+    if (force) this.autoScroll = true;
     const shouldScroll =
-      this.autoScroll || isScrolledToEnd(this.container, this.options);
+      force || this.autoScroll || isScrolledToEnd(this.container, this.options);
     if (!shouldScroll) return;
 
     const scroll = () => scrollToLatest(this.container, this.options, behavior);

@@ -661,11 +661,12 @@ export class OverlayRuntime {
     this.scrollToLatestAfterRender();
   }
 
-  private scrollToLatestAfterRender(): void {
+  private scrollToLatestAfterRender(force = false): void {
     window.requestAnimationFrame(() => {
       if (!this.chatService || !this.activeConfig) return;
       this.chatService.scrollToLatest(
         getAnimationScrollBehavior(this.activeConfig.animation),
+        force,
       );
     });
   }
@@ -698,7 +699,7 @@ export class OverlayRuntime {
           ? nextMessages.slice(-100)
           : nextMessages;
       });
-      this.scrollToLatestAfterRender();
+      this.scrollToLatestAfterRender(true);
 
       return preparedMessages.length;
     } catch (error) {

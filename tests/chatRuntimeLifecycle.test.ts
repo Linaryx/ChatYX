@@ -221,7 +221,7 @@ describe("overlay runtime lifecycle", () => {
       },
     };
 
-    const scrollBehaviors: ScrollBehavior[] = [];
+    const scrollCalls: Array<{ behavior: ScrollBehavior; force: boolean }> = [];
     const runtime = new OverlayRuntime("channel", {
       onConfigResolved: () => {},
       onServiceReady: () => {},
@@ -234,17 +234,50 @@ describe("overlay runtime lifecycle", () => {
     });
     (runtime as any).activeConfig = { animation: "none" } as ChatConfig;
     (runtime as any).chatService = {
-      scrollToLatest: (behavior: ScrollBehavior) => {
-        scrollBehaviors.push(behavior);
+      scrollToLatest: (behavior: ScrollBehavior, force = false) => {
+        scrollCalls.push({ behavior, force });
       },
     };
 
     (runtime as any).scrollToLatestAfterRender();
 
-    expect(scrollBehaviors).toEqual([]);
+    expect(scrollCalls).toEqual([]);
     expect(frames).toHaveLength(1);
     frames[0](0);
-    expect(scrollBehaviors).toEqual(["auto"]);
+    expect(scrollCalls).toEqual([{ behavior: "auto", force: false }]);
+  });
+
+  test("forces restored history to the latest position", () => {
+    const frames: FrameRequestCallback[] = [];
+    (globalThis as any).window = {
+      requestAnimationFrame: (callback: FrameRequestCallback) => {
+        frames.push(callback);
+        return frames.length;
+      },
+    };
+
+    const scrollCalls: Array<{ behavior: ScrollBehavior; force: boolean }> = [];
+    const runtime = new OverlayRuntime("channel", {
+      onConfigResolved: () => {},
+      onServiceReady: () => {},
+      onLoadingChange: () => {},
+      onCommandStatusChange: () => {},
+      onConnectionChange: () => {},
+      onMessagesChange: () => {},
+      onAnimationDurationChange: () => {},
+      onChannelResolved: () => {},
+    });
+    (runtime as any).activeConfig = { animation: "none" } as ChatConfig;
+    (runtime as any).chatService = {
+      scrollToLatest: (behavior: ScrollBehavior, force = false) => {
+        scrollCalls.push({ behavior, force });
+      },
+    };
+
+    (runtime as any).scrollToLatestAfterRender(true);
+    frames[0](0);
+
+    expect(scrollCalls).toEqual([{ behavior: "auto", force: true }]);
   });
 
   test("destroy invalidates an initialization waiting for channel identity", async () => {

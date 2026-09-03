@@ -502,9 +502,9 @@ export class ChatPresentationService {
   /**
    * Scroll to latest message
    */
-  scrollToLatest(behavior: ScrollBehavior = "auto"): void {
+  scrollToLatest(behavior: ScrollBehavior = "auto", force = false): void {
     if (this.layoutManager) {
-      this.layoutManager.scrollIfNeeded(behavior);
+      this.layoutManager.scrollIfNeeded(behavior, force);
     }
   }
 
