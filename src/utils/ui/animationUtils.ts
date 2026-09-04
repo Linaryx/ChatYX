@@ -27,7 +27,7 @@ export const DEFAULT_ANIMATION_OPTIONS: AnimationOptions = {
   easing: "ease-in-out",
   type: "fade",
 };
-export const FLOW_ANIMATION_DURATION = 320;
+export const FLOW_ANIMATION_DURATION = 380;
 
 export function getMessageEntryAnimationDuration(
   mode: ChatAnimationMode,
@@ -109,17 +109,20 @@ export function getAnimationStyles(options: AnimationOptions): string {
 
     case "flow":
       return `
-        @keyframes flowIn {
-          from { transform: translateY(8px); }
-          to { transform: translateY(0); }
+        #chat_container.layout-vertical.layout-normal {
+          flex-direction: column-reverse;
         }
-        .message-enter {
-          animation: flowIn var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+        #chat_container.layout-vertical.layout-normal .chat_line {
+          transform: translateY(0);
+          transition: transform var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #chat_container.layout-vertical.layout-normal .chat_line.message-enter {
+          transform: translateY(8px);
           will-change: transform;
         }
         @media (prefers-reduced-motion: reduce) {
-          .message-enter {
-            animation: none;
+          #chat_container.layout-vertical.layout-normal .chat_line {
+            transition: none;
           }
         }
       `;

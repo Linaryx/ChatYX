@@ -86,18 +86,6 @@ body {
 }
 
 
-.chat_line.chat-event-highlight:not(.chat-event-with-message) {
-  background-color: color-mix(
-    in srgb,
-    var(--chat-event-accent)
-      var(
-        --chat-event-background-opacity,
-        var(--chat-event-background-opacity-default)
-      ),
-    transparent
-  );
-}
-
 .chat-event-summary {
   display: inline-flex;
   flex-wrap: wrap;
@@ -140,12 +128,6 @@ body {
 
 .chat_line.chat-event-highlighted-message.chat-event-highlight {
   inline-size: 100%;
-  background-color: color-mix(
-    in srgb,
-    var(--chat-event-accent) 16%,
-    transparent
-  );
-  border-radius: var(--chat-event-radius);
 }
 
 

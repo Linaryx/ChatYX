@@ -504,6 +504,10 @@ export class ChatPresentationService {
    * Scroll to latest message
    */
   scrollToLatest(behavior: ScrollBehavior = "auto", force = false): void {
+    // Flow owns post-render scrolling so its measured animation is not
+    // interrupted by the runtime's immediate scroll-to-end call.
+    if (this.config.animation.type === "flow" && !force) return;
+
     if (this.layoutManager) {
       this.layoutManager.scrollIfNeeded(
         behavior,

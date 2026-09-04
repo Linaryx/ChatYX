@@ -136,6 +136,8 @@ export const ChatMessage = (props: ChatMessageProps) => {
   const { message, service } = props;
   let rootRef: HTMLDivElement | undefined;
   let animationTimer: number | undefined;
+  let flowEntryFrame: number | undefined;
+  let flowEntrySettleFrame: number | undefined;
   let onEntryAnimationEnd: ((event: AnimationEvent) => void) | undefined;
 
   const actionPrefix = "\x01ACTION";
@@ -264,6 +266,15 @@ export const ChatMessage = (props: ChatMessageProps) => {
 
     if (hasMessageEntryAnimation(props.config.animation)) {
       rootRef.classList.add("message-enter");
+      if (props.config.animation === "flow") {
+        flowEntryFrame = window.requestAnimationFrame(() => {
+          flowEntrySettleFrame = window.requestAnimationFrame(() => {
+            rootRef?.classList.remove("message-enter");
+          });
+        });
+        return;
+      }
+
       const clearEntryAnimation = () => {
         rootRef?.classList.remove("message-enter");
         rootRef?.removeEventListener("animationend", onEntryAnimationEnd!);
@@ -282,6 +293,12 @@ export const ChatMessage = (props: ChatMessageProps) => {
 
   onCleanup(() => {
     if (animationTimer !== undefined) window.clearTimeout(animationTimer);
+    if (flowEntryFrame !== undefined) {
+      window.cancelAnimationFrame(flowEntryFrame);
+    }
+    if (flowEntrySettleFrame !== undefined) {
+      window.cancelAnimationFrame(flowEntrySettleFrame);
+    }
     if (rootRef && onEntryAnimationEnd) {
       rootRef.removeEventListener("animationend", onEntryAnimationEnd);
     }

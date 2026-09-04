@@ -1786,12 +1786,12 @@ export default function ChatSetup() {
                       </div>
                     </Show>
 
-                    <div class="relative h-[min(420px,46dvh)] w-full min-h-[240px] flex-1 overflow-hidden bg-transparent min-[1100px]:h-auto min-[1100px]:min-h-[280px]">
+                    <div class="relative isolate h-[clamp(180px,36dvh,320px)] w-full shrink-0 overflow-hidden bg-transparent min-[1100px]:h-auto min-[1100px]:min-h-[280px] min-[1100px]:flex-1">
                       <iframe
                         ref={iframeRef}
                         src={previewUrl()}
                         onLoad={() => postPreviewConfig()}
-                        class="pointer-events-none relative z-[1] block h-full w-full border-0 bg-transparent"
+                        class="pointer-events-none block h-full w-full border-0 bg-transparent"
                         title="Chat preview"
                         scrolling="no"
                         tabindex="-1"

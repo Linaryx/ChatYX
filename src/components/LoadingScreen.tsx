@@ -6,6 +6,7 @@ interface LoadingScreenProps {
   status: string;
   onComplete?: () => void;
   overlay?: boolean;
+  background?: string;
 }
 
 const loadingImageSrc = getPublicAssetUrl("img/Peepo.png");
@@ -43,7 +44,7 @@ export function LoadingScreen(props: LoadingScreenProps) {
             left: 0,
             width: "100vw",
             height: "100vh",
-            background: "rgba(0, 0, 0, 0.5)",
+            background: props.background ?? "rgba(0, 0, 0, 0.5)",
             display: "flex",
             "flex-direction": "column",
             "align-items": "center",
@@ -91,7 +92,7 @@ export function LoadingScreen(props: LoadingScreenProps) {
             left: 0,
             width: "100vw",
             height: "100vh",
-            background: "rgba(0, 0, 0, 0.5)",
+            background: props.background ?? "rgba(0, 0, 0, 0.5)",
             display: "flex",
             "flex-direction": "column",
             "align-items": "center",

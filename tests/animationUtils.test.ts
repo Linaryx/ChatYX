@@ -18,11 +18,11 @@ describe("chat animation modes", () => {
     expect(fadeStyles).toContain("fadeIn");
     expect(fadeStyles).toContain("prefers-reduced-motion: reduce");
     const flowStyles = getAnimationStyles({ ...options, type: "flow" });
-    expect(flowStyles).toContain("flowIn");
     expect(flowStyles).toContain("transform: translateY(8px)");
     expect(flowStyles).toContain("transform: translateY(0)");
+    expect(flowStyles).toContain("transition: transform");
     expect(flowStyles).toContain("cubic-bezier(0.16, 1, 0.3, 1)");
-    expect(flowStyles).not.toContain("opacity:");
+    expect(flowStyles).not.toContain("@keyframes flowIn");
     expect(flowStyles).not.toContain("scale:");
     expect(flowStyles).toContain("prefers-reduced-motion: reduce");
     expect(getAnimationStyles({ ...options, type: "scroll" })).toBe("");
@@ -37,7 +37,7 @@ describe("chat animation modes", () => {
   });
 
   test("gives flow enough time to read while keeping fade compact", () => {
-    expect(getMessageEntryAnimationDuration("flow")).toBe(320);
+    expect(getMessageEntryAnimationDuration("flow")).toBe(380);
     expect(getMessageEntryAnimationDuration("fade")).toBe(200);
     expect(getMessageEntryAnimationDuration("none")).toBe(200);
   });

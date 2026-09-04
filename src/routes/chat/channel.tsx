@@ -357,6 +357,12 @@ export default function ChatOverlay() {
     } as const;
   });
 
+  const loadingBackground = createMemo(() => {
+    const cfg = config() ?? initialConfig;
+    const opacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
+    return `rgba(${hexToRgb(cfg.overlayBackgroundColor)}, ${opacity})`;
+  });
+
   const containerStyle = createMemo(() => ({
     position: "relative",
     width: "100%",
@@ -527,6 +533,7 @@ export default function ChatOverlay() {
               progress={loadingProgress()}
               status={loadingStatus()}
               onComplete={() => setIsLoading(false)}
+              background={loadingBackground()}
             />
           </Show>
           <div id="chat_overlay_root" style={overlayRootStyle()}>
@@ -561,7 +568,12 @@ export default function ChatOverlay() {
           </div>
           <Show when={commandStatus()}>
             {(status) => (
-              <LoadingScreen progress={0} status={status().text} overlay />
+              <LoadingScreen
+                progress={0}
+                status={status().text}
+                overlay
+                background={loadingBackground()}
+              />
             )}
           </Show>
         </>
