@@ -230,10 +230,27 @@ export class ChatPresentationService {
   }
 
   /**
+   * The flow stack renders newest-first in a column-reverse container, so the
+   * visual "latest" edge is scroll position 0 rather than the scroll range end.
+   */
+  private isFlowStack(): boolean {
+    return (
+      this.config.animation.type === "flow" &&
+      !this.config.layout.horizontal &&
+      !this.config.layout.reverse
+    );
+  }
+
+  private syncFlowStackScroll(): void {
+    this.layoutManager?.setLatestAtStart(this.isFlowStack());
+  }
+
+  /**
    * Initialize layout manager with container
    */
   initializeLayout(container: HTMLElement): void {
     this.layoutManager = new LayoutManager(container, this.config.layout);
+    this.syncFlowStackScroll();
   }
 
   /**
@@ -557,6 +574,10 @@ export class ChatPresentationService {
 
     if (config.layout && this.layoutManager) {
       this.layoutManager.updateOptions(config.layout);
+    }
+
+    if ((config.layout || config.animation) && this.layoutManager) {
+      this.syncFlowStackScroll();
     }
 
     if (config.botFilter?.customBots) {

@@ -64,6 +64,21 @@ describe("chat commands", () => {
       args: "hello",
       targetChannels: [],
     });
+    expect(parseChatCommand("!tts hello")).toEqual({
+      name: "tts",
+      args: "hello",
+      targetChannels: [],
+    });
+    expect(parseChatCommand("!tts -s Maxim hello")).toEqual({
+      name: "tts",
+      args: "-s Maxim hello",
+      targetChannels: [],
+    });
+    expect(parseChatCommand("!tts")).toEqual({
+      name: "tts",
+      args: "",
+      targetChannels: [],
+    });
     expect(parseChatCommand("!chat azuretts hello")).toBeNull();
     expect(parseChatCommand("!chat rickroll")).toBeNull();
     expect(parseChatCommand("!chat ytplay https://youtu.be/dQw4w9WgXcQ")).toBeNull();
@@ -91,6 +106,15 @@ describe("chat commands", () => {
     expect(
       getAuthorizedChatCommand(
         message("!chat tts hello", ["moderator/1"]),
+        "target",
+      ),
+    ).toEqual({ name: "tts", args: "hello", targetChannels: [] });
+    expect(
+      getAuthorizedChatCommand(message("!tts hello"), "target"),
+    ).toBeNull();
+    expect(
+      getAuthorizedChatCommand(
+        message("!tts hello", ["moderator/1"]),
         "target",
       ),
     ).toEqual({ name: "tts", args: "hello", targetChannels: [] });

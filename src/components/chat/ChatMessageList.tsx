@@ -150,18 +150,35 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     }
   });
 
+  // Restored history and the initial preview batch arrive as one bulk flush.
+  // They render without an entry animation; the flag flips in a microtask so
+  // every item created in the same synchronous flush sees the same value.
+  let firstBatchDone = false;
+  let firstBatchScheduled = false;
+
   return (
     <Show when={props.config && props.service}>
       <For each={orderedMessages()}>
-        {(message) => (
-          <ChatMessage
-            message={message}
-            config={props.config!}
-            service={props.service!}
-            animationDurationMs={props.animationDurationMs}
-            onExpired={props.onMessageExpired}
-          />
-        )}
+        {(message) => {
+          const animateEntry = firstBatchDone;
+          if (!firstBatchDone && !firstBatchScheduled) {
+            firstBatchScheduled = true;
+            queueMicrotask(() => {
+              firstBatchScheduled = false;
+              firstBatchDone = true;
+            });
+          }
+          return (
+            <ChatMessage
+              message={message}
+              config={props.config!}
+              service={props.service!}
+              animationDurationMs={props.animationDurationMs}
+              onExpired={props.onMessageExpired}
+              animateEntry={animateEntry}
+            />
+          );
+        }}
       </For>
     </Show>
   );

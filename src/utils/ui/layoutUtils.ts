@@ -165,6 +165,7 @@ export class LayoutManager {
   private container: HTMLElement;
   private options: LayoutOptions;
   private autoScroll: boolean = true;
+  private latestAtStart = false;
   private smoothScrollFrame: number | undefined;
   private smoothScrollTarget: number | undefined;
   private smoothScrollLastTime: number | undefined;
@@ -199,6 +200,21 @@ export class LayoutManager {
    */
   getOptions(): LayoutOptions {
     return { ...this.options };
+  }
+
+  /**
+   * Whether the latest message sits at scroll position 0. Used by reversed
+   * stacks (such as the flow column-reverse container) where the layout
+   * classes stay normal but scroll math must target the start.
+   */
+  setLatestAtStart(value: boolean): void {
+    this.latestAtStart = value;
+  }
+
+  private scrollOptions(): LayoutOptions {
+    return this.latestAtStart
+      ? { ...this.options, reverse: true }
+      : this.options;
   }
 
   private currentScroll(): number {
@@ -260,16 +276,19 @@ export class LayoutManager {
     settle = true,
   ): void {
     if (force) this.autoScroll = true;
+    const scrollOptions = this.scrollOptions();
     const shouldScroll =
-      force || this.autoScroll || isScrolledToEnd(this.container, this.options);
+      force ||
+      this.autoScroll ||
+      isScrolledToEnd(this.container, scrollOptions);
     if (!shouldScroll) return;
 
     const scroll = () => {
-      const target = getScrollPosition(this.container, this.options);
+      const target = getScrollPosition(this.container, scrollOptions);
       if (behavior === "smooth" && typeof window !== "undefined") {
         this.animateSmoothScroll(target);
       } else {
-        scrollToLatest(this.container, this.options, behavior);
+        scrollToLatest(this.container, scrollOptions, behavior);
       }
     };
     scroll();
@@ -293,7 +312,7 @@ export class LayoutManager {
    * Check if user has scrolled away
    */
   checkUserScroll(): boolean {
-    const scrolledToEnd = isScrolledToEnd(this.container, this.options);
+    const scrolledToEnd = isScrolledToEnd(this.container, this.scrollOptions());
     this.autoScroll = scrolledToEnd;
     return scrolledToEnd;
   }

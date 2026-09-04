@@ -1269,13 +1269,13 @@ export default function ChatSetup() {
       label: "Русский TTS через ChatIS / Streamlabs",
       checked: rteChatIsTts,
       onChange: setRteChatIsTts,
-      hint: "Команда модератора: !chat tts [-s Maxim|Tatyana] текст. Синтезированный аудиофайл не сохраняется.",
+      hint: "Команда модератора: !chat tts (или короче !tts) [-s Maxim|Tatyana] текст. Синтезированный аудиофайл не сохраняется.",
     },
     {
       label: "Русский TTS через JustDavi / Azure",
       checked: rteAzureTts,
       onChange: setRteAzureTts,
-      hint: "Команда модератора: !chat tts [-s Dmitriy|Dmitry|Svetlana] текст.",
+      hint: "Команда модератора: !chat tts (или короче !tts) [-s Dmitriy|Dmitry|Svetlana] текст.",
     },
   ];
 

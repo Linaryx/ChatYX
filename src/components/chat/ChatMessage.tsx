@@ -33,6 +33,11 @@ type ChatMessageProps = {
   service: ChatPresentationService;
   animationDurationMs: number;
   onExpired?: (messageId: string) => void;
+  /**
+   * Restored history (recent messages, initial preview batch) renders without
+   * an entry animation; only newly arriving messages animate.
+   */
+  animateEntry?: boolean;
 };
 
 const CSS_COLOR_PATTERN =
@@ -264,7 +269,10 @@ export const ChatMessage = (props: ChatMessageProps) => {
       });
     }
 
-    if (hasMessageEntryAnimation(props.config.animation)) {
+    if (
+      props.animateEntry !== false &&
+      hasMessageEntryAnimation(props.config.animation)
+    ) {
       rootRef.classList.add("message-enter");
       if (props.config.animation === "flow") {
         flowEntryFrame = window.requestAnimationFrame(() => {

@@ -100,7 +100,7 @@ export function VoiceCatalog() {
             Каталог голосов
           </h3>
           <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            В ChatYX доступны пять русских вариантов имён голосов. Команда одна: <code class="text-foreground">!chat tts</code>.
+            В ChatYX доступны пять русских вариантов имён голосов. Команды: <code class="text-foreground">!chat tts</code> или короче <code class="text-foreground">!tts</code>.
           </p>
         </div>
         <a

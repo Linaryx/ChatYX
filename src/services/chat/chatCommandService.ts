@@ -68,6 +68,10 @@ export function parseChatCommand(input: string): ParsedChatCommand | null {
   if (/^!hardreload(?:\s|$)/i.test(text)) {
     return buildParsedCommand("hardreload", text.slice("!hardreload".length));
   }
+  const ttsMatch = text.match(/^!tts(?:\s+([\s\S]*))?$/i);
+  if (ttsMatch) {
+    return buildParsedCommand("tts", ttsMatch[1] || "");
+  }
 
   const match = text.match(/^!(?:chat|chatis|chatyx)\s+(\S+)(?:\s+([\s\S]*))?$/i);
   if (!match) return null;
