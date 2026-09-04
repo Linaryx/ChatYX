@@ -505,7 +505,11 @@ export class ChatPresentationService {
    */
   scrollToLatest(behavior: ScrollBehavior = "auto", force = false): void {
     if (this.layoutManager) {
-      this.layoutManager.scrollIfNeeded(behavior, force);
+      this.layoutManager.scrollIfNeeded(
+        behavior,
+        force,
+        this.config.animation.type !== "flow",
+      );
     }
   }
 

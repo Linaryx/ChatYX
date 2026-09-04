@@ -16,7 +16,7 @@
     "lint:app": "oxlint -c ./.oxlintrc.json --tsconfig ./tsconfig.app.json src",
     "lint:youtube": "oxlint -c ./.oxlintrc.json services/youtube-websocket/src",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && bun run --cwd services/youtube-websocket typecheck",
-    "test": "bun test",
+    "test": "bun test tests/*.test.ts",
     "check": "bun run lint && bun run typecheck && bun run test && bun run build"
   },
   "devDependencies": {

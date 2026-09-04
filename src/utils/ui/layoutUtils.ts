@@ -29,6 +29,7 @@ export function getLayoutStyles(options: LayoutOptions): string {
         gap: 1rem;
         overflow-x: hidden;
         overflow-y: hidden;
+        overflow-anchor: none;
       }
       #chat_container .chat_line {
         flex: 0 0 auto;
@@ -43,6 +44,7 @@ export function getLayoutStyles(options: LayoutOptions): string {
         justify-content: flex-start;
         overflow-y: hidden;
         overflow-x: hidden;
+        overflow-anchor: none;
       }
       #chat_container .chat_line {
         flex: 0 0 auto;
@@ -199,7 +201,11 @@ export class LayoutManager {
   /**
    * Scroll to latest message if auto-scroll enabled
    */
-  scrollIfNeeded(behavior: ScrollBehavior = "auto", force = false): void {
+  scrollIfNeeded(
+    behavior: ScrollBehavior = "auto",
+    force = false,
+    settle = true,
+  ): void {
     if (force) this.autoScroll = true;
     const shouldScroll =
       force || this.autoScroll || isScrolledToEnd(this.container, this.options);
@@ -208,7 +214,7 @@ export class LayoutManager {
     const scroll = () => scrollToLatest(this.container, this.options, behavior);
     scroll();
 
-    if (typeof window === "undefined") return;
+    if (!settle || typeof window === "undefined") return;
 
     window.requestAnimationFrame(() => {
       scroll();

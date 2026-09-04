@@ -21,6 +21,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   let scrollStart: number | undefined;
   let scrollTarget: number | undefined;
   let scrollStartTime: number | undefined;
+  let lastScrollHeight = 0;
   const orderedMessages = createMemo(() => {
     const config = props.config;
     if (!config) return props.messages;
@@ -41,27 +42,27 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     scrollStartTime = undefined;
   };
 
-  const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+  const easeInOutCubic = (t: number) =>
+    t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
 
   const animateScroll = (
     container: HTMLElement,
-    delta: number,
+    target: number,
     duration: number,
   ) => {
     const reverse = props.config?.reverseLineOrder ?? false;
     if (reverse || props.config?.horizontal) return;
 
-    const now = performance.now();
-    const currentTarget = scrollTarget ?? container.scrollTop;
+    const maximum = Math.max(0, container.scrollHeight - container.clientHeight);
+    const clampedTarget = Math.min(target, maximum);
+    if (clampedTarget <= container.scrollTop) {
+      stopScrollAnimation();
+      return;
+    }
 
+    const now = performance.now();
     scrollStart = container.scrollTop;
-    scrollTarget = Math.max(
-      0,
-      Math.min(
-        currentTarget + delta,
-        container.scrollHeight - container.clientHeight,
-      ),
-    );
+    scrollTarget = clampedTarget;
     scrollStartTime = now;
 
     if (scrollFrame !== undefined) return;
@@ -78,7 +79,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
 
       const elapsed = performance.now() - scrollStartTime;
       const progress = Math.min(1, elapsed / duration);
-      const eased = easeOutCubic(progress);
+      const eased = easeInOutCubic(progress);
       const value = scrollStart + (scrollTarget - scrollStart) * eased;
       container.scrollTop = value;
 
@@ -97,6 +98,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     if (!container) return;
 
     cleanupImageFallback = installMessageImageFallback(container);
+    lastScrollHeight = container.scrollHeight;
 
     const isFlow = () => props.config?.animation === "flow";
     const reduceMotion = () =>
@@ -111,21 +113,17 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
         const added = Array.from(
           container.querySelectorAll<HTMLElement>(".chat_line.message-enter"),
         ).at(-1);
-        if (!added) return;
+        const scrollHeight = container.scrollHeight;
+        const heightDelta = scrollHeight - lastScrollHeight;
+        lastScrollHeight = scrollHeight;
+        if (!added || heightDelta <= 0) return;
 
-        const addedRect = added.getBoundingClientRect();
         const addedHeight = added.offsetHeight;
-        const containerRect = container.getBoundingClientRect();
-        const isAtBottom =
-          container.scrollTop + container.clientHeight >=
-          container.scrollHeight - 2;
+        const target = scrollHeight - container.clientHeight;
+        const distanceToEnd = target - container.scrollTop;
 
-        if (
-          isAtBottom &&
-          addedRect.bottom > containerRect.top &&
-          addedRect.top < containerRect.bottom
-        ) {
-          animateScroll(container, addedHeight, props.animationDurationMs);
+        if (distanceToEnd <= Math.max(heightDelta, addedHeight) + 2) {
+          animateScroll(container, target, props.animationDurationMs);
         }
       });
     };

@@ -27,7 +27,7 @@ export const DEFAULT_ANIMATION_OPTIONS: AnimationOptions = {
   easing: "ease-in-out",
   type: "fade",
 };
-export const FLOW_ANIMATION_DURATION = 300;
+export const FLOW_ANIMATION_DURATION = 320;
 
 export function getMessageEntryAnimationDuration(
   mode: ChatAnimationMode,
@@ -110,29 +110,12 @@ export function getAnimationStyles(options: AnimationOptions): string {
     case "flow":
       return `
         @keyframes flowIn {
-          0% {
-            opacity: 0;
-            clip-path: inset(100% 0 0 0);
-            scale: 1 0.82;
-            filter: blur(2px);
-          }
-          70% {
-            opacity: 1;
-            clip-path: inset(0 0 0 0);
-            scale: 1 0.98;
-            filter: blur(0.2px);
-          }
-          100% {
-            opacity: 1;
-            clip-path: inset(0 0 0 0);
-            scale: 1 1;
-            filter: blur(0);
-          }
+          from { transform: translateY(8px); }
+          to { transform: translateY(0); }
         }
         .message-enter {
-          animation: flowIn var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.2, 0, 0, 1) both;
-          transform-origin: center bottom;
-          will-change: opacity, filter;
+          animation: flowIn var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+          will-change: transform;
         }
         @media (prefers-reduced-motion: reduce) {
           .message-enter {
