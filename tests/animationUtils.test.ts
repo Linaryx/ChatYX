@@ -18,9 +18,9 @@ describe("chat animation modes", () => {
     expect(fadeStyles).toContain("fadeIn");
     expect(fadeStyles).toContain("prefers-reduced-motion: reduce");
     const flowStyles = getAnimationStyles({ ...options, type: "flow" });
-    expect(flowStyles).toContain("transform: translateY(8px)");
-    expect(flowStyles).toContain("transform: translateY(0)");
-    expect(flowStyles).toContain("transition: transform");
+    expect(flowStyles).toContain("translate: 0 8px");
+    expect(flowStyles).toContain("translate: 0;");
+    expect(flowStyles).toContain("transition: translate");
     expect(flowStyles).toContain("cubic-bezier(0.16, 1, 0.3, 1)");
     expect(flowStyles).not.toContain("@keyframes flowIn");
     expect(flowStyles).not.toContain("scale:");

@@ -165,6 +165,9 @@ export class LayoutManager {
   private container: HTMLElement;
   private options: LayoutOptions;
   private autoScroll: boolean = true;
+  private smoothScrollFrame: number | undefined;
+  private smoothScrollTarget: number | undefined;
+  private smoothScrollLastTime: number | undefined;
 
   constructor(
     container: HTMLElement,
@@ -198,6 +201,56 @@ export class LayoutManager {
     return { ...this.options };
   }
 
+  private currentScroll(): number {
+    return this.options.horizontal
+      ? this.container.scrollLeft
+      : this.container.scrollTop;
+  }
+
+  private setCurrentScroll(value: number): void {
+    if (this.options.horizontal) {
+      this.container.scrollLeft = value;
+    } else {
+      this.container.scrollTop = value;
+    }
+  }
+
+  private animateSmoothScroll(target: number): void {
+    // Exponential follow: retargeting only moves the goal, so velocity stays
+    // continuous no matter how often new messages arrive.
+    this.smoothScrollTarget = target;
+    if (this.smoothScrollFrame !== undefined) return;
+
+    this.smoothScrollLastTime = performance.now();
+    const step = (now: number) => {
+      if (
+        this.smoothScrollTarget === undefined ||
+        this.smoothScrollLastTime === undefined
+      ) {
+        this.smoothScrollFrame = undefined;
+        return;
+      }
+
+      const elapsed = Math.min(50, Math.max(0, now - this.smoothScrollLastTime));
+      this.smoothScrollLastTime = now;
+      const current = this.currentScroll();
+      const remaining = this.smoothScrollTarget - current;
+      if (Math.abs(remaining) < 0.5) {
+        this.setCurrentScroll(this.smoothScrollTarget);
+        this.smoothScrollFrame = undefined;
+        this.smoothScrollTarget = undefined;
+        this.smoothScrollLastTime = undefined;
+        return;
+      }
+
+      const factor = 1 - Math.exp(-elapsed / 140);
+      this.setCurrentScroll(current + remaining * factor);
+      this.smoothScrollFrame = window.requestAnimationFrame(step);
+    };
+
+    this.smoothScrollFrame = window.requestAnimationFrame(step);
+  }
+
   /**
    * Scroll to latest message if auto-scroll enabled
    */
@@ -211,10 +264,17 @@ export class LayoutManager {
       force || this.autoScroll || isScrolledToEnd(this.container, this.options);
     if (!shouldScroll) return;
 
-    const scroll = () => scrollToLatest(this.container, this.options, behavior);
+    const scroll = () => {
+      const target = getScrollPosition(this.container, this.options);
+      if (behavior === "smooth" && typeof window !== "undefined") {
+        this.animateSmoothScroll(target);
+      } else {
+        scrollToLatest(this.container, this.options, behavior);
+      }
+    };
     scroll();
 
-    if (!settle || typeof window === "undefined") return;
+    if (!settle || behavior === "smooth" || typeof window === "undefined") return;
 
     window.requestAnimationFrame(() => {
       scroll();

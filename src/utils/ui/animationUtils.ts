@@ -113,12 +113,12 @@ export function getAnimationStyles(options: AnimationOptions): string {
           flex-direction: column-reverse;
         }
         #chat_container.layout-vertical.layout-normal .chat_line {
-          transform: translateY(0);
-          transition: transform var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.16, 1, 0.3, 1);
+          translate: 0;
         }
         #chat_container.layout-vertical.layout-normal .chat_line.message-enter {
-          transform: translateY(8px);
-          will-change: transform;
+          translate: 0 8px;
+          transition: translate var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: translate;
         }
         @media (prefers-reduced-motion: reduce) {
           #chat_container.layout-vertical.layout-normal .chat_line {
