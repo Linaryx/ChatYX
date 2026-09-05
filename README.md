@@ -9,7 +9,7 @@ Twitch и YouTube Live Chat в одном аккуратном OBS-оверле�
 [![Build](https://img.shields.io/github/actions/workflow/status/Linaryx/ChatYX/deploy-pages.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=build)](https://github.com/Linaryx/ChatYX/actions/workflows/deploy-pages.yml)
 [![Frontend](https://img.shields.io/website?url=https%3A%2F%2Fchat.ruina.team%2F&style=for-the-badge&label=frontend&up_message=online&down_message=offline)](https://chat.ruina.team/)
 [![YouTube WebSocket](https://img.shields.io/website?url=https%3A%2F%2Fytwss.ruina.team%2Fhealth&style=for-the-badge&logo=youtube&logoColor=white&label=YouTube%20WebSocket&up_message=online&down_message=offline)](https://ytwss.ruina.team/health)
-[![License](https://img.shields.io/github/license/Linaryx/ChatYX?style=for-the-badge)](LICENSE)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue?style=for-the-badge)](LICENSE)
 
 ### [Открыть настройку оверлея](https://chat.ruina.team/)
 
@@ -215,4 +215,14 @@ YouTube bridge на `wss://ytwss.ruina.team`; Docker-инструкция выш
 
 ## Лицензия
 
-[MIT](LICENSE). Используйте, переделывайте и собирайте свой оверлей.
+ChatYX, включая frontend и YouTube WebSocket bridge, распространяется под
+[GNU GPL версии 3, без «или более поздней версии»](LICENSE) (`GPL-3.0-only`).
+Можно использовать, изменять и распространять оверлей при соблюдении GPL,
+включая предоставление соответствующих исходников при распространении сборок.
+Программа предоставляется без каких-либо гарантий.
+
+Исходное уведомление `Copyright (c) 2025 Linaryx` и полный текст MIT сохранены
+в [LICENSE-MIT](LICENSE-MIT) для ранее опубликованного MIT-кода. Переход не
+отменяет ранее выданные MIT-права и не меняет лицензии сторонних компонентов.
+Область действия, сохранение уведомлений и обязанности распространителей:
+[Licensing](documents/LICENSING.md).

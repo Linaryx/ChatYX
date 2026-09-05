@@ -1,12 +1,33 @@
 # Chat References
 
 Каталог внешних чатов, форков, оверлеев и сервисов, которые исследуются для
-ChatYX. Это **не** список зависимостей. Код из GPL, AGPL, кастомно
-лицензированных проектов или проектов без лицензии не копируется в MIT-проект
-ChatYX: мы используем только independently implemented behavior.
+ChatYX. Это **не** список зависимостей и не разрешение копировать любой код.
+С 5 сентября 2026 ChatYX распространяется под `GPL-3.0-only`; прежняя
+MIT reference-only policy для совместимого GPL-кода больше не действует.
+Подробности перехода и сохранения MIT-уведомлений: [Licensing](LICENSING.md).
+
+Код под GPLv3 или совместимой лицензией теперь может переноситься **после**
+проверки лицензии конкретных файлов и фиксации provenance: upstream URL,
+полный commit, исходные и целевые пути, copyright/license/NOTICE, изменения
+и их дата. Сохраняем все требуемые уведомления и выполняем обязанности по
+распространению исходников. Этот переход лицензии сам по себе не переносит код.
+
+Это не разрешение использовать GPLv2-only: он несовместим с GPLv3, в отличие
+от GPLv2-or-later при выборе версии 3. MIT/ISC/BSD/Apache-2.0 и другие
+не-GPL лицензии проверяются по точным условиям, а не запрещаются по названию.
+AGPL-источники остаются behavior reference only по политике проекта:
+GPLv3 section 13 допускает определённые комбинации с AGPLv3, но сохраняет
+AGPL-обязанности, включая сетевое предоставление исходников; это не обычный
+импорт под GPL-only. Нужны отдельное решение и проверка до такого объединения.
+Код из custom/nonfree (включая CC BY-NC-ND), unknown/unlicensed и `avoid`
+источников не переносится без отдельно подтверждённого совместимого разрешения.
+Для них используем independently implemented behavior, не копируя реализацию.
+Лицензии медиа, шрифтов и сервисов проверяются отдельно от лицензии приложения.
 
 Проверено: 30 августа 2026. `Unknown` означает, что canonical source или
 лицензию публично подтвердить не удалось.
+Политика лицензирования и три локальных GPL-checkout перепроверены 5 сентября
+2026; остальные записи не считаются повторно проверенными этой датой.
 
 ## Как Добавлять Источник
 
@@ -17,7 +38,8 @@ features, status и risks. Если поле не подтверждено, пи
 Статусы:
 
 - `primary` - основной проект или штатный provider ChatYX;
-- `reference` - поведение изучалось, код не переносится;
+- `reference` - источник для изучения, не утверждённый импорт кода; совместимый
+  код может быть перенесён только с отдельной проверкой и записью provenance;
 - `candidate` - источник добавлен, но ещё не прошёл аудит;
 - `avoid` - не использовать как source/runtime dependency.
 
@@ -46,7 +68,7 @@ giambaJ/jChat -> IS2511/ChatIS-v2 -> Johnnycyan/cyan-chat -> daviirodrig/cyan-ch
 | ChatIS-v2 | [IS2511/ChatIS-v2](https://github.com/IS2511/ChatIS-v2) · [ChatIS-core](https://github.com/IS2511/ChatIS-core) | [chatis.is2511.com](https://chatis.is2511.com/) · [README](https://github.com/IS2511/ChatIS-v2/blob/main/README.md) | GPL-3.0 | JS overlay; TypeScript core; Twitch | emotes, badges, fonts, animation, filters, TTS behavior | reference; inherited GPL obligations |
 | Cyan Chat | [Johnnycyan/cyan-chat](https://github.com/Johnnycyan/cyan-chat) | [chat.johnnycyan.com](https://chat.johnnycyan.com/) · [README](https://github.com/Johnnycyan/cyan-chat/blob/main/README.md) | GPL-3.0 | JS/jQuery, Webpack, Go backend; Twitch + optional YouTube | announcements, layouts, paints, TTS, image/YouTube commands | reference; media/TTS inputs and GPL require review |
 | mirronake/chat | [mirronake/chat](https://github.com/mirronake/chat) | Unknown | Verify on update | Cyan-derived source to re-check | announcement styling | reference; provenance/branch parity must be checked per commit |
-| Davii Chat | [daviirodrig/cyan-chat](https://github.com/daviirodrig/cyan-chat) | [README](https://github.com/daviirodrig/cyan-chat/blob/main/README.md) | GPL-3.0 | Go backend + Webpack/JS overlay; Twitch + optional YouTube | direct Cyan fork: TTS, emotes, badges, paints, commands | reference; README still points at Johnnycyan deployment; repository `package.json` says ISC but GPL `LICENSE` is authoritative |
+| Davii Chat | [daviirodrig/cyan-chat](https://github.com/daviirodrig/cyan-chat) | [README](https://github.com/daviirodrig/cyan-chat/blob/main/README.md) | GPL-3.0; ISC metadata conflict | Go backend + Webpack/JS overlay; Twitch + optional YouTube | direct Cyan fork: TTS, emotes, badges, paints, commands | reference; README still points at Johnnycyan deployment; ISC manifest is not evidence of an ISC grant for inherited GPL code; verify exact files before reuse |
 
 ### Independent Overlays (по дате создания)
 
@@ -61,7 +83,7 @@ giambaJ/jChat -> IS2511/ChatIS-v2 -> Johnnycyan/cyan-chat -> daviirodrig/cyan-ch
 | Twir | [twirapp/twir](https://github.com/twirapp/twir) | [README](https://github.com/twirapp/twir/blob/main/README.md) · [alert stage](https://github.com/twirapp/twir/blob/main/libs/frontend-alert-box/src/components/alert-stage.vue) | CC BY-NC-ND 4.0 | Go, Nuxt/Vue, TypeScript; streaming overlays | observe entry timing and reduced-motion handling | reference only; non-commercial/no-derivatives license means no source code is copied |
 | Snops Chat Overlay | [snops.fun/chat-overlay](https://snops.fun/chat-overlay) | [OBS overlay](https://snops.fun/chat-overlay?obs=1) | Unknown | deployed browser overlay; Twitch | bottom-slide entry and FLIP list movement | reference only; source repository and license not located, so no code is copied |
 | MultiChat | [gxufy/multichat-gxufy](https://github.com/gxufy/multichat-gxufy) | [Generator](https://gxufy.com/multichat) · [README](https://github.com/gxufy/multichat-gxufy/blob/main/README.md) | AGPL-3.0-or-later | Next.js, React, TS, Tailwind, Supabase, Pusher, Zod; Twitch/Kick/YouTube/TikTok | unified chat, viewer counter, pins/replies, Shared Chat/Hype Train, cosmetics, filtering, TTS/image/YouTube commands | AGPL; young project; external backend/platform dependency; user media URLs are untrusted |
-| ChatYX | [Linaryx/ChatYX](https://github.com/Linaryx/ChatYX) | [chat.ruina.team](https://chat.ruina.team/) · [README](README.md) | MIT | SolidJS, TypeScript, Vite; Twitch + YouTube | OBS overlay, emotes, badges, paints, RTE opt-ins, Shared Chat, events, TTS commands | primary; external provider/API availability remains operational risk |
+| ChatYX | [Linaryx/ChatYX](https://github.com/Linaryx/ChatYX) | [chat.ruina.team](https://chat.ruina.team/) · [README](../README.md) | GPL-3.0-only; legacy MIT notices retained | SolidJS, TypeScript, Vite; Twitch + YouTube | OBS overlay, emotes, badges, paints, RTE opt-ins, Shared Chat, events, TTS commands | primary; external provider/API availability remains operational risk |
 
 ### Unknown Source / Unverified
 
@@ -110,11 +132,21 @@ giambaJ/jChat -> IS2511/ChatIS-v2 -> Johnnycyan/cyan-chat -> daviirodrig/cyan-ch
 
 ## Local `codesnippets` Provenance
 
+`codesnippets/` исключён через `.gitignore`; в tracked tree ChatYX нет файлов
+из этого каталога. Не включать локальные checkout/captures в release artifacts.
+Три GPL-checkout ниже чистые на указанных revisions по проверке 2026-09-05.
+Их `LICENSE` содержит один и тот же полный GNU GPL **version 3, 29 June 2007**.
+В проверенных README и application notices не найден отдельный grant
+«or later»: пример в конце стандартного GPL не является таким grant.
+Для оценки совместимости используем версию 3, не заявляя право на будущие
+версии. Табличное `GPL-3.0` у внешних проектов не уточняет `only`/`or-later`;
+проверка отдельных файлов обязательна. `ChatIS-core` отдельно здесь не проверен.
+
 | Local Path | Remote / Commit | Status | Notes |
 |---|---|---|---|
-| `codesnippets/jChat` | `giambaJ/jChat` @ `86a0b95` | valid upstream checkout | GPL-3.0 |
-| `codesnippets/ChatIS-v2` | `IS2511/ChatIS-v2` @ `f478edf` | valid upstream checkout | GPL-3.0 |
-| `codesnippets/cyan-chat-upstream` | `Johnnycyan/cyan-chat` @ `36887b4` | valid upstream checkout | GPL LICENSE takes precedence over conflicting `package.json` ISC field |
+| `codesnippets/jChat` | [giambaJ/jChat](https://github.com/giambaJ/jChat/tree/86a0b95fcf303ed684d3367dad2b218181ab209b) @ `86a0b95fcf303ed684d3367dad2b218181ab209b` | valid upstream checkout; reference | GPL v3 text in `LICENSE`; no project-specific or-later grant found; bundled jQuery, TinyColor, Twemoji and assets require separate notice review |
+| `codesnippets/ChatIS-v2` | [IS2511/ChatIS-v2](https://github.com/IS2511/ChatIS-v2/tree/f478edf53bcc89e75a1346fdf5a34c68579a125f) @ `f478edf53bcc89e75a1346fdf5a34c68579a125f` | valid upstream checkout; reference | GPL v3 text in `LICENSE`; no project-specific or-later grant found; inherited jChat notices plus DOMPurify/arrive.js and asset terms need review |
+| `codesnippets/cyan-chat-upstream` | [Johnnycyan/cyan-chat](https://github.com/Johnnycyan/cyan-chat/tree/36887b4db1215bc6d86429164923d61b0b0f08bb) @ `36887b4db1215bc6d86429164923d61b0b0f08bb` | valid upstream checkout; reference | GPL v3 `LICENSE` conflicts with `package.json` ISC; do not treat inherited GPL code as ISC; no project-specific or-later grant found; verify file-level grants, bundled libraries, submodules and media before import |
 | `codesnippets/twir` | `twirapp/twir` @ `b6dfcda` | valid upstream checkout | CC BY-NC-ND 4.0; behavior reference only, no code copied |
 | `codesnippets/snops-chat-overlay` | `https://snops.fun/chat-overlay` | capture metadata | source repository and license unknown; behavior reference only, no source copied |
 | `codesnippets/cyan-chat` | resolves to ChatYX parent repo | copied derivative | not an independent Cyan source checkout |

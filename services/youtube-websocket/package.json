@@ -2,6 +2,7 @@
   "name": "@chatyx/youtube-websocket",
   "version": "0.1.0",
   "private": true,
+  "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
