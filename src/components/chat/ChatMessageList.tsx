@@ -13,24 +13,13 @@ type ChatMessageListProps = {
   onMessageExpired?: (messageId: string) => void;
 };
 
-function currentTransformY(element: HTMLElement): number {
-  const transform = getComputedStyle(element).transform;
-  if (!transform || transform === "none") return 0;
-  try {
-    return new DOMMatrixReadOnly(transform).m42 || 0;
-  } catch {
-    const match = transform.match(/matrix\([^,]+,[^,]+,[^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-    const parsed = match ? Number.parseFloat(match[1] ?? "") : Number.NaN;
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-}
-
 export const ChatMessageList = (props: ChatMessageListProps) => {
   let cleanupImageFallback: (() => void) | undefined;
   let flowObserver: MutationObserver | undefined;
-  let flowReconciliationFrame: number | undefined;
-  let flowStartFrame: number | undefined;
+  let flowInvertFrame: number | undefined;
+  let flowPlayFrame: number | undefined;
   let flowCleanupTimer: number | undefined;
+  const knownMessageIds = new Set<string>();
   const orderedMessages = createMemo(() => {
     const config = props.config;
     if (!config) return props.messages;
@@ -51,33 +40,22 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
 
     cleanupImageFallback = installMessageImageFallback(container);
 
-    let flowPending: HTMLElement[] = [];
-
-    const playFlow = () => {
-      flowReconciliationFrame = undefined;
-      const shifted = flowPending;
-      flowPending = [];
-      if (shifted.length === 0) return;
-      flowStartFrame = window.requestAnimationFrame(() => {
-        flowStartFrame = undefined;
-        for (const element of shifted) {
+    const playFlow = (pending: HTMLElement[]) => {
+      if (pending.length === 0) return;
+      flowPlayFrame = window.requestAnimationFrame(() => {
+        flowPlayFrame = undefined;
+        for (const element of pending) {
           if (!element.isConnected) continue;
           element.style.transition = `transform ${props.animationDurationMs}ms cubic-bezier(0.16, 1, 0.3, 1)`;
           element.style.transform = "";
         }
-
         flowCleanupTimer = window.setTimeout(() => {
-          for (const element of shifted) {
+          for (const element of pending) {
             if (element.isConnected) element.style.transition = "";
           }
           flowCleanupTimer = undefined;
         }, props.animationDurationMs + 50);
       });
-    };
-
-    const scheduleFlowPlay = () => {
-      if (flowReconciliationFrame !== undefined) return;
-      flowReconciliationFrame = window.requestAnimationFrame(playFlow);
     };
 
     const invertFlow = () => {
@@ -91,45 +69,45 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
         return;
       }
 
-      // Cancel a not-yet-started play so rapid messages accumulate into one.
-      if (flowStartFrame !== undefined) {
-        window.cancelAnimationFrame(flowStartFrame);
-        flowStartFrame = undefined;
+      if (flowInvertFrame !== undefined) {
+        window.cancelAnimationFrame(flowInvertFrame);
+      }
+      if (flowPlayFrame !== undefined) {
+        window.cancelAnimationFrame(flowPlayFrame);
+        flowPlayFrame = undefined;
       }
       if (flowCleanupTimer !== undefined) {
         window.clearTimeout(flowCleanupTimer);
         flowCleanupTimer = undefined;
       }
 
-      const added = Array.from(
-        container.querySelectorAll<HTMLElement>(".chat_line.message-enter"),
-      ).filter((element) => element.isConnected);
-      if (added.length === 0) return;
+      flowInvertFrame = window.requestAnimationFrame(() => {
+        flowInvertFrame = undefined;
 
-      // The new row height is only known after layout, so measure the real
-      // inserted rows instead of predicting it. In the reversed flow stack
-      // every visible row shifts by exactly this amount.
-      const addedHeight = added.reduce((total, element) => {
-        const height =
-          element.offsetHeight || element.getBoundingClientRect().height || 0;
-        return total + height;
-      }, 0);
-      if (addedHeight < 0.5) return;
+        const newIds = orderedMessages()
+          .map((m) => m.id)
+          .filter((id) => !knownMessageIds.has(id));
+        if (newIds.length === 0) return;
 
-      const existing = Array.from(
-        container.querySelectorAll<HTMLElement>(".chat_line:not(.message-enter)"),
-      ).filter((element) => element.isConnected);
-      if (existing.length === 0) return;
+        const addedHeight = newIds.reduce((total, id) => {
+          const el = container.querySelector<HTMLElement>(`[data-id="${id}"]`);
+          return total + (el?.offsetHeight || el?.getBoundingClientRect().height || 0);
+        }, 0);
+        if (addedHeight < 0.5) return;
 
-      // Run synchronously inside the mutation callback (before paint), so no
-      // uncorrected frame is ever rendered.
-      for (const element of existing) {
-        const remaining = currentTransformY(element);
-        element.style.transition = "none";
-        element.style.transform = `translate3d(0, ${remaining + addedHeight}px, 0)`;
-      }
-      flowPending = existing;
-      scheduleFlowPlay();
+        const existing = Array.from(
+          container.querySelectorAll<HTMLElement>(".chat_line"),
+        ).filter((el) => el.isConnected && !newIds.includes(el.dataset.id ?? ""));
+        if (existing.length === 0) return;
+
+        for (const id of newIds) knownMessageIds.add(id);
+
+        for (const element of existing) {
+          element.style.transition = "none";
+          element.style.transform = `translate3d(0, ${addedHeight}px, 0)`;
+        }
+        playFlow(existing);
+      });
     };
 
     flowObserver = new MutationObserver(invertFlow);
@@ -139,11 +117,11 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   onCleanup(() => {
     cleanupImageFallback?.();
     flowObserver?.disconnect();
-    if (flowReconciliationFrame !== undefined) {
-      window.cancelAnimationFrame(flowReconciliationFrame);
+    if (flowInvertFrame !== undefined) {
+      window.cancelAnimationFrame(flowInvertFrame);
     }
-    if (flowStartFrame !== undefined) {
-      window.cancelAnimationFrame(flowStartFrame);
+    if (flowPlayFrame !== undefined) {
+      window.cancelAnimationFrame(flowPlayFrame);
     }
     if (flowCleanupTimer !== undefined) {
       window.clearTimeout(flowCleanupTimer);

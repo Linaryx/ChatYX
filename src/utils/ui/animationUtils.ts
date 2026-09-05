@@ -109,20 +109,24 @@ export function getAnimationStyles(options: AnimationOptions): string {
 
     case "flow":
       return `
+        @keyframes chatFlowEnter {
+          from {
+            translate: 0 var(--chat-flow-entry-shift, 18px);
+          }
+          to {
+            translate: 0 0;
+          }
+        }
         #chat_container.layout-vertical.layout-normal {
           flex-direction: column-reverse;
         }
-        #chat_container.layout-vertical.layout-normal .chat_line {
-          translate: 0;
-        }
         #chat_container.layout-vertical.layout-normal .chat_line.message-enter {
-          translate: 0 8px;
-          transition: translate var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.16, 1, 0.3, 1);
+          animation: chatFlowEnter var(--chat-message-enter-duration, ${duration}ms) cubic-bezier(0.16, 1, 0.3, 1) both;
           will-change: translate;
         }
         @media (prefers-reduced-motion: reduce) {
-          #chat_container.layout-vertical.layout-normal .chat_line {
-            transition: none;
+          #chat_container.layout-vertical.layout-normal .chat_line.message-enter {
+            animation: none;
           }
         }
       `;

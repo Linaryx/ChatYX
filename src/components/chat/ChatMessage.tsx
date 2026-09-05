@@ -138,35 +138,39 @@ function stripReplyMention(message: TwitchMessage, text: string) {
 }
 
 export const ChatMessage = (props: ChatMessageProps) => {
-  const { message, service } = props;
   let rootRef: HTMLDivElement | undefined;
   let animationTimer: number | undefined;
-  let flowEntryFrame: number | undefined;
-  let flowEntrySettleFrame: number | undefined;
   let onEntryAnimationEnd: ((event: AnimationEvent) => void) | undefined;
 
-  const actionPrefix = "\x01ACTION";
-  const actionSuffix = "\x01";
-  const isAction =
-    message.message.startsWith(actionPrefix) &&
-    message.message.endsWith(actionSuffix);
-  let processedMessage = message.message;
-  if (isAction) {
-    processedMessage = processedMessage
-      .slice(actionPrefix.length, -actionSuffix.length)
-      .trim();
-  }
-  processedMessage = stripReplyMention(message, processedMessage);
-
-  const integrationPaint = message.userId
-    ? service.getUserPaint(message.userId, message.username)
-    : null;
-
-  const paintCSS =
-    integrationPaint || sevenTVCosmeticsService.calculatePaintCSS(message.username);
-  const userColor = safeCssColor(message.color || "#e6eef7");
+  const ACTION_PREFIX = "\x01ACTION";
+  const ACTION_SUFFIX = "\x01";
+  const isAction = createMemo(
+    () =>
+      props.message.message.startsWith(ACTION_PREFIX) &&
+      props.message.message.endsWith(ACTION_SUFFIX),
+  );
+  const processedMessage = createMemo(() => {
+    let text = props.message.message;
+    if (isAction()) {
+      text = text.slice(ACTION_PREFIX.length, -ACTION_SUFFIX.length).trim();
+    }
+    return stripReplyMention(props.message, text);
+  });
+  const integrationPaint = createMemo(() =>
+    props.message.userId
+      ? props.service.getUserPaint(props.message.userId, props.message.username)
+      : null,
+  );
+  const paintCSS = createMemo(
+    () =>
+      integrationPaint() ||
+      sevenTVCosmeticsService.calculatePaintCSS(props.message.username),
+  );
+  const userColor = createMemo(() =>
+    safeCssColor(props.message.color || "#e6eef7"),
+  );
   const visibleTwitchEvent = createMemo(() => {
-    const event = message.twitchEvent;
+    const event = props.message.twitchEvent;
     if (!event) return undefined;
     if (
       event.type === "highlighted-message" &&
@@ -217,34 +221,45 @@ export const ChatMessage = (props: ChatMessageProps) => {
       : "normal",
   }));
 
-  let nickStyle = "";
-  let paintClasses = "";
-  let paintAttributes: Record<string, string> = {};
-
-  if (paintCSS && typeof paintCSS === "object" && paintCSS.useGlobalCSS) {
-    paintClasses = "chatyx-seventv-paint";
-    paintAttributes["data-seventv-paint-id"] = (paintCSS as { paintId: string }).paintId;
-  } else if (integrationPaint) {
-    nickStyle += ` ${integrationPaint}`;
-  } else {
-    nickStyle += ` color: ${userColor};`;
-  }
-
-  const has7tvPaint =
-    Boolean(integrationPaint) ||
-    (typeof paintCSS === "object" &&
-      paintCSS !== null &&
-      "useGlobalCSS" in paintCSS &&
-      (paintCSS as { useGlobalCSS?: boolean }).useGlobalCSS);
-
-  const messageTextColor = isAction ? userColor : "white";
+  const has7tvPaint = createMemo(
+    () =>
+      Boolean(integrationPaint()) ||
+      (typeof paintCSS() === "object" &&
+        paintCSS() !== null &&
+        "useGlobalCSS" in paintCSS() &&
+        (paintCSS() as { useGlobalCSS?: boolean }).useGlobalCSS),
+  );
+  const nickStyle = createMemo(() => {
+    const css = paintCSS();
+    const ip = integrationPaint();
+    const uc = userColor();
+    if (css && typeof css === "object" && css.useGlobalCSS) return "";
+    if (ip) return ` ${ip}`;
+    return ` color: ${uc};`;
+  });
+  const paintClasses = createMemo(() => {
+    const css = paintCSS();
+    return css && typeof css === "object" && css.useGlobalCSS
+      ? "chatyx-seventv-paint"
+      : "";
+  });
+  const paintAttributes = createMemo(() => {
+    const css = paintCSS();
+    if (css && typeof css === "object" && css.useGlobalCSS) {
+      const result: Record<string, string> = {};
+      result["data-seventv-paint-id"] = (css as { paintId: string }).paintId;
+      return result;
+    }
+    return {} as Record<string, string>;
+  });
+  const messageTextColor = createMemo(() => (isAction() ? userColor() : "white"));
   const replyText = createMemo(() =>
-    isReplyEligibleEvent(message.twitchEvent?.type)
-      ? getReplyText(message)
+    isReplyEligibleEvent(props.message.twitchEvent?.type)
+      ? getReplyText(props.message)
       : null,
   );
   const hasEventMessageText = createMemo(() =>
-    Boolean(visibleTwitchEvent() && processedMessage.trim()),
+    Boolean(visibleTwitchEvent() && processedMessage().trim()),
   );
   const eventSummary = createMemo(() => {
     const event = visibleTwitchEvent();
@@ -259,10 +274,10 @@ export const ChatMessage = (props: ChatMessageProps) => {
   onMount(() => {
     if (!rootRef) return;
 
-    if (message.id) {
+    if (props.message.id) {
       props.service.scheduleMessageFade(rootRef, () => {
         if (props.onExpired) {
-          props.onExpired(message.id);
+          props.onExpired(props.message.id);
         } else {
           rootRef?.remove();
         }
@@ -274,12 +289,30 @@ export const ChatMessage = (props: ChatMessageProps) => {
       hasMessageEntryAnimation(props.config.animation)
     ) {
       rootRef.classList.add("message-enter");
+
       if (props.config.animation === "flow") {
-        flowEntryFrame = window.requestAnimationFrame(() => {
-          flowEntrySettleFrame = window.requestAnimationFrame(() => {
-            rootRef?.classList.remove("message-enter");
-          });
-        });
+        // Smooth "throw from bottom": a CSS @keyframes animation (chatFlowEnter)
+        // slides the new row up from one row-height below its natural position.
+        // Measure synchronously (forces layout) so the animation starts with the
+        // correct shift and never jumps; animationend/timer clean up the class.
+        const height = rootRef.getBoundingClientRect().height || 18;
+        rootRef.style.setProperty("--chat-flow-entry-shift", `${height}px`);
+        const clearEntryAnimation = () => {
+          const r = rootRef;
+          if (!r) return;
+          r.classList.remove("message-enter");
+          r.style.removeProperty("--chat-flow-entry-shift");
+          rootRef?.removeEventListener("animationend", onEntryAnimationEnd!);
+          animationTimer = undefined;
+        };
+        onEntryAnimationEnd = (event) => {
+          if (event.target === rootRef) clearEntryAnimation();
+        };
+        rootRef.addEventListener("animationend", onEntryAnimationEnd);
+        animationTimer = window.setTimeout(
+          clearEntryAnimation,
+          props.animationDurationMs + 100,
+        );
         return;
       }
 
@@ -301,12 +334,6 @@ export const ChatMessage = (props: ChatMessageProps) => {
 
   onCleanup(() => {
     if (animationTimer !== undefined) window.clearTimeout(animationTimer);
-    if (flowEntryFrame !== undefined) {
-      window.cancelAnimationFrame(flowEntryFrame);
-    }
-    if (flowEntrySettleFrame !== undefined) {
-      window.cancelAnimationFrame(flowEntrySettleFrame);
-    }
     if (rootRef && onEntryAnimationEnd) {
       rootRef.removeEventListener("animationend", onEntryAnimationEnd);
     }
@@ -321,14 +348,14 @@ export const ChatMessage = (props: ChatMessageProps) => {
       class="chat_line"
       classList={{
         "gigantified-emote": Boolean(
-          message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
+          props.message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
         ),
         "platform-marked": showPlatformMarker(),
         "chat-event": Boolean(visibleTwitchEvent()),
         "chat-event-highlight": Boolean(
           visibleTwitchEvent() &&
             props.config.highlightTwitchEvents &&
-            !(message.isGigantifiedEmote && props.config.showGigantifiedEmotes),
+            !(props.message.isGigantifiedEmote && props.config.showGigantifiedEmotes),
         ),
         "chat-event-with-message": hasEventMessageText(),
         "chat-event-authored": hasEventMessageText(),
@@ -341,11 +368,11 @@ export const ChatMessage = (props: ChatMessageProps) => {
           Boolean(visibleTwitchEvent()?.level),
       }}
       style={messageStyle()}
-      data-nick={message.username}
-      data-user-id={message.userId || ""}
-      data-time={message.timestamp.getTime()}
-      data-id={message.id}
-      data-platform={message.platform || "twitch"}
+      data-nick={props.message.username}
+      data-user-id={props.message.userId || ""}
+      data-time={props.message.timestamp.getTime()}
+      data-id={props.message.id}
+      data-platform={props.message.platform || "twitch"}
       data-event={visibleTwitchEvent()?.type || undefined}
     >
       {replyText() && (
@@ -418,9 +445,9 @@ export const ChatMessage = (props: ChatMessageProps) => {
                         <>
                           <span
                             class="chat-watch-streak-user"
-                            style={{ color: userColor }}
+                            style={{ color: userColor() }}
                           >
-                            {message.displayName || event().detail}
+                            {props.message.displayName || event().detail}
                           </span>
                           {` · ${formatWatchStreakCount(event().count)}`}
                         </>
@@ -485,28 +512,28 @@ export const ChatMessage = (props: ChatMessageProps) => {
           </span>
         )}
       </Show>
-      <Show when={!visibleTwitchEvent() || processedMessage.trim()}>
-        <ChatBadges message={message} config={props.config} service={service} />
+      <Show when={!visibleTwitchEvent() || processedMessage().trim()}>
+        <ChatBadges message={props.message} config={props.config} service={props.service} />
         <ChatNick
-          message={message}
-          nickStyle={nickStyle}
+          message={props.message}
+          nickStyle={nickStyle()}
           fontWeight={nickFontWeight()}
-          paintClasses={paintClasses}
-          paintAttributes={paintAttributes}
-          colonColor={has7tvPaint ? "#fff" : userColor}
-          isAction={isAction}
+          paintClasses={paintClasses()}
+          paintAttributes={paintAttributes()}
+          colonColor={has7tvPaint() ? "#fff" : userColor()}
+          isAction={isAction()}
           uppercase={props.config.smallCaps}
         />
         <ChatText
           message={{
-            ...message,
-            message: processedMessage,
+            ...props.message,
+            message: processedMessage(),
             isGigantifiedEmote:
-              message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
+              props.message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
           }}
           config={props.config}
-          service={service}
-          color={messageTextColor}
+          service={props.service}
+          color={messageTextColor()}
           fontWeight={fontWeight()}
         />
       </Show>
