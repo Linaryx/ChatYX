@@ -22,9 +22,9 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.4.1",
     "csstype": "^3.2.3",
-    "oxlint": "^1.80.0",
+    "oxlint": "^1.81.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
@@ -37,7 +37,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucid-color-picker": "^0.1.0",
-    "lucide-solid": "^1.38.0",
+    "lucide-solid": "^1.41.0",
     "solid-js": "^1.9.15",
     "tailwind-merge": "^3.6.0"
   },
