@@ -60,6 +60,7 @@ function config(overrides: Partial<ChatConfig> = {}): ChatConfig {
   return {
     ...DEFAULT_CHAT_CONFIG,
     rteAzureTts: true,
+    rteChatIsTts: false,
     ttsReadChat: true,
     ...overrides,
   };
@@ -90,7 +91,7 @@ describe("RTE runtime controller", () => {
 
     controller.updateConfig(
       config({
-        ttsVoice: "Dmitriy",
+      ttsVoice: "Dmitry",
         ttsVolume: 0.25,
         ttsMaxLength: 250,
       }),
@@ -100,7 +101,7 @@ describe("RTE runtime controller", () => {
       {
         azureEnabled: true,
         chatisEnabled: false,
-        azureVoice: "Dmitriy",
+      azureVoice: "Dmitry",
         chatisVoice: "Maxim",
         volume: 0.25,
         maxLength: 250,
@@ -132,7 +133,7 @@ describe("RTE runtime controller", () => {
     controller.updateConfig(config());
     const source = message();
 
-    controller.handleAuthorizedCommand("-s Dmitriy hello", source);
+    controller.handleAuthorizedCommand("-s Dmitry hello", source);
     controller.handleAuthorizedCommand("skip", source);
     controller.handleAuthorizedCommand("clear", source);
     controller.handleAuthorizedCommand("stop", source);

@@ -4,34 +4,37 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px;
-  border: 1px solid #27272a;
-  border-radius: 8px;
-  background: #0d0d0f;
+  padding: 4px 6px 4px 12px;
+  border: 1px solid hsl(var(--input));
+  border-radius: 0.5rem;
+  background: hsl(var(--background));
   box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.twitch-channel-field:focus-within {
+  border-color: hsl(264 100% 64%);
+  box-shadow: 0 0 0 3px hsl(264 100% 64% / 0.16);
 }
 
 .twitch-channel-chip {
   width: 100%;
   min-width: 0;
-  min-height: 38px;
+  min-height: 30px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 5px 8px 5px 5px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  background: #050505;
-  color: #ffffff;
+  padding: 2px 2px 2px 0;
+  color: hsl(var(--foreground));
   box-sizing: border-box;
 }
 
 .twitch-channel-avatar,
 .twitch-channel-avatar-fallback {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   flex: 0 0 auto;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 2px solid hsl(264 100% 68% / 0.5);
   border-radius: 999px;
   background: #000000;
   box-sizing: border-box;
@@ -70,7 +73,7 @@
   min-width: 0;
   max-width: 150px;
   overflow: hidden;
-  color: #ffffff;
+  color: hsl(var(--foreground));
   font-size: 12px;
   font-weight: 800;
   text-overflow: ellipsis;
@@ -82,7 +85,7 @@
   height: 6px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
+  background: hsl(264 100% 70%);
   animation: twitch-channel-loading 0.9s ease-in-out infinite alternate;
 }
 
@@ -97,12 +100,12 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 22px;
+  height: 20px;
   padding: 0 7px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid hsl(var(--border));
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.86);
+  background: hsl(var(--muted) / 0.6);
+  color: hsl(var(--muted-foreground));
   font-size: 12px;
   font-weight: 800;
   line-height: 1;
@@ -137,38 +140,46 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #ffffff;
+  color: hsl(var(--muted-foreground));
   cursor: pointer;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.twitch-channel-remove:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
 }
 
 .twitch-channel-input {
-  min-width: 190px;
-  flex: 1 1 220px;
-  height: 30px;
-  padding: 0 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 28px;
+  padding: 0;
   border: 0;
   background: transparent;
-  color: #ffffff;
+  color: hsl(var(--foreground));
   font: inherit;
   font-size: 13px;
-  text-align: center;
+  text-align: left;
   box-sizing: border-box;
 }
 
 .twitch-channel-input::placeholder {
-  color: #a1a1aa;
+  color: hsl(var(--muted-foreground));
+}
+
+.twitch-channel-input:focus {
+  outline: none;
 }
 
 @keyframes twitch-channel-loading {
   from {
-    opacity: 0.35;
-    transform: scale(0.9);
+    opacity: 0.3;
   }
 
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }

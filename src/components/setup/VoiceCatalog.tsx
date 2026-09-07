@@ -12,7 +12,7 @@ const PROVIDERS = [
   {
     id: "JustDavi / Azure",
     title: "JustDavi / Azure",
-    command: "!chat tts -s Dmitriy текст",
+    command: "!chat tts -s Dmitry текст",
   },
 ] as const;
 
@@ -100,7 +100,7 @@ export function VoiceCatalog() {
             Каталог голосов
           </h3>
           <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            В ChatYX доступны пять русских вариантов имён голосов. Команды: <code class="text-foreground">!chat tts</code> или короче <code class="text-foreground">!tts</code>.
+            В ChatYX доступны четыре русских голоса. Команды: <code class="text-foreground">!chat tts</code> или короче <code class="text-foreground">!tts</code>.
           </p>
         </div>
         <a
@@ -145,13 +145,13 @@ export function VoiceCatalog() {
                     </h4>
                     <code class="text-[11px] text-muted-foreground">{provider.command}</code>
                   </div>
-                  <div class="mt-1.5 max-h-48 overflow-auto rounded-md border border-border">
-                    <table class="w-full min-w-[560px] border-collapse text-left text-xs">
+                  <div class="mt-1.5 overflow-hidden rounded-md border border-border">
+                    <table class="w-full table-fixed border-collapse text-left text-xs">
                       <thead class="sticky top-0 bg-card text-muted-foreground">
                         <tr>
-                          <th scope="col" class="px-2 py-1.5 font-medium">Голос</th>
-                          <th scope="col" class="px-2 py-1.5 font-medium">Локаль</th>
-                          <th scope="col" class="px-2 py-1.5 font-medium">Пол</th>
+                          <th scope="col" class="w-[24%] px-2 py-1.5 font-medium">Голос</th>
+                          <th scope="col" class="w-[18%] px-2 py-1.5 font-medium">Локаль</th>
+                          <th scope="col" class="w-[18%] px-2 py-1.5 font-medium">Пол</th>
                           <th scope="col" class="px-2 py-1.5 font-medium">Особенности</th>
                         </tr>
                       </thead>
@@ -159,17 +159,16 @@ export function VoiceCatalog() {
                         <For each={providerVoices()}>
                           {(voice) => (
                             <tr class="border-t border-border/70 text-foreground">
-                              <td class="px-2 py-1.5 font-mono text-[11px]">{voice.voice}</td>
-                              <td class="px-2 py-1.5 text-muted-foreground">{voice.locale}</td>
-                              <td class="px-2 py-1.5 text-muted-foreground">{voice.gender}</td>
-                              <td class="px-2 py-1.5 text-muted-foreground">{voice.features || "—"}</td>
+                              <td class="break-words px-2 py-1.5 font-mono text-[11px]">{voice.voice}</td>
+                              <td class="break-words px-2 py-1.5 text-muted-foreground">{voice.locale}</td>
+                              <td class="break-words px-2 py-1.5 text-muted-foreground">{voice.gender}</td>
+                              <td class="break-words px-2 py-1.5 text-muted-foreground">{voice.features || "—"}</td>
                             </tr>
                           )}
                         </For>
                       </tbody>
                     </table>
                   </div>
-                  <p class="mt-1 text-[11px] text-muted-foreground">Показано: {providerVoices().length}</p>
                 </section>
               );
             }}

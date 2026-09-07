@@ -12,6 +12,7 @@ import { ColorPickerField } from "~/components/ColorPickerField";
 import {
   ControlRows,
   SectionCard,
+  SETUP_NAV,
   SetupNav,
   ToggleRows,
   type ControlRow,
@@ -20,6 +21,7 @@ import {
 } from "~/components/setup/SetupLayout";
 import { VoiceCatalog } from "~/components/setup/VoiceCatalog";
 import { SetupImportCard } from "~/components/setup/SetupImportCard";
+import { parseSetupImport } from "~/config/setupImport";
 import { applySetupImport } from "~/components/setup/setupImportAdapter";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
@@ -36,6 +38,7 @@ import {
   type ChatAnimationMode,
   type ChatConfig,
   type LinkDisplayMode,
+  type PlatformMarkerMode,
 } from "~/config/chatUrlParams";
 import { getAppBaseUrl, getPublicAssetUrl } from "~/utils/appBase";
 import {
@@ -48,6 +51,14 @@ import {
   getChatPreviewSessionKey,
 } from "~/services/chat/preview";
 import { cn } from "~/lib/utils";
+import Check from "lucide-solid/icons/check";
+import Copy from "lucide-solid/icons/copy";
+import ExternalLink from "lucide-solid/icons/external-link";
+import Monitor from "lucide-solid/icons/monitor";
+import Pause from "lucide-solid/icons/pause";
+import Play from "lucide-solid/icons/play";
+import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
+import "~/components/setup/SetupWorkspace.css";
 
 type BotProfile = {
   login: string;
@@ -75,7 +86,10 @@ const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_WEB_CLIENT_ID =
   import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
 const SETUP_STORAGE_KEYS = {
+  config: "chatyx.setup.config.v1",
   twitchChannel: "chatyx.setup.twitchChannel",
+  previewStageBackdrop: "chatyx.setup.previewStageBackdrop",
+  previewStageColor: "chatyx.setup.previewStageColor",
 } as const;
 
 function readStoredSetupValue(key: string): string {
@@ -251,6 +265,9 @@ export default function ChatSetup() {
     readStoredSetupValue(SETUP_STORAGE_KEYS.twitchChannel),
   );
   const [youtubeChannel, setYoutubeChannel] = createSignal("");
+  const [platformMarker, setPlatformMarker] = createSignal<PlatformMarkerMode>(
+    DEFAULT_CHAT_CONFIG.platformMarker,
+  );
   const [size, setSize] = createSignal(String(DEFAULT_CHAT_CONFIG.size));
   const [font, setFont] = createSignal(String(DEFAULT_CHAT_CONFIG.font));
   const [fontWeight, setFontWeight] = createSignal(
@@ -284,6 +301,36 @@ export default function ChatSetup() {
     String(DEFAULT_CHAT_CONFIG.messageSpeed),
   );
   const [previewMode, setPreviewMode] = createSignal<"live" | "demo">("demo");
+  const [demoPaused, setDemoPaused] = createSignal(false);
+  const [stageBackdrop, setStageBackdrop] = createSignal<
+    "dark" | "light" | "checker" | "custom"
+  >(
+    (readStoredSetupValue(SETUP_STORAGE_KEYS.previewStageBackdrop) as
+      | "dark"
+      | "light"
+      | "checker"
+      | "custom") || "dark",
+  );
+  const [stageColor, setStageColor] = createSignal(
+    readStoredSetupValue(SETUP_STORAGE_KEYS.previewStageColor) || "#241b33",
+  );
+
+  const previewStageStyle = createMemo(() => {
+    switch (stageBackdrop()) {
+      case "checker":
+        return "background-image: repeating-conic-gradient(#ffffff 0% 25%, #d4d4d8 0% 50%); background-size: 16px 16px;";
+      case "light":
+        return "background-color: #ffffff;";
+      case "custom":
+        return `background-color: ${stageColor()};`;
+      case "dark":
+      default:
+        return "background-color: #000000;";
+    }
+  });
+  const [reducedMotion, setReducedMotion] = createSignal(false);
+  const [mobileView, setMobileView] = createSignal<"settings" | "preview">("settings");
+  const [copyStatus, setCopyStatus] = createSignal<"idle" | "copying" | "success" | "error">("idle");
   const [previewDemoKind, setPreviewDemoKind] = createSignal<
     "pasta" | "emote"
   >("pasta");
@@ -397,9 +444,14 @@ export default function ChatSetup() {
   // eslint-disable-next-line no-unassigned-vars -- assigned by SolidJS ref={}
   let iframeRef: HTMLIFrameElement | undefined;
   // eslint-disable-next-line no-unassigned-vars -- assigned by SolidJS ref={}
-  let settingsScrollRef: HTMLDivElement | undefined;
+  let settingsScrollRef: HTMLElement | undefined;
+  // eslint-disable-next-line no-unassigned-vars -- assigned by SolidJS ref={}
+  let bodyScrollRef: HTMLDivElement | undefined;
+  const sectionScrollPositions = new Map<SetupSectionId, number>();
+  const viewScrollPositions = { settings: 0, preview: 0 };
   let activePreviewSessionKey = "";
   let previewNavigationTimer: number | undefined;
+  let copyResetTimer: number | undefined;
 
   const postPreviewConfig = (config = previewConfig()) => {
     iframeRef?.contentWindow?.postMessage(
@@ -422,6 +474,13 @@ export default function ChatSetup() {
       rootHeight: root?.style.height ?? "",
     };
     const supportedBrowser = detectLocalFontBrowser();
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncMotionPreference = () => {
+      setReducedMotion(motionQuery.matches);
+      if (motionQuery.matches) setDemoPaused(true);
+    };
+    syncMotionPreference();
+    motionQuery.addEventListener("change", syncMotionPreference);
 
     // Lock document scroll — setup owns scrolling in fixed columns
     html.style.background = "#09090b";
@@ -442,6 +501,7 @@ export default function ChatSetup() {
     }
 
     onCleanup(() => {
+      motionQuery.removeEventListener("change", syncMotionPreference);
       html.style.background = prev.htmlBg;
       html.style.overflow = prev.htmlOverflow;
       body.style.background = prev.bodyBg;
@@ -455,28 +515,13 @@ export default function ChatSetup() {
   });
 
   const [activeSection, setActiveSection] =
-    createSignal<SetupSectionId>("import");
-  const [openSections, setOpenSections] = createSignal<
-    Record<SetupSectionId, boolean>
-  >({
-    import: true,
-    appearance: false,
-    styling: false,
-    behavior: false,
-    content: false,
-    bots: false,
-    tts: false,
-    rte: false,
-  });
-
-  const setSectionOpen = (id: SetupSectionId, open: boolean) => {
-    setOpenSections((prev) => ({ ...prev, [id]: open }));
-  };
+    createSignal<SetupSectionId>("appearance");
 
   const importSettings = (patch: Parameters<typeof applySetupImport>[0]) => {
     applySetupImport(patch, {
       channel: setChannel,
       youtubeChannel: setYoutubeChannel,
+      platformMarker: setPlatformMarker,
       animation: setAnimation,
       bots: setBots,
       commands: setCommands,
@@ -501,28 +546,48 @@ export default function ChatSetup() {
       showHighlightedMessages: setShowHighlightedMessages,
       showGigantifiedEmotes: setShowGigantifiedEmotes,
       showChannelPointRewards: setShowChannelPointRewards,
+      nickFontWeight: setNickFontWeight,
+      messageSpeed: setMessageSpeed,
+      recentMessages: setRecentMessages,
+      ffzBotMixBroadcaster: setFfzBotMixBroadcaster,
+      ffzBotMixModerator: setFfzBotMixModerator,
+      ffzBotMixVip: setFfzBotMixVip,
+      overlayBackgroundColor: setOverlayBackgroundColor,
+      overlayBackgroundOpacity: setOverlayBackgroundOpacity,
+      overlayBackgroundRadius: setOverlayBackgroundRadius,
+      overlayBorderOpacity: setOverlayBorderOpacity,
+      highlightTwitchEvents: setHighlightTwitchEvents,
+      twitchEventColor: setTwitchEventColor,
+      twitchEventBackgroundOpacity: setTwitchEventBackgroundOpacity,
+      twitchEventBold: setTwitchEventBold,
+      twitchEventItalic: setTwitchEventItalic,
+      showPredictions: setShowPredictions,
+      linkMode: setLinkMode,
+      linkColor: setLinkColor,
+      hideLinkRewards: setHideLinkRewards,
+      rteProxy: setRteProxy,
+      rteAzureTts: setRteAzureTts,
+      rteChatIsTts: setRteChatIsTts,
+      rteReyohohoBadge: setRteReyohohoBadge,
+      rteCustomCosmetics: setRteCustomCosmetics,
     });
   };
 
   const scrollToSection = (id: SetupSectionId) => {
+    if (id === activeSection()) return;
+    const scroller = window.matchMedia("(min-width: 1100px)").matches
+      ? settingsScrollRef : bodyScrollRef;
+    sectionScrollPositions.set(activeSection(), scroller?.scrollTop ?? 0);
     setActiveSection(id);
-    setSectionOpen(id, true);
-    requestAnimationFrame(() => {
-      const el = document.getElementById(`setup-section-${id}`);
-      if (!el) return;
-      if (settingsScrollRef) {
-        const top =
-          el.getBoundingClientRect().top -
-          settingsScrollRef.getBoundingClientRect().top +
-          settingsScrollRef.scrollTop -
-          8;
-        settingsScrollRef.scrollTo({ top, behavior: "smooth" });
-        return;
-      }
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    if (scroller) scroller.scrollTop = sectionScrollPositions.get(id) ?? 0;
   };
 
+  const selectMobileView = (view: "settings" | "preview") => {
+    if (view === mobileView()) return;
+    viewScrollPositions[mobileView()] = bodyScrollRef?.scrollTop ?? 0;
+    setMobileView(view);
+    if (bodyScrollRef) bodyScrollRef.scrollTop = viewScrollPositions[view];
+  };
 
   const normalizeHexColor = (raw: string, fallback: string): string => {
     const value = raw.trim();
@@ -604,6 +669,7 @@ export default function ChatSetup() {
     hideNames: hideNames(),
     reverseLineOrder: reverseLineOrder(),
     horizontal: horizontal(),
+    platformMarker: platformMarker(),
     ffzBotMixCustom: true,
     ffzBotMixBroadcaster: ffzBotMixBroadcaster(),
     ffzBotMixModerator: ffzBotMixModerator(),
@@ -649,6 +715,24 @@ export default function ChatSetup() {
     rteCustomCosmetics: rteCustomCosmetics(),
   });
 
+  let canPersistSetupConfig = false;
+  onMount(() => {
+    const savedConfig = readStoredSetupValue(SETUP_STORAGE_KEYS.config);
+    if (savedConfig) {
+      const result = parseSetupImport(savedConfig, "chatyx");
+      if (result.kind === "parsed") importSettings(result.patch);
+    }
+    canPersistSetupConfig = true;
+  });
+
+  createEffect(() => {
+    const persistedConfig = chatConfigToSearchParams(buildConfig(channel().trim()))
+      .toString();
+    if (canPersistSetupConfig) {
+      writeStoredSetupValue(SETUP_STORAGE_KEYS.config, persistedConfig);
+    }
+  });
+
   const buildChatUrl = (
     cfg: ChatConfig,
     extraParams?: Record<string, string>,
@@ -675,7 +759,12 @@ export default function ChatSetup() {
   const previewChannel = createMemo(() =>
     channel().trim() || (hasYouTubeChannel() ? "" : "chatyxpreview"),
   );
-  const previewConfig = createMemo(() => buildConfig(previewChannel()));
+  // Preview playback is deliberately separate from the exported OBS configuration.
+  const previewConfig = createMemo(() => ({
+    ...buildConfig(previewChannel()),
+    ...(previewMode() === "demo" && demoPaused() ? { messageSpeed: 0 } : {}),
+    ...(reducedMotion() ? { animation: "none" as const } : {}),
+  }));
   const messageSpeedValue = createMemo(() =>
     toClampedInt(
       messageSpeed(),
@@ -771,6 +860,14 @@ export default function ChatSetup() {
   });
 
   createEffect(() => {
+    writeStoredSetupValue(
+      SETUP_STORAGE_KEYS.previewStageBackdrop,
+      stageBackdrop(),
+    );
+    writeStoredSetupValue(SETUP_STORAGE_KEYS.previewStageColor, stageColor());
+  });
+
+  createEffect(() => {
     const currentChannel = channel().trim();
     const currentYouTubeChannel = youtubeChannel().trim();
     if (!currentChannel && !currentYouTubeChannel) {
@@ -823,6 +920,9 @@ export default function ChatSetup() {
     if (previewNavigationTimer !== undefined) {
       window.clearTimeout(previewNavigationTimer);
     }
+    if (copyResetTimer !== undefined) {
+      window.clearTimeout(copyResetTimer);
+    }
   });
 
   createEffect(() => {
@@ -830,13 +930,29 @@ export default function ChatSetup() {
   });
 
   const copyToClipboard = async () => {
+    const url = generatedUrl();
+    if (!url || copyStatus() === "copying") return;
+    setCopyStatus("copying");
     try {
-      await navigator.clipboard.writeText(generatedUrl());
-      alert("Ссылка скопирована в буфер обмена");
+      await navigator.clipboard.writeText(url);
+      if (url === generatedUrl()) {
+        setCopyStatus("success");
+        if (copyResetTimer !== undefined) window.clearTimeout(copyResetTimer);
+        copyResetTimer = window.setTimeout(() => {
+          copyResetTimer = undefined;
+          setCopyStatus("idle");
+        }, 2600);
+      }
     } catch (err) {
       console.error("Ошибка копирования:", err);
+      if (url === generatedUrl()) setCopyStatus("error");
     }
   };
+
+  createEffect(() => {
+    generatedUrl();
+    setCopyStatus("idle");
+  });
 
   const loadLocalFonts = async () => {
     const queryLocalFonts = (window as LocalFontWindow).queryLocalFonts;
@@ -1132,6 +1248,27 @@ export default function ChatSetup() {
 
   const behaviorRows: ControlRow[] = [
     {
+      label: "Источник сообщений",
+      hint: "Показывается, когда подключены Twitch и YouTube.",
+      control: (labelId) => (
+        <div class="flex items-center gap-2">
+          <img class="size-5 rounded-sm" src={getPublicAssetUrl("img/platform-twitch.svg")} alt="Twitch" />
+          <img class="size-5 rounded-sm" src={getPublicAssetUrl("img/platform-youtube.svg")} alt="YouTube" />
+          <SetupSelect
+            aria-labelledby={labelId}
+            value={platformMarker()}
+            onChange={(event) =>
+              setPlatformMarker(event.currentTarget.value as PlatformMarkerMode)
+            }
+          >
+            <option value="none">Ничего</option>
+            <option value="stripe">Полоска</option>
+            <option value="icon">Иконка</option>
+          </SetupSelect>
+        </div>
+      ),
+    },
+    {
       label: "Анимация сообщений",
       hint: "Плавный поток двигает существующие строки, остальные режимы анимируют только новое сообщение.",
       control: (labelId) => (
@@ -1191,7 +1328,7 @@ export default function ChatSetup() {
       hint: "Показывает recent-messages до подключения к Twitch IRC. Если выключить, чат стартует только с новых сообщений.",
     },
     {
-      label: "Писать ники капсом",
+      label: "Отображать ники заглавными буквами",
       checked: smallCaps,
       onChange: setSmallCaps,
     },
@@ -1207,7 +1344,7 @@ export default function ChatSetup() {
       onChange: setReverseLineOrder,
     },
     {
-      label: "Чат одной строкой (горизонтальный режим)",
+      label: "Горизонтальная лента сообщений",
       checked: horizontal,
       onChange: setHorizontal,
     },
@@ -1220,7 +1357,7 @@ export default function ChatSetup() {
       onChange: setShowHighlightedMessages,
     },
     {
-      label: "Показывать покупки за баллы",
+      label: "Показывать награды за баллы",
       checked: showChannelPointRewards,
       onChange: setShowChannelPointRewards,
     },
@@ -1236,13 +1373,13 @@ export default function ChatSetup() {
       onChange: setShowGigantifiedEmotes,
     },
     {
-      label: "Показывать прогноз над чатом",
+      label: "Показывать прогнозы над чатом",
       checked: showPredictions,
       onChange: setShowPredictions,
       hint: "Полоска Twitch Predictions над сообщениями. Работает только при указанном Twitch-канале.",
     },
     {
-      label: "Показывать команды с !",
+      label: "Показывать сообщения, начинающиеся с !",
       checked: commands,
       onChange: setCommands,
     },
@@ -1275,7 +1412,7 @@ export default function ChatSetup() {
       label: "Русский TTS через JustDavi / Azure",
       checked: rteAzureTts,
       onChange: setRteAzureTts,
-      hint: "Команда модератора: !chat tts (или короче !tts) [-s Dmitriy|Dmitry|Svetlana] текст.",
+      hint: "Команда модератора: !chat tts (или короче !tts) [-s Dmitry|Svetlana] текст.",
     },
   ];
 
@@ -1287,13 +1424,13 @@ export default function ChatSetup() {
       hint: "Направляет только публичные API и CDN 7TV, BTTV и FFZ через RTE. Twitch и авторизация не проксируются.",
     },
     {
-      label: "Reyohoho-бейдж",
+      label: "Бейдж Reyohoho",
       checked: rteReyohohoBadge,
       onChange: setRteReyohohoBadge,
       hint: "Показывает пользовательский бейдж из публичного RTE API, если он есть.",
     },
     {
-      label: "Кастомные пейнты RTE",
+      label: "Пользовательские пейнты RTE",
       checked: rteCustomCosmetics,
       onChange: setRteCustomCosmetics,
       hint: "Подгружает персональный paint из RTE, если для пользователя нет подходящего локального источника.",
@@ -1368,7 +1505,7 @@ export default function ChatSetup() {
         </span>
         <button
           type="button"
-          class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-base leading-none text-white hover:bg-white/10"
+          class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-base leading-none text-white hover:bg-white/10"
           onClick={() => remove(login)}
           aria-label={`${ariaLabel}: ${displayName()}`}
         >
@@ -1385,94 +1522,99 @@ export default function ChatSetup() {
     <>
       <Title>ChatYX • настройка</Title>
 
-      <div class="setup-root dark flex h-dvh max-h-dvh w-full flex-col overflow-hidden">
-        <div class="mx-auto flex h-full min-h-0 w-full max-w-[1760px] flex-col gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:px-5 xl:px-6">
-          <header class="flex shrink-0 flex-col gap-1.5 border-b border-border/70 pb-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 class="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                Чат-оверлей
-              </h1>
-              <p class="mt-0.5 text-xs text-muted-foreground">
-                Настрой параметры и проверь их в живом превью.
-              </p>
+      <div class="setup-root dark" lang="ru" data-mobile-view={mobileView()}>
+        <div class="setup-shell">
+          <a class="setup-skip-link" href={mobileView() === "settings" ? "#setup-settings" : "#setup-preview"}>Перейти к рабочей области</a>
+          <header class="setup-toolbar">
+            <div class="setup-brand">
+              <span class="setup-brand-mark" aria-hidden="true"><img src={getPublicAssetUrl("img/emote-2x.webp")} alt="" /></span>
+              <div><h1>Чат-оверлей</h1><p>Настрой оформление и добавь оверлей в OBS.</p></div>
             </div>
-            <p class="hidden text-xs text-muted-foreground sm:block">
-              Изменения применяются сразу.
-            </p>
           </header>
-
-          <div class="shrink-0">
-            <SectionCard
-              title="Подключение чата"
-              description="Укажи Twitch и YouTube, если нужен общий оверлей."
-              compact
-            >
-              <div class="setup-channel-row grid grid-cols-1 items-center gap-2 md:grid-cols-2">
+          <div class="setup-view-switch" role="group" aria-label="Рабочая область">
+            <button type="button" aria-pressed={mobileView() === "settings"} aria-controls="setup-settings" onClick={() => selectMobileView("settings")}><SlidersHorizontal size={16} aria-hidden="true" />Настройки</button>
+            <button type="button" aria-pressed={mobileView() === "preview"} aria-controls="setup-preview" onClick={() => selectMobileView("preview")}><Monitor size={16} aria-hidden="true" />Предпросмотр</button>
+          </div>
+          <main class="setup-body setup-pane-scroll" ref={bodyScrollRef}>
+            <div class="setup-source-row">
+            <section class="setup-connection" aria-label="Подключение каналов">
+              <div class="setup-connection-intro"><h2>Подключение</h2><p>Укажи Twitch, YouTube или оба канала.</p></div>
+              <div class="setup-channel-field">
+                <span class="setup-field-label setup-platform-label">
+                  <svg class="setup-platform-logo setup-platform-logo--twitch" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0 1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+                  </svg>
+                  Twitch
+                </span>
                 <TwitchChannelField value={channel()} onChange={setChannel} />
+              </div>
+              <div class="setup-channel-field">
+                <label class="setup-field-label setup-platform-label" for="setup-youtube">
+                  <svg class="setup-platform-logo setup-platform-logo--youtube" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M23.5 6.19a3.02 3.02 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.51A3.02 3.02 0 0 0 .5 6.19C0 8.07 0 12 0 12s0 3.93.5 5.81a3.02 3.02 0 0 0 2.123 2.136c1.872.509 9.377.509 9.377.509s7.505 0 9.377-.51a3.02 3.02 0 0 0 2.122-2.135C24 15.93 24 12 24 12s0-3.93-.5-5.81zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                  </svg>
+                  YouTube <span>необязательно</span>
+                </label>
                 <Input
-                  aria-label="YouTube handle или ID"
+                  id="setup-youtube"
                   type="text"
+                  autocomplete="off"
+                  spellcheck={false}
                   value={youtubeChannel()}
                   onInput={(e) => setYoutubeChannel(e.currentTarget.value)}
-                  placeholder="YouTube handle или ID, например @linaryx"
-                  class="h-9 text-center sm:h-10"
+                  placeholder="@канал или ID канала"
+                  class="h-10"
                 />
               </div>
-            </SectionCard>
-          </div>
-
-          {/*
-            <1100: stack
-            ≥1100: settings | preview (compact)
-            ≥1280: nav | settings | preview
-          */}
-          <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto overflow-x-hidden min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(300px,38%)] min-[1100px]:gap-3 min-[1100px]:overflow-hidden xl:grid-cols-[196px_minmax(0,1fr)_minmax(320px,400px)] xl:gap-4">
-            <aside class="hidden min-h-0 xl:block">
-              <div class="setup-pane-scroll h-full max-h-full overflow-y-auto overscroll-contain rounded-lg border border-border/80 bg-card/60 p-1.5">
+            </section>
+            <div class="setup-export">
+              <label for="setup-obs-url" class="setup-field-label">Ссылка для OBS</label>
+              <Input id="setup-obs-url" type="text" readonly value={generatedUrl()} placeholder="Укажи канал, чтобы создать ссылку" onFocus={(event) => event.currentTarget.select()} class="setup-url-input" aria-describedby="setup-copy-status" />
+              <Button
+                type="button"
+                onClick={copyToClipboard}
+                disabled={!generatedUrl() || copyStatus() === "copying"}
+                class={cn(
+                  "setup-url-copy-button",
+                  copyStatus() === "success" && "setup-url-copy-button--success",
+                )}
+              >
+                <Show when={copyStatus() === "success"} fallback={<Copy size={16} aria-hidden="true" />}><Check size={16} aria-hidden="true" /></Show>
+                {copyStatus() === "success" ? "Скопировано" : "Скопировать"}
+              </Button>
+              <Show when={generatedUrl()}><a class="setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label="Открыть оверлей в новой вкладке"><ExternalLink size={15} aria-hidden="true" /><span>Открыть</span></a></Show>
+              <p id="setup-copy-status" role="status" aria-live="polite" class={cn("setup-copy-status", copyStatus() === "success" && "setup-copy-status--success", copyStatus() === "error" && "setup-copy-status--error")}>
+                {copyStatus() === "success" ? "Ссылка скопирована. Добавь в OBS источник «Браузер» и вставь её."
+                  : copyStatus() === "error" ? "Не удалось скопировать. Выдели ссылку выше и скопируй её вручную."
+                  : copyStatus() === "copying" ? "Копирование ссылки…"
+                  : generatedUrl() ? "Добавь в OBS источник «Браузер» и вставь эту ссылку."
+                  : "Для демо канал не нужен. Для OBS укажи хотя бы один канал."}
+              </p>
+            </div>
+            </div>
+          <div class="setup-workspace">
+            <aside class="setup-sidebar setup-pane-scroll">
+              <p class="setup-sidebar-caption">Настройки оверлея</p>
                 <SetupNav active={activeSection()} onSelect={scrollToSection} />
-              </div>
             </aside>
 
             <div
+              id="setup-settings"
+              tabIndex={-1}
               ref={(el) => {
                 settingsScrollRef = el;
               }}
-              class="setup-pane-scroll flex min-h-0 min-w-0 flex-col gap-2.5 overflow-y-auto overscroll-contain min-[1100px]:h-full"
+              class="setup-settings setup-pane-scroll"
             >
-              <div class="xl:hidden">
-                <div class="flex gap-1 overflow-x-auto pb-0.5">
-                  <For
-                    each={[
-                      { id: "import" as const, label: "Импорт" },
-                      { id: "appearance" as const, label: "Текст" },
-                      { id: "styling" as const, label: "Вид" },
-                      { id: "behavior" as const, label: "Поведение" },
-                      { id: "content" as const, label: "Контент" },
-                      { id: "bots" as const, label: "Фильтры" },
-                      { id: "tts" as const, label: "Озвучка" },
-                      { id: "rte" as const, label: "RTE" },
-                    ]}
-                  >
-                    {(item) => (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={
-                          activeSection() === item.id ? "secondary" : "ghost"
-                        }
-                        onClick={() => scrollToSection(item.id)}
-                        class="h-8 shrink-0 px-2.5 text-xs"
-                      >
-                        {item.label}
-                      </Button>
-                    )}
-                  </For>
-                </div>
+              <div class="setup-section-select">
+                <label for="setup-section-picker" class="setup-field-label">Раздел настроек</label>
+                <SetupSelect id="setup-section-picker" value={activeSection()} onChange={(event) => scrollToSection(event.currentTarget.value as SetupSectionId)}>
+                  <For each={SETUP_NAV}>{(item) => <option value={item.id}>{item.label}</option>}</For>
+                </SetupSelect>
               </div>
 
               <SetupImportCard
-                open={openSections().import}
-                onOpenChange={(open) => setSectionOpen("import", open)}
+                hidden={activeSection() !== "import"}
                 onImport={importSettings}
               />
 
@@ -1480,50 +1622,47 @@ export default function ChatSetup() {
                 id="setup-section-appearance"
                 title="Текст и размер"
                 description="Настрой, насколько крупно и каким шрифтом будет выглядеть чат."
-                collapsible
-                open={openSections().appearance}
-                onOpenChange={(open) => setSectionOpen("appearance", open)}
+                hidden={activeSection() !== "appearance"}
               >
-                <ControlRows rows={appearanceRows} />
+                <div class="setup-field-group"><h3>Шрифт сообщений</h3><ControlRows rows={appearanceRows.slice(0, 3)} /></div>
+                <div class="setup-field-group"><h3>Насыщенность и эмоуты</h3><ControlRows rows={appearanceRows.slice(3)} /></div>
               </SectionCard>
 
               <SectionCard
                 id="setup-section-styling"
                 title="Внешний вид"
                 description="Фон сообщений, тень, обводка и время жизни строк на экране."
-                collapsible
-                open={openSections().styling}
-                onOpenChange={(open) => setSectionOpen("styling", open)}
+                hidden={activeSection() !== "styling"}
               >
-                <ControlRows rows={stylingRows} />
+                <div class="setup-field-group"><h3>Читаемость текста</h3><ControlRows rows={stylingRows.slice(0, 3)} /></div>
+                <div class="setup-field-group"><h3>Подложка сообщений</h3><ControlRows rows={stylingRows.slice(3, 6)} /></div>
+                <div class="setup-field-group"><h3>Цветовые акценты</h3><ControlRows rows={stylingRows.slice(6)} /></div>
               </SectionCard>
 
               <SectionCard
                 id="setup-section-behavior"
                 title="Поведение сообщений"
                 description="Управляет анимацией, переносами, порядком и форматом сообщений."
-                collapsible
-                open={openSections().behavior}
-                onOpenChange={(open) => setSectionOpen("behavior", open)}
+                hidden={activeSection() !== "behavior"}
               >
-                <ControlRows rows={behaviorRows} />
-                <ToggleRows rows={behaviorToggles} />
+                <div class="setup-field-group"><h3>Анимация и ссылки</h3><ControlRows rows={behaviorRows} /></div>
+                <div class="setup-field-group"><h3>Оформление событий</h3><ToggleRows rows={behaviorToggles.slice(0, 3)} /></div>
+                <div class="setup-field-group"><h3>Поток сообщений</h3><ToggleRows rows={behaviorToggles.slice(3)} /></div>
               </SectionCard>
 
               <SectionCard
                 id="setup-section-content"
                 title="Контент и бейджи"
                 description="Выбери, какие сообщения, эмоуты и бейджи попадут в оверлей."
-                collapsible
-                open={openSections().content}
-                onOpenChange={(open) => setSectionOpen("content", open)}
+                hidden={activeSection() !== "content"}
               >
-                <ToggleRows rows={contentToggles} />
+                <div class="setup-field-group"><h3>Сообщения и события</h3><ToggleRows rows={contentToggles.slice(0, 6)} /></div>
+                <div class="setup-field-group"><h3>Эмоуты и бейджи</h3><ToggleRows rows={contentToggles.slice(6)} /></div>
 
                 <div class="setup-role-merge grid grid-cols-1 gap-3 rounded-lg border border-border bg-black/40 p-3.5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
                   <div class="flex min-w-0 flex-col gap-1.5">
                     <div class="text-sm font-bold text-foreground">
-                      Объединять bot badge с role badge
+                      Бейдж бота рядом с ролью
                     </div>
                     <div class="text-xs leading-snug text-muted-foreground">
                       Выбери роли, у которых FFZ-бот-бейдж будет показываться
@@ -1574,9 +1713,7 @@ export default function ChatSetup() {
                 id="setup-section-bots"
                 title="Боты и фильтры"
                 description="Спрячь ботов, команды или оставь сообщения только выбранных пользователей."
-                collapsible
-                open={openSections().bots}
-                onOpenChange={(open) => setSectionOpen("bots", open)}
+                hidden={activeSection() !== "bots"}
               >
                 <div class="setup-bot-row grid grid-cols-1 items-start gap-2 min-[1100px]:grid-cols-[132px_minmax(0,1fr)] xl:grid-cols-[168px_minmax(0,1fr)] md:max-[1099px]:grid-cols-[180px_minmax(0,1fr)]">
                   <div class="flex min-w-0 flex-col gap-1.5">
@@ -1585,11 +1722,10 @@ export default function ChatSetup() {
                     </div>
                     <div class="inline-flex items-center gap-2 text-[11px] text-muted-foreground sm:text-xs">
                       <SetupSwitch
-                        checked={bots()}
-                        onChange={setBots}
-                        label="Не фильтровать ботов"
+                        checked={!bots()}
+                        onChange={(hideBots) => setBots(!hideBots)}
+                        label="Скрывать ботов"
                       />
-                      <span>Не фильтровать ботов</span>
                     </div>
                   </div>
                   <div class={chipFieldClass}>
@@ -1662,9 +1798,7 @@ export default function ChatSetup() {
                 id="setup-section-tts"
                 title="Озвучка сообщений"
                 description="Включи один или оба сервиса синтеза речи для единой команды модератора."
-                collapsible
-                open={openSections().tts}
-                onOpenChange={(open) => setSectionOpen("tts", open)}
+                hidden={activeSection() !== "tts"}
               >
                 <ToggleRows rows={ttsToggles} />
                 <VoiceCatalog />
@@ -1674,23 +1808,21 @@ export default function ChatSetup() {
                 id="setup-section-rte"
                 title="RTE-интеграции"
                 description="Необязательный прокси для публичных ресурсов и пользовательской косметики."
-                collapsible
-                open={openSections().rte}
-                onOpenChange={(open) => setSectionOpen("rte", open)}
+                hidden={activeSection() !== "rte"}
               >
                 <ToggleRows rows={rteToggles} />
               </SectionCard>
             </div>
 
-            <div class="setup-pane-scroll min-h-0 min-w-0 overflow-y-auto overscroll-contain min-[1100px]:h-full">
+            <div id="setup-preview" tabIndex={-1} class="setup-preview-pane setup-pane-scroll min-h-0 min-w-0 overflow-y-auto overscroll-contain min-[1100px]:h-full">
               <div class="flex min-h-0 flex-col gap-2.5 pb-2 min-[1100px]:h-full min-[1100px]:pb-0">
                 <SectionCard
-                  title="Живое превью"
+                  title="Предпросмотр"
                   compact
                   class="min-[1100px]:flex min-[1100px]:min-h-0 min-[1100px]:flex-1 min-[1100px]:flex-col"
                 >
-                  <div class="flex min-h-0 flex-1 flex-col gap-2">
-                    <div class="flex shrink-0 flex-col gap-2 rounded-lg border border-border bg-card/40 p-2.5">
+                  <div class="setup-preview-content">
+                    <div class="setup-preview-options">
                       <div
                         class={cn(
                           "setup-preview-controls grid gap-2",
@@ -1701,10 +1833,10 @@ export default function ChatSetup() {
                       >
                         <div class="flex min-w-0 flex-col gap-1">
                           <div class="text-xs font-medium sm:text-sm">
-                            Режим превью
+                            Режим чата
                           </div>
                           <SetupSelect
-                            aria-label="Режим превью"
+                            aria-label="Режим чата в предпросмотре"
                             value={previewMode()}
                             onChange={(event) =>
                               setPreviewMode(
@@ -1716,19 +1848,19 @@ export default function ChatSetup() {
                             }
                             class="h-9"
                           >
-                            <option value="live">Лайв режим</option>
+                            <option value="live">Чат канала</option>
                             <Show when={!isYouTubeOnly()}>
-                              <option value="demo">Демонстрация</option>
+                              <option value="demo">Демо</option>
                             </Show>
                           </SetupSelect>
                         </div>
                         <Show when={!isYouTubeOnly()}>
                           <div class="flex min-w-0 flex-col gap-1">
                             <div class="text-xs font-medium sm:text-sm">
-                              Сценарий
+                              Сценарий демо
                             </div>
                             <SetupSelect
-                              aria-label="Сценарий превью"
+                              aria-label="Сценарий демо"
                               value={previewDemoKind()}
                               onChange={(event) =>
                                 setPreviewDemoKind(
@@ -1744,95 +1876,139 @@ export default function ChatSetup() {
                               )}
                             >
                               <option value="pasta">Сообщения</option>
-                              <option value="emote">Обычный</option>
+                              <option value="emote">Эмоуты</option>
                             </SetupSelect>
                           </div>
                         </Show>
+                        <div class="flex min-w-0 flex-col gap-1 xl:col-span-full">
+                          <div
+                            class="text-xs font-medium sm:text-sm"
+                          >
+                            Фон предпросмотра
+                          </div>
+                          <div
+                            class="setup-stage-switcher"
+                            role="group"
+                            aria-label="Фон предпросмотра"
+                          >
+                            <button
+                              type="button"
+                              class={cn("setup-stage-option", stageBackdrop() === "dark" && "setup-stage-option--active")}
+                              aria-pressed={stageBackdrop() === "dark"}
+                              aria-label="Чёрная подложка"
+                              onClick={() => setStageBackdrop("dark")}
+                            >
+                              <span class="setup-stage-swatch setup-stage-swatch--dark" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              class={cn("setup-stage-option", stageBackdrop() === "light" && "setup-stage-option--active")}
+                              aria-pressed={stageBackdrop() === "light"}
+                              aria-label="Белая подложка"
+                              onClick={() => setStageBackdrop("light")}
+                            >
+                              <span class="setup-stage-swatch setup-stage-swatch--light" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              class={cn("setup-stage-option", stageBackdrop() === "checker" && "setup-stage-option--active")}
+                              aria-pressed={stageBackdrop() === "checker"}
+                              aria-label="Подложка-сетка"
+                              onClick={() => setStageBackdrop("checker")}
+                            >
+                              <span class="setup-stage-swatch setup-stage-swatch--checker" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              class={cn("setup-stage-option", stageBackdrop() === "custom" && "setup-stage-option--active")}
+                              aria-pressed={stageBackdrop() === "custom"}
+                              aria-label="Свой цвет подложки"
+                              onClick={() => setStageBackdrop("custom")}
+                            >
+                              <span class="setup-stage-swatch" style={`background-color: ${stageColor()}`} aria-hidden="true" />
+                            </button>
+                          </div>
+                          <p class="setup-preview-hint">Только для проверки. Не меняет фон в OBS.</p>
+                          <Show when={stageBackdrop() === "custom"}>
+                            <div class="setup-stage-color">
+                              <ColorPickerField
+                                color={stageColor()}
+                                opacity={100}
+                                showOpacity={false}
+                                label="Цвет подложки"
+                                onChange={(value) => setStageColor(value.color)}
+                              />
+                            </div>
+                          </Show>
+                          </div>
                       </div>
                       <div class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
                         {isYouTubeOnly()
-                          ? "Для YouTube-only превью доступен только лайв режим."
-                          : "Лайв — реальный чат. Демо — тестовые сообщения."}
+                          ? "Для YouTube доступен только чат канала."
+                          : "Чат канала показывает сообщения в реальном времени. Демо выводит тестовые сообщения."}
                       </div>
                     </div>
 
                     <Show when={previewMode() === "demo"}>
-                      <div class="flex shrink-0 flex-col gap-2 rounded-lg border border-border bg-card/40 p-2.5">
-                        <div class="flex items-baseline justify-between gap-2">
-                          <div class="text-xs font-medium sm:text-sm">
-                            Скорость сообщений
-                          </div>
-                          <div class="whitespace-nowrap text-[11px] font-semibold text-muted-foreground sm:text-xs">
+                      <div class="setup-preview-playback">
+                        <div class="setup-preview-speed">
+                          <span class="text-xs font-medium sm:text-sm">
+                            Скорость
+                          </span>
+                          <Slider
+                            aria-label="Скорость сообщений"
+                            minValue={MIN_MESSAGE_SPEED}
+                            maxValue={MAX_MESSAGE_SPEED}
+                            step={1}
+                            value={[messageSpeedValue()]}
+                            onChange={(values) => {
+                              const next = values[0];
+                              if (next !== undefined)
+                                setMessageSpeed(String(next));
+                            }}
+                            class="min-w-0 flex-1 px-1"
+                          />
+                          <div class="whitespace-nowrap text-[11px] font-semibold tabular-nums text-muted-foreground sm:text-xs">
                             {messageSpeedLabel()}
                           </div>
                         </div>
-                        <Slider
-                          aria-label="Скорость сообщений"
-                          minValue={MIN_MESSAGE_SPEED}
-                          maxValue={MAX_MESSAGE_SPEED}
-                          step={1}
-                          value={[messageSpeedValue()]}
-                          onChange={(values) => {
-                            const next = values[0];
-                            if (next !== undefined)
-                              setMessageSpeed(String(next));
-                          }}
-                          class="w-full px-1"
-                        />
-                        <div class="flex justify-between text-[11px] text-muted-foreground">
-                          <span>Стоп</span>
-                          <span>Летит</span>
-                        </div>
+                        <button
+                          type="button"
+                          class={cn(
+                            "setup-pause-button",
+                            demoPaused() && "setup-pause-button--paused",
+                          )}
+                          onClick={() => setDemoPaused((value) => !value)}
+                          aria-pressed={demoPaused()}
+                        >
+                          <Show when={demoPaused()} fallback={<Pause size={14} aria-hidden="true" />}>
+                            <Play size={14} aria-hidden="true" />
+                          </Show>
+                          {demoPaused() ? "Продолжить" : "Пауза"}
+                        </button>
                       </div>
                     </Show>
 
-                    <div class="relative isolate h-[clamp(180px,36dvh,320px)] w-full shrink-0 overflow-hidden bg-transparent min-[1100px]:h-auto min-[1100px]:min-h-[280px] min-[1100px]:flex-1">
+                    <div
+                      class="setup-preview-frame relative isolate h-[clamp(180px,36dvh,320px)] w-full shrink-0 overflow-hidden min-[1100px]:h-auto min-[1100px]:flex-1 min-[1100px]:min-h-[min(180px,36dvh)] min-[1100px]:max-h-[42dvh]"
+                      style={previewStageStyle()}
+                    >
                       <iframe
                         ref={iframeRef}
                         src={previewUrl()}
                         onLoad={() => postPreviewConfig()}
                         class="pointer-events-none block h-full w-full border-0 bg-transparent"
-                        title="Chat preview"
+                        title="Предпросмотр чата"
                         scrolling="no"
-                        tabindex="-1"
+                        tabIndex={-1}
                       />
                     </div>
                   </div>
                 </SectionCard>
-
-                <Show when={generatedUrl()}>
-                  <SectionCard
-                    title="Ссылка для OBS"
-                    compact
-                    class="shrink-0"
-                  >
-                    <div class="break-all rounded-md border border-border bg-background px-2.5 py-2 font-mono text-[0.75em] leading-snug text-muted-foreground">
-                      {generatedUrl()}
-                    </div>
-                    <div class="flex flex-wrap gap-1.5">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={copyToClipboard}
-                      >
-                        Скопировать
-                      </Button>
-                      <a
-                        href={generatedUrl()}
-                        target="_blank"
-                        rel="noreferrer"
-                        class={cn(
-                          "inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        )}
-                      >
-                        Открыть
-                      </a>
-                    </div>
-                  </SectionCard>
-                </Show>
               </div>
             </div>
           </div>
+          </main>
         </div>
       </div>
     </>

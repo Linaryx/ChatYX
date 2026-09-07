@@ -10,6 +10,5 @@
 [JustDavi / Azure]
 | Voice | Locale | Gender | Features |
 | --- | --- | --- | --- |
-| Dmitriy | Russian | Male | Azure Neural: ru-RU-DmitryNeural |
 | Dmitry | Russian | Male | Azure Neural: ru-RU-DmitryNeural |
 | Svetlana | Russian | Female | Azure Neural: ru-RU-SvetlanaNeural |

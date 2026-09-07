@@ -45,10 +45,16 @@ describe("RTE asset and presentation integration", () => {
       },
     });
     const presentation = new ChatPresentationService(
-      createChatPresentationConfig(config()),
+      createChatPresentationConfig(config({
+        rteReyohohoBadge: false,
+        rteCustomCosmetics: false,
+      })),
     );
 
-    await loader.loadRteUserAssets(config(), message(), presentation);
+    await loader.loadRteUserAssets(config({
+      rteReyohohoBadge: false,
+      rteCustomCosmetics: false,
+    }), message(), presentation);
 
     expect(badgeCalls).toBe(0);
     expect(paintCalls).toBe(0);

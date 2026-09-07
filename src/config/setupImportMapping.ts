@@ -1,41 +1,41 @@
-import type { ChatAnimationMode } from "./chatUrlParams";
+import { DEFAULT_CHAT_CONFIG, parseBotNames, parseChatConfigFromSearchParams, type ChatConfig } from "./chatUrlParams";
 
-export type SetupImportSource = "auto" | "chatis" | "cyan" | "davii";
+export type SetupImportSource = "auto" | "chatyx" | "chatis" | "cyan" | "davii";
 export type DetectedSetupImportSource = Exclude<SetupImportSource, "auto">;
 
-export type SetupImportPatch = {
-  readonly channel?: string;
-  readonly youtubeChannel?: string;
-  readonly animation?: ChatAnimationMode;
-  readonly bots?: boolean;
-  readonly commands?: boolean;
-  readonly hideSpecialBadges?: boolean;
-  readonly showHomies?: boolean;
-  readonly fade?: number | false;
-  readonly size?: number;
-  readonly font?: number;
-  readonly fontWeight?: number;
-  readonly fontCustom?: string;
-  readonly stroke?: number | false;
-  readonly shadow?: number | false;
-  readonly emoteScale?: number;
-  readonly smallCaps?: boolean;
-  readonly nlAfterName?: boolean;
-  readonly hideNames?: boolean;
+type RuntimeOnlySetting =
+  | "youtubeWebSocketUrl" | "ffzBotMix" | "ffzBotMixCustom"
+  | "ttsReadChat" | "ttsReadBots" | "ttsVoice" | "ttsChatIsVoice"
+  | "ttsVolume" | "ttsMaxLength";
+
+export type SetupImportPatch = Readonly<Partial<Omit<
+  ChatConfig, RuntimeOnlySetting | "botNames" | "singleChatter"
+>>> & {
   readonly botNames?: readonly string[];
-  readonly reverseLineOrder?: boolean;
-  readonly horizontal?: boolean;
   readonly singleChatter?: readonly string[];
-  readonly show7tvUnlisted?: boolean;
-  readonly showHighlightedMessages?: boolean;
-  readonly showGigantifiedEmotes?: boolean;
-  readonly showChannelPointRewards?: boolean;
 };
 
 export type SetupImportMapping = {
   readonly patch: SetupImportPatch;
   readonly unsupported: readonly string[];
 };
+
+export function mapChatYxParams(params: URLSearchParams): SetupImportMapping {
+  const {
+    youtubeWebSocketUrl, ffzBotMix, ffzBotMixCustom,
+    ttsReadChat, ttsReadBots, ttsVoice, ttsChatIsVoice, ttsVolume, ttsMaxLength,
+    botNames, singleChatter, ...settings
+  } = parseChatConfigFromSearchParams(params);
+  const runtimeOnly = {
+    youtubeWebSocketUrl, ffzBotMix, ffzBotMixCustom,
+    ttsReadChat, ttsReadBots, ttsVoice, ttsChatIsVoice, ttsVolume, ttsMaxLength,
+  };
+  return {
+    patch: { ...settings, botNames: parseBotNames(botNames), singleChatter: parseBotNames(singleChatter) },
+    unsupported: (Object.keys(runtimeOnly) as RuntimeOnlySetting[])
+      .filter((key) => runtimeOnly[key] !== DEFAULT_CHAT_CONFIG[key]),
+  };
+}
 
 export const CHATIS_UNIQUE_KEYS = [
   "hide_special_badges", "show_homies", "fontCustom", "nl_after_name",

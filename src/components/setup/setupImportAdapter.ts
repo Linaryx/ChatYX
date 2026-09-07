@@ -1,33 +1,11 @@
-import type { ChatAnimationMode } from "~/config/chatUrlParams";
 import type { SetupImportPatch } from "~/config/setupImport";
 
 export type SetupImportSetters = {
-  readonly channel: (value: string) => void;
-  readonly youtubeChannel: (value: string) => void;
-  readonly animation: (value: ChatAnimationMode) => void;
-  readonly bots: (value: boolean) => void;
-  readonly commands: (value: boolean) => void;
-  readonly hideSpecialBadges: (value: boolean) => void;
-  readonly showHomies: (value: boolean) => void;
-  readonly fade: (value: string) => void;
-  readonly size: (value: string) => void;
-  readonly font: (value: string) => void;
-  readonly fontWeight: (value: string) => void;
-  readonly fontCustom: (value: string) => void;
-  readonly stroke: (value: string) => void;
-  readonly shadow: (value: string) => void;
-  readonly emoteScale: (value: string) => void;
-  readonly smallCaps: (value: boolean) => void;
-  readonly nlAfterName: (value: boolean) => void;
-  readonly hideNames: (value: boolean) => void;
-  readonly botNames: (value: string[]) => void;
-  readonly reverseLineOrder: (value: boolean) => void;
-  readonly horizontal: (value: boolean) => void;
-  readonly singleChatter: (value: string[]) => void;
-  readonly show7tvUnlisted: (value: boolean) => void;
-  readonly showHighlightedMessages: (value: boolean) => void;
-  readonly showGigantifiedEmotes: (value: boolean) => void;
-  readonly showChannelPointRewards: (value: boolean) => void;
+  readonly [K in keyof SetupImportPatch]-?: (
+    value: number extends SetupImportPatch[K] ? string
+      : NonNullable<SetupImportPatch[K]> extends readonly string[] ? string[]
+      : NonNullable<SetupImportPatch[K]>,
+  ) => void;
 };
 
 export function applySetupImport(
@@ -36,6 +14,7 @@ export function applySetupImport(
 ): void {
   if (patch.channel !== undefined) setters.channel(patch.channel);
   if (patch.youtubeChannel !== undefined) setters.youtubeChannel(patch.youtubeChannel);
+  if (patch.platformMarker !== undefined) setters.platformMarker(patch.platformMarker);
   if (patch.animation !== undefined) setters.animation(patch.animation);
   if (patch.bots !== undefined) setters.bots(patch.bots);
   if (patch.commands !== undefined) setters.commands(patch.commands);
@@ -60,4 +39,28 @@ export function applySetupImport(
   if (patch.showHighlightedMessages !== undefined) setters.showHighlightedMessages(patch.showHighlightedMessages);
   if (patch.showGigantifiedEmotes !== undefined) setters.showGigantifiedEmotes(patch.showGigantifiedEmotes);
   if (patch.showChannelPointRewards !== undefined) setters.showChannelPointRewards(patch.showChannelPointRewards);
+  if (patch.nickFontWeight !== undefined) setters.nickFontWeight(String(patch.nickFontWeight));
+  if (patch.messageSpeed !== undefined) setters.messageSpeed(String(patch.messageSpeed));
+  if (patch.recentMessages !== undefined) setters.recentMessages(patch.recentMessages);
+  if (patch.ffzBotMixBroadcaster !== undefined) setters.ffzBotMixBroadcaster(patch.ffzBotMixBroadcaster);
+  if (patch.ffzBotMixModerator !== undefined) setters.ffzBotMixModerator(patch.ffzBotMixModerator);
+  if (patch.ffzBotMixVip !== undefined) setters.ffzBotMixVip(patch.ffzBotMixVip);
+  if (patch.overlayBackgroundColor !== undefined) setters.overlayBackgroundColor(patch.overlayBackgroundColor);
+  if (patch.overlayBackgroundOpacity !== undefined) setters.overlayBackgroundOpacity(String(patch.overlayBackgroundOpacity));
+  if (patch.overlayBackgroundRadius !== undefined) setters.overlayBackgroundRadius(String(patch.overlayBackgroundRadius));
+  if (patch.overlayBorderOpacity !== undefined) setters.overlayBorderOpacity(String(patch.overlayBorderOpacity));
+  if (patch.highlightTwitchEvents !== undefined) setters.highlightTwitchEvents(patch.highlightTwitchEvents);
+  if (patch.twitchEventColor !== undefined) setters.twitchEventColor(patch.twitchEventColor);
+  if (patch.twitchEventBackgroundOpacity !== undefined) setters.twitchEventBackgroundOpacity(String(patch.twitchEventBackgroundOpacity));
+  if (patch.twitchEventBold !== undefined) setters.twitchEventBold(patch.twitchEventBold);
+  if (patch.twitchEventItalic !== undefined) setters.twitchEventItalic(patch.twitchEventItalic);
+  if (patch.showPredictions !== undefined) setters.showPredictions(patch.showPredictions);
+  if (patch.linkMode !== undefined) setters.linkMode(patch.linkMode);
+  if (patch.linkColor !== undefined) setters.linkColor(patch.linkColor);
+  if (patch.hideLinkRewards !== undefined) setters.hideLinkRewards(patch.hideLinkRewards);
+  if (patch.rteProxy !== undefined) setters.rteProxy(patch.rteProxy);
+  if (patch.rteAzureTts !== undefined) setters.rteAzureTts(patch.rteAzureTts);
+  if (patch.rteChatIsTts !== undefined) setters.rteChatIsTts(patch.rteChatIsTts);
+  if (patch.rteReyohohoBadge !== undefined) setters.rteReyohohoBadge(patch.rteReyohohoBadge);
+  if (patch.rteCustomCosmetics !== undefined) setters.rteCustomCosmetics(patch.rteCustomCosmetics);
 }

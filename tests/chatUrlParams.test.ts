@@ -164,15 +164,15 @@ describe("chat URL params", () => {
     ).toBe(false);
   });
 
-  test("defaults every RTE integration to disabled", () => {
+  test("enables the configured RTE integrations by default", () => {
     expect(DEFAULT_CHAT_CONFIG.rteProxy).toBe(false);
-    expect(DEFAULT_CHAT_CONFIG.rteAzureTts).toBe(false);
-    expect(DEFAULT_CHAT_CONFIG.rteChatIsTts).toBe(false);
-    expect(DEFAULT_CHAT_CONFIG.rteReyohohoBadge).toBe(false);
-    expect(DEFAULT_CHAT_CONFIG.rteCustomCosmetics).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.rteAzureTts).toBe(true);
+    expect(DEFAULT_CHAT_CONFIG.rteChatIsTts).toBe(true);
+    expect(DEFAULT_CHAT_CONFIG.rteReyohohoBadge).toBe(true);
+    expect(DEFAULT_CHAT_CONFIG.rteCustomCosmetics).toBe(true);
     expect(DEFAULT_CHAT_CONFIG.ttsReadChat).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.ttsReadBots).toBe(false);
-    expect(DEFAULT_CHAT_CONFIG.ttsVoice).toBe("Dmitriy");
+    expect(DEFAULT_CHAT_CONFIG.ttsVoice).toBe("Dmitry");
     expect(DEFAULT_CHAT_CONFIG.ttsChatIsVoice).toBe("Maxim");
     expect(DEFAULT_CHAT_CONFIG.ttsVolume).toBe(1);
     expect(DEFAULT_CHAT_CONFIG.ttsMaxLength).toBe(400);
@@ -231,10 +231,10 @@ describe("chat URL params", () => {
 
     const params = chatConfigToSearchParams(cfg);
     expect(params.get("rtep")).toBe("true");
-    expect(params.get("aztts")).toBe("true");
-    expect(params.get("rtetts")).toBe("true");
-    expect(params.get("rtebadge")).toBe("true");
-    expect(params.get("rtecosmetics")).toBe("true");
+    expect(params.get("aztts")).toBeNull();
+    expect(params.get("rtetts")).toBeNull();
+    expect(params.get("rtebadge")).toBeNull();
+    expect(params.get("rtecosmetics")).toBeNull();
     expect(parseChatConfigFromSearchParams(params)).toEqual(cfg);
   });
 });

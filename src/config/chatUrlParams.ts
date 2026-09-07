@@ -9,12 +9,14 @@ import {
 export type { ChatAnimationMode } from "../utils/ui/animationUtils";
 
 export type LinkDisplayMode = "normal" | "hide" | "highlight";
+export type PlatformMarkerMode = "none" | "stripe" | "icon";
 
 export interface ChatConfig {
   // Required query param: `?c=...` (alias: `channel`)
   channel: string;
   youtubeChannel: string;
   youtubeWebSocketUrl: string;
+  platformMarker: PlatformMarkerMode;
 
   animation: ChatAnimationMode;
   messageSpeed: number;
@@ -81,6 +83,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   channel: "",
   youtubeChannel: "",
   youtubeWebSocketUrl: "wss://ytwss.ruina.team",
+  platformMarker: "stripe",
   size: 1,
   font: 2,
   fontWeight: DEFAULT_FONT_WEIGHT,
@@ -127,13 +130,13 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   linkColor: "#53b7ff",
   hideLinkRewards: true,
   rteProxy: false,
-  rteAzureTts: false,
-  rteChatIsTts: false,
-  rteReyohohoBadge: false,
-  rteCustomCosmetics: false,
+  rteAzureTts: true,
+  rteChatIsTts: true,
+  rteReyohohoBadge: true,
+  rteCustomCosmetics: true,
   ttsReadChat: false,
   ttsReadBots: false,
-  ttsVoice: "Dmitriy",
+  ttsVoice: "Dmitry",
   ttsChatIsVoice: "Maxim",
   ttsVolume: 1,
   ttsMaxLength: 400,
@@ -193,6 +196,11 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
       const normalized = String(value || "").trim().replace(/\/+$/, "");
       return normalized || null;
     },
+  },
+  platformMarker: {
+    query: "pm",
+    kind: "string",
+    aliases: ["platform_marker", "platformMarker"],
   },
 
   size: { query: "s", kind: "int", aliases: ["size"] },
@@ -428,6 +436,37 @@ function parseBool(raw: string): boolean | null {
   return null;
 }
 
+export const CHAT_CONFIG_QUERY_KEYS: readonly string[] = [
+  ...Object.values(PARAMS).flatMap((def) => [def.query, ...(def.aliases ?? [])]),
+  "a", "animate",
+];
+
+// Import must not turn a typo into a full reset via the runtime parser's fallbacks.
+export function isValidChatConfigImport(params: URLSearchParams): boolean {
+  if (!CHAT_CONFIG_QUERY_KEYS.some((key) => params.has(key))) return false;
+  for (const [key, def] of Object.entries(PARAMS)) {
+    for (const query of [def.query, ...(def.aliases ?? [])]) {
+      for (const raw of params.getAll(query)) {
+        if (def.kind === "bool" && parseBool(raw) === null) return false;
+        if (def.kind !== "bool" && def.kind !== "string") {
+          if (!raw.trim() || !Number.isFinite(Number(raw))) return false;
+          const numericPattern = def.kind === "float"
+            ? /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i
+            : /^[+-]?\d+$/;
+          if (!numericPattern.test(raw.trim())) return false;
+        }
+        if (key === "animation" && normalizeChatAnimationMode(raw) !== raw) return false;
+        if (key === "linkMode" && !["normal", "hide", "highlight"].includes(raw)) return false;
+        if (key === "platformMarker" && !["none", "stripe", "icon"].includes(raw)) return false;
+        if (key.endsWith("Color") && !/^#?[0-9a-f]{6}$/i.test(raw)) return false;
+      }
+    }
+  }
+  return ["a", "animate"].every((key) =>
+    params.getAll(key).every((raw) => parseBool(raw) !== null),
+  );
+}
+
 function parseIntSafe(raw: string): number | null {
   const n = Number.parseInt(raw, 10);
   return Number.isFinite(n) ? n : null;
@@ -562,6 +601,9 @@ export function parseChatConfigFromSearchParams(
   cfg.ttsMaxLength = Math.max(cfg.ttsMaxLength, 1);
   if (!["normal", "hide", "highlight"].includes(cfg.linkMode)) {
     cfg.linkMode = DEFAULT_CHAT_CONFIG.linkMode;
+  }
+  if (!["none", "stripe", "icon"].includes(cfg.platformMarker)) {
+    cfg.platformMarker = DEFAULT_CHAT_CONFIG.platformMarker;
   }
 
   return cfg;

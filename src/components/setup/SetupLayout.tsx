@@ -1,17 +1,5 @@
 import type { JSX } from "solid-js";
 import { createUniqueId, For, Show } from "solid-js";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
 import { cn } from "~/lib/utils";
 import { SetupSwitch } from "./SetupSwitch";
 
@@ -46,7 +34,7 @@ export const SETUP_NAV: {
   {
     id: "import",
     label: "Импорт настроек",
-    description: "ChatIS, Cyan и Davii",
+    description: "ChatYX, ChatIS, Cyan и Davii",
   },
   {
     id: "appearance",
@@ -87,18 +75,18 @@ export const SETUP_NAV: {
 
 export function ControlRows(props: { rows: ControlRow[] }) {
   return (
-    <div class="flex flex-col gap-3">
+    <div class="setup-control-list">
       <For each={props.rows}>
         {(row) => {
           const labelId = `setup-control-label-${createUniqueId()}`;
           return (
           <div class="setup-control-row grid grid-cols-1 items-center gap-2 min-[1100px]:grid-cols-[132px_minmax(0,1fr)] xl:grid-cols-[168px_minmax(0,1fr)] md:max-[1099px]:grid-cols-[180px_minmax(0,1fr)]">
             <div class="flex min-w-0 flex-col gap-0.5">
-              <div id={labelId} class="text-xs font-medium text-foreground sm:text-sm">
+              <div id={labelId} class="text-sm font-medium leading-normal text-foreground">
                 {row.label}
               </div>
               <Show when={row.hint}>
-                <div class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
+                <div class="text-xs leading-normal text-muted-foreground">
                   {row.hint}
                 </div>
               </Show>
@@ -114,81 +102,18 @@ export function ControlRows(props: { rows: ControlRow[] }) {
 
 export function ToggleRows(props: { rows: ToggleRow[] }) {
   return (
-    <div class="flex flex-col gap-2">
+    <div class="setup-toggle-list">
       <For each={props.rows}>
         {(row) => (
-          <div class="setup-toggle-row grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5">
-            <div class="flex min-w-0 flex-col gap-0.5">
-              <div class="text-xs font-medium text-foreground sm:text-sm">
-                {row.label}
-              </div>
-              <Show when={row.hint}>
-                <div class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
-                  {row.hint}
-                </div>
-              </Show>
-            </div>
-            <SetupSwitch
-              checked={row.checked()}
-              onChange={row.onChange}
-              label={row.label}
-            />
-          </div>
+          <SetupSwitch
+            checked={row.checked()}
+            onChange={row.onChange}
+            label={row.label}
+            hint={row.hint}
+          />
         )}
       </For>
     </div>
-  );
-}
-
-function SectionHeader(props: {
-  title: string;
-  description?: string;
-  collapsible?: boolean;
-  compact?: boolean;
-}) {
-  return (
-    <CardHeader
-      class={cn(
-        "space-y-1.5",
-        props.compact ? "p-4" : "p-4 xl:p-5",
-        props.collapsible
-          ? props.compact
-            ? "cursor-pointer select-none pb-3.5"
-            : "cursor-pointer select-none pb-4 xl:pb-5"
-          : "pb-2.5",
-      )}
-    >
-      <div class="flex items-start justify-between gap-2.5">
-        <div class="min-w-0 space-y-0.5">
-          <CardTitle class="text-sm font-semibold tracking-tight text-foreground">
-            {props.title}
-          </CardTitle>
-          <Show when={props.description}>
-            <CardDescription class="text-xs leading-relaxed text-muted-foreground">
-              {props.description}
-            </CardDescription>
-          </Show>
-        </div>
-        <Show when={props.collapsible}>
-          <span
-            class="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.03] text-muted-foreground transition-transform duration-200 group-data-[expanded]:rotate-180 sm:size-7"
-            aria-hidden="true"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              class="size-3.5 sm:size-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </span>
-        </Show>
-      </div>
-    </CardHeader>
   );
 }
 
@@ -198,67 +123,23 @@ export function SectionCard(props: {
   children: JSX.Element;
   class?: string;
   id?: string;
+  hidden?: boolean;
   compact?: boolean;
-  collapsible?: boolean;
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
 }) {
-  const isCollapsible = () => props.collapsible === true;
-  const pad = () =>
-    props.compact
-      ? "flex flex-col gap-3 p-3.5 pt-0"
-      : "flex flex-col gap-3 p-4 pt-0 xl:gap-4 xl:p-5 xl:pt-0";
-
+  const titleId = `setup-heading-${createUniqueId()}`;
   return (
-    <Show
-      when={isCollapsible()}
-      fallback={
-        <Card
-          id={props.id}
-          class={cn(
-            "scroll-mt-4 border-transparent bg-card shadow-[0_0_0_1px_rgba(255,255,255,0.08)]",
-            props.class,
-          )}
-        >
-          <SectionHeader
-            title={props.title}
-            description={props.description}
-            compact={props.compact}
-          />
-          <CardContent class={cn(pad(), "min-h-0 flex-1")}>
-            {props.children}
-          </CardContent>
-        </Card>
-      }
+    <section
+      id={props.id}
+      hidden={props.hidden}
+      aria-labelledby={titleId}
+      class={cn("setup-section", props.compact && "setup-section--compact", props.class)}
     >
-      <Collapsible
-        open={props.open}
-        defaultOpen={props.defaultOpen ?? false}
-        onOpenChange={props.onOpenChange}
-        class="group"
-      >
-        <Card
-          id={props.id}
-          class={cn(
-            "scroll-mt-4 border-transparent bg-card shadow-[0_0_0_1px_rgba(255,255,255,0.08)]",
-            props.class,
-          )}
-        >
-          <CollapsibleTrigger class="w-full rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-            <SectionHeader
-              title={props.title}
-              description={props.description}
-              collapsible
-              compact={props.compact}
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent class={pad()}>{props.children}</CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-    </Show>
+      <header class="setup-section-heading">
+        <h2 id={titleId}>{props.title}</h2>
+        <Show when={props.description}><p>{props.description}</p></Show>
+      </header>
+      <div class="setup-section-content">{props.children}</div>
+    </section>
   );
 }
 
@@ -267,7 +148,7 @@ export function SetupNav(props: {
   onSelect: (id: SetupSectionId) => void;
 }) {
   return (
-    <nav class="flex flex-col gap-1">
+    <nav class="setup-nav" aria-label="Разделы настроек">
       <For each={SETUP_NAV}>
         {(item) => {
           const active = () => props.active === item.id;
@@ -275,18 +156,14 @@ export function SetupNav(props: {
             <button
               type="button"
               onClick={() => props.onSelect(item.id)}
-              class={cn(
-                "block w-full rounded-md px-3 py-2 text-left transition-colors duration-150",
-                active()
-                  ? "bg-white/[0.09] text-foreground"
-                  : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
-              )}
+              class="setup-nav-item"
+              aria-controls={`setup-section-${item.id}`}
               aria-current={active() ? "location" : undefined}
             >
               <span class="block text-xs font-medium leading-tight xl:text-sm">
                 {item.label}
               </span>
-              <span class="mt-0.5 block text-[11px] font-normal leading-snug text-muted-foreground">
+              <span class="mt-1 block text-xs font-normal leading-normal text-muted-foreground">
                 {item.description}
               </span>
             </button>

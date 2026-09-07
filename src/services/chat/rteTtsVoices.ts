@@ -4,11 +4,6 @@ export const RUSSIAN_TTS_VOICES = [
   { name: "Maxim", provider: "chatis", backendName: "Maxim" },
   { name: "Tatyana", provider: "chatis", backendName: "Tatyana" },
   {
-    name: "Dmitriy",
-    provider: "azure",
-    backendName: "ru-RU-DmitryNeural",
-  },
-  {
     name: "Dmitry",
     provider: "azure",
     backendName: "ru-RU-DmitryNeural",
@@ -27,7 +22,8 @@ export const RUSSIAN_TTS_VOICES = [
 export type RussianTtsVoice = (typeof RUSSIAN_TTS_VOICES)[number]["name"];
 
 const LEGACY_VOICE_NAMES: Readonly<Record<string, RussianTtsVoice>> = {
-  "ru-ru-dmitryneural": "Dmitriy",
+  dmitriy: "Dmitry",
+  "ru-ru-dmitryneural": "Dmitry",
   "ru-ru-svetlananeural": "Svetlana",
 };
 

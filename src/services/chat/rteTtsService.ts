@@ -46,7 +46,7 @@ export class RteTtsService {
   private config: RteTtsConfig = {
     azureEnabled: false,
     chatisEnabled: false,
-    azureVoice: "Dmitriy",
+    azureVoice: "Dmitry",
     chatisVoice: "Maxim",
     volume: 1,
     maxLength: 400,

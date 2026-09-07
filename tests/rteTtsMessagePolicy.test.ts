@@ -7,6 +7,7 @@ function config(overrides: Partial<ChatConfig> = {}): ChatConfig {
   return {
     ...DEFAULT_CHAT_CONFIG,
     rteAzureTts: true,
+    rteChatIsTts: false,
     ttsReadChat: true,
     botNames: "nightbot,streamelements",
     ...overrides,
@@ -44,7 +45,10 @@ describe("RTE all-chat TTS policy", () => {
 
   test("does not read chat unless both TTS and all-chat mode are enabled", () => {
     expect(
-      getRteChatSpeechRequest(config({ rteAzureTts: false }), message()),
+      getRteChatSpeechRequest(
+        config({ rteAzureTts: false, rteChatIsTts: false }),
+        message(),
+      ),
     ).toBeNull();
     expect(
       getRteChatSpeechRequest(config({ ttsReadChat: false }), message()),
