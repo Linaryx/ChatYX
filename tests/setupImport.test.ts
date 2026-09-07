@@ -282,10 +282,12 @@ describe("setup import parser", () => {
     });
   });
 
-  test("keeps Davii detection and label separate while sharing schema mapping", () => {
+  test.each([
+    "https://unificado.justdavi.dev/",
+    "https://chatsemban.justdavi.dev/",
+  ])("keeps Davii detection and label separate while sharing schema mapping: %s", (base) => {
     // Given
-    const input =
-      "https://unificado.justdavi.dev/?channel=foo&font=Custom%20Face&size=3";
+    const input = `${base}?channel=foo&font=Custom%20Face&size=3`;
 
     // When
     const result = parseSetupImport(input, "auto");
@@ -345,9 +347,9 @@ describe("setup import parser", () => {
 
   test("reports known non-equivalent fields and ignores unknown fields", () => {
     // Given
-    const chatIsInput = "channel=foo&markdown=true&md_image=x&last_emote_background=true&future=1";
+    const chatIsInput = "channel=foo&markdown=true&md_image=x&last_emote_background=true&dynamicEmoteScale=true&desRegular=1.2&future=1";
     const cyanInput =
-      "channel=foo&big_emotes=true&link_urls=true&center=true&height=4&hide_paints=true&hide_colon=true&future=1";
+      "channel=foo&big_emotes=true&link_urls=true&center=true&height=4&hide_paints=true&hide_colon=true&filters=x&pronouns=true&pi_sides=left&future=1";
 
     // When
     const chatIsResult = parseSetupImport(chatIsInput, "chatis");
@@ -358,6 +360,8 @@ describe("setup import parser", () => {
       "markdown",
       "md_image",
       "last_emote_background",
+      "dynamicEmoteScale",
+      "desRegular",
     ]);
     expect(cyanResult.kind === "parsed" ? cyanResult.unsupported : []).toEqual([
       "big_emotes",
@@ -366,6 +370,27 @@ describe("setup import parser", () => {
       "height",
       "hide_paints",
       "hide_colon",
+      "pronouns",
+      "filters",
+      "pi_sides",
     ]);
+  });
+
+  test.each([
+    ["none", "none"],
+    ["badge", "icon"],
+    ["minimal", "stripe"],
+    ["outline", "stripe"],
+  ] as const)("maps Cyan platform indicator %s to %s", (input, expected) => {
+    const result = parseSetupImport(`channel=foo&platform_indicator=${input}`, "cyan");
+    expect(result.kind === "parsed" ? result.patch : undefined).toEqual({
+      channel: "foo",
+      platformMarker: expected,
+    });
+  });
+
+  test("reports an unknown Cyan platform indicator instead of ignoring it", () => {
+    const result = parseSetupImport("channel=foo&platform_indicator=rainbow", "cyan");
+    expect(result.kind === "parsed" ? result.unsupported : undefined).toEqual(["platform_indicator"]);
   });
 });

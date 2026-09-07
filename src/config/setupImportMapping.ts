@@ -1,4 +1,10 @@
-import { DEFAULT_CHAT_CONFIG, parseBotNames, parseChatConfigFromSearchParams, type ChatConfig } from "./chatUrlParams";
+import {
+  DEFAULT_CHAT_CONFIG,
+  parseBotNames,
+  parseChatConfigFromSearchParams,
+  type ChatConfig,
+  type PlatformMarkerMode,
+} from "./chatUrlParams";
 
 export type SetupImportSource = "auto" | "chatyx" | "chatis" | "cyan" | "davii";
 export type DetectedSetupImportSource = Exclude<SetupImportSource, "auto">;
@@ -41,13 +47,14 @@ export const CHATIS_UNIQUE_KEYS = [
   "hide_special_badges", "show_homies", "fontCustom", "nl_after_name",
   "hide_names", "botNames", "reverse_line_order", "horizontal",
   "single_chatter", "show_7tv_unlisted", "markdown", "md_image",
-  "last_emote_background",
+  "last_emote_background", "dynamicEmoteScale", "desRegular", "desMulti", "desSingle",
 ] as const;
 
 export const SHARED_UNIQUE_KEYS = [
   "yt", "hide_commands", "hide_badges", "weight", "highlight", "gigantify",
   "show_redeems", "allow", "big_emotes", "link_urls", "center", "height",
-  "hide_paints", "hide_colon",
+  "hide_paints", "hide_colon", "platform_indicator", "pi_sides", "pi_style",
+  "pi_thickness", "pi_radius",
 ] as const;
 
 export const COMMON_KEYS = [
@@ -57,12 +64,16 @@ export const COMMON_KEYS = [
 
 const CHATIS_UNSUPPORTED = [
   "markdown", "md_image", "last_emote_background",
+  "dynamicEmoteScale", "desRegular", "desMulti", "desSingle",
 ] as const;
 const SHARED_UNSUPPORTED = [
   "big_emotes", "link_urls", "center", "height", "hide_paints", "hide_colon",
   "sms", "invert", "block", "readable", "disable_sync", "disable_pruning",
   "yt_emotes", "voice", "highlight_mentions", "highlight_mention_color",
   "normal_chat", "streamer_chat", "off_commands", "scale", "pronouns",
+  "pronoun_color_mode", "pronoun_single_color1", "pronoun_single_color2",
+  "pronoun_custom_colors", "filters", "regex", "cN", "img", "preview",
+  "pi_sides", "pi_style", "pi_thickness", "pi_radius",
 ] as const;
 // Cyan font ids in query order. The first ten match ChatYX presets 1-10;
 // the last two exist only in Cyan/Davii and become ChatYX custom fonts.
@@ -168,6 +179,17 @@ function cyanFont(params: URLSearchParams): Pick<SetupImportPatch, "font" | "fon
   return cyanFontById(raw);
 }
 
+function cyanPlatformMarker(params: URLSearchParams): PlatformMarkerMode | undefined {
+  switch (params.get("platform_indicator")?.trim().toLowerCase()) {
+    case "none": return "none";
+    case "badge": return "icon";
+    // Cyan's minimal dot and configurable outline both identify the source with a border.
+    case "minimal":
+    case "outline": return "stripe";
+    default: return undefined;
+  }
+}
+
 export function mapChatIsParams(params: URLSearchParams): SetupImportMapping {
   const channel = normalizedText(params, "channel");
   const animate = booleanValue(params, "animate");
@@ -234,6 +256,7 @@ export function mapSharedParams(params: URLSearchParams): SetupImportMapping {
   const gigantify = booleanValue(params, "gigantify");
   const showRedeems = booleanValue(params, "show_redeems");
   const allow = normalizedList(params, "allow");
+  const platformMarker = cyanPlatformMarker(params);
   return {
     patch: {
       ...(channel !== undefined && { channel }),
@@ -254,7 +277,11 @@ export function mapSharedParams(params: URLSearchParams): SetupImportMapping {
       ...(gigantify !== undefined && { showGigantifiedEmotes: gigantify }),
       ...(showRedeems !== undefined && { showChannelPointRewards: showRedeems }),
       ...(allow !== undefined && { singleChatter: allow }),
+      ...(platformMarker !== undefined && { platformMarker }),
     },
-    unsupported: unsupportedKeys(params, SHARED_UNSUPPORTED),
+    unsupported: [
+      ...unsupportedKeys(params, SHARED_UNSUPPORTED),
+      ...(params.has("platform_indicator") && platformMarker === undefined ? ["platform_indicator"] : []),
+    ],
   };
 }
