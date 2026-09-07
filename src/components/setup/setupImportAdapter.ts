@@ -15,6 +15,8 @@ export function applySetupImport(
   if (patch.channel !== undefined) setters.channel(patch.channel);
   if (patch.youtubeChannel !== undefined) setters.youtubeChannel(patch.youtubeChannel);
   if (patch.platformMarker !== undefined) setters.platformMarker(patch.platformMarker);
+  if (patch.showGifs !== undefined) setters.showGifs(patch.showGifs);
+  if (patch.gifScale !== undefined) setters.gifScale(String(patch.gifScale));
   if (patch.animation !== undefined) setters.animation(patch.animation);
   if (patch.bots !== undefined) setters.bots(patch.bots);
   if (patch.commands !== undefined) setters.commands(patch.commands);

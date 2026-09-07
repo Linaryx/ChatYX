@@ -56,6 +56,7 @@ export interface TwitchMessage {
     cost: number;
   };
   platform?: "twitch" | "youtube";
+  gifs?: TwitchGif[];
   platformBadges?: Array<{
     url: string;
     title?: string;
@@ -77,6 +78,29 @@ export interface TwitchMessage {
   sourceChannelAvatarUrl?: string;
   showSourceChannelBadge?: boolean;
   twitchEvent?: TwitchEvent;
+}
+
+export type TwitchGif = {
+  start: number;
+  end: number;
+  id: string;
+  url: string;
+};
+
+function parseGifs(raw: string | undefined): TwitchGif[] | undefined {
+  if (!raw) return undefined;
+  const gifs = raw.split(",").flatMap((entry): TwitchGif[] => {
+    const [bounds, id, ...urlParts] = entry.split("|");
+    const [startRaw, endRaw] = (bounds || "").split("-");
+    const start = Number.parseInt(startRaw || "", 10);
+    const end = Number.parseInt(endRaw || "", 10);
+    const url = urlParts.join("|").trim();
+    if (!id || !url || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start) {
+      return [];
+    }
+    return [{ start, end, id, url }];
+  });
+  return gifs.length > 0 ? gifs : undefined;
 }
 
 function getPrivMsgEvent(tags: Record<string, string>): TwitchEvent | undefined {
@@ -577,6 +601,7 @@ export class TwitchService {
         color,
         badges,
         emotes: this.parseEmotes(tags.emotes || ""),
+        gifs: parseGifs(tags.gifs),
         userType: tags["user-type"] || "",
         isModerator: tags.mod === "1",
         isSubscriber: tags.subscriber === "1",
@@ -688,8 +713,10 @@ export class TwitchService {
     const pairs = tagsString.split(";");
 
     for (const pair of pairs) {
-      const [key, value] = pair.split("=");
-      if (key && value !== undefined) {
+      const separator = pair.indexOf("=");
+      if (separator > 0) {
+        const key = pair.slice(0, separator);
+        const value = pair.slice(separator + 1);
         tags[key] = this.unescapeTagValue(value);
       }
     }

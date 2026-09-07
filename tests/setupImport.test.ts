@@ -36,6 +36,7 @@ const nativeConfig: ChatConfig = {
   linkMode: "highlight", linkColor: "#fedcba", hideLinkRewards: false,
   rteProxy: true, rteAzureTts: true, rteChatIsTts: true,
   rteReyohohoBadge: true, rteCustomCosmetics: true,
+  showGifs: true, gifScale: 1.6,
 };
 
 describe("native setup import", () => {

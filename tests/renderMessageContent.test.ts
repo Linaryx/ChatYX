@@ -22,7 +22,11 @@ function message(text: string, positions: string[]): TwitchMessage {
   };
 }
 
-function render(message: TwitchMessage, displayText?: string): string {
+function render(
+  message: TwitchMessage,
+  displayText?: string,
+  config = DEFAULT_CHAT_CONFIG,
+): string {
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
   const element = {
     innerHTML: "",
@@ -45,8 +49,8 @@ function render(message: TwitchMessage, displayText?: string): string {
       },
     });
     const rendered = displayText === undefined
-      ? renderMessageWithEmotes(message, DEFAULT_CHAT_CONFIG, service)
-      : renderMessageWithEmotes(message, DEFAULT_CHAT_CONFIG, service, displayText);
+      ? renderMessageWithEmotes(message, config, service)
+      : renderMessageWithEmotes(message, config, service, displayText);
     expect(rendered).toBe(element);
     return element.innerHTML;
   } finally {
@@ -128,5 +132,38 @@ describe("renderMessageWithEmotes display text", () => {
     original.tokenSnapshot = createMessageTokenSnapshot(original.message);
 
     expect(render(original, "")).toBe("");
+  });
+
+  test("renders enabled Twitch GIFs as WebP at the configured scale", () => {
+    const original = message("[GIF]", []);
+    original.gifs = [{
+      start: 0,
+      end: 4,
+      id: "gif-1",
+      url: "https://media.example/gif.gif?token=a=b",
+    }];
+    const html = render(original, undefined, {
+      ...DEFAULT_CHAT_CONFIG,
+      showGifs: true,
+      gifScale: 1.5,
+    });
+
+    expect(html).toContain('class="chat-gif"');
+    expect(html).toContain("gif.webp?token=a=b");
+    expect(html).toContain('alt="GIF"');
+  });
+
+  test("keeps GIF text when the feature is disabled", () => {
+    const original = message("[GIF]", []);
+    original.gifs = [{
+      start: 0,
+      end: 4,
+      id: "gif-1",
+      url: "https://media.example/gif.gif",
+    }];
+
+    const html = render(original);
+    expect(html).not.toContain("chat-gif");
+    expect(html).toContain("[GIF]");
   });
 });

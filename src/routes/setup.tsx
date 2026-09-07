@@ -348,6 +348,8 @@ export default function ChatSetup() {
   const [emoteScale, setEmoteScale] = createSignal(
     String(DEFAULT_CHAT_CONFIG.emoteScale),
   );
+  const [showGifs, setShowGifs] = createSignal(DEFAULT_CHAT_CONFIG.showGifs);
+  const [gifScale, setGifScale] = createSignal(String(DEFAULT_CHAT_CONFIG.gifScale));
   const [botNames, setBotNames] = createSignal<string[]>([
     ...DEFAULT_BOT_NAMES,
   ]);
@@ -522,6 +524,8 @@ export default function ChatSetup() {
       channel: setChannel,
       youtubeChannel: setYoutubeChannel,
       platformMarker: setPlatformMarker,
+      showGifs: setShowGifs,
+      gifScale: setGifScale,
       animation: setAnimation,
       bots: setBots,
       commands: setCommands,
@@ -661,6 +665,8 @@ export default function ChatSetup() {
     commands: commands(),
     hideSpecialBadges: hideSpecialBadges(),
     emoteScale: toFloat(emoteScale(), DEFAULT_CHAT_CONFIG.emoteScale),
+    showGifs: showGifs(),
+    gifScale: toFloat(gifScale(), DEFAULT_CHAT_CONFIG.gifScale),
     botNames: normalizeBotNames(botNames().join(",")),
     singleChatter: normalizeBotNames(allowedChatters().join(",")),
     show7tvUnlisted: show7tvUnlisted(),
@@ -1123,6 +1129,20 @@ export default function ChatSetup() {
         />
       ),
     },
+    {
+      label: "Размер GIF",
+      hint: "Масштаб GIF относительно размера эмоутов.",
+      control: (_labelId) => (
+        <SetupNumberField
+          label="Размер GIF"
+          value={gifScale()}
+          onChange={setGifScale}
+          min={0.25}
+          max={3}
+          step={0.1}
+        />
+      ),
+    },
   ];
 
   const stylingRows: ControlRow[] = [
@@ -1371,6 +1391,12 @@ export default function ChatSetup() {
       label: "Показывать гигантские эмоуты",
       checked: showGigantifiedEmotes,
       onChange: setShowGigantifiedEmotes,
+    },
+    {
+      label: "Показывать GIF в сообщениях",
+      checked: showGifs,
+      onChange: setShowGifs,
+      hint: "Показывает Twitch GIF в формате WebP. Выключено по умолчанию.",
     },
     {
       label: "Показывать прогнозы над чатом",

@@ -43,7 +43,8 @@ function sanitizeImageUrl(value: string): string {
   if (!trimmed) return "";
 
   try {
-    const url = new URL(trimmed, window.location.origin);
+    const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+    const url = new URL(trimmed, origin);
     if (url.protocol !== "https:" && url.protocol !== "http:") return "";
     return url.href;
   } catch {
@@ -135,6 +136,11 @@ function getEmoteScale(config: ChatConfig): number {
     : 1;
 }
 
+function webpGifUrl(rawUrl: string): string {
+  const url = sanitizeImageUrl(rawUrl);
+  return url.replace(/\.gif(?=($|[?#]))/i, ".webp");
+}
+
 /**
  * Render message content with emotes/emoji/cheers to JSX (innerHTML)
  */
@@ -154,6 +160,34 @@ export function renderMessageWithEmotes(
     | { kind: "zw"; overlayHtml: string; fallbackHtml: string };
 
   const replacements: Record<string, Replacement> = {};
+
+  if (config.showGifs && message.gifs) {
+    const codePointToCodeUnit = (text: string, codePointIndex: number): number => {
+      let currentCodePoint = 0;
+      for (let i = 0; i < text.length; i++) {
+        if (currentCodePoint === codePointIndex) return i;
+        const charCode = text.charCodeAt(i);
+        if (charCode >= 0xd800 && charCode <= 0xdbff) i += 1;
+        currentCodePoint += 1;
+      }
+      return text.length;
+    };
+    const gifScale = Number.isFinite(config.gifScale)
+      ? Math.min(Math.max(config.gifScale, 0.25), 3)
+      : 1;
+    for (const gif of message.gifs) {
+      const start = codePointToCodeUnit(message.message, gif.start);
+      const end = codePointToCodeUnit(message.message, gif.end + 1);
+      const token = message.message.substring(start, end);
+      const url = webpGifUrl(gif.url);
+      if (!token || !url) continue;
+      replacements[token] = {
+        kind: "html",
+        html: `<span class="gif-container"><img class="chat-gif" src="${url}" alt="GIF" title="GIF" style="max-height: ${Math.round(size.emoteMaxHeight * 5 * gifScale)}px;" /></span>`,
+        isOverlayTarget: true,
+      };
+    }
+  }
 
   if (message.emotes && typeof message.emotes === "object") {
     const codePointToCodeUnit = (

@@ -216,6 +216,18 @@ describe("chat commands", () => {
     expect(parsed?.userId).toBe("684505240");
   });
 
+  test("parses Twitch GIF metadata without truncating URLs containing equals", () => {
+    const parsed = new TwitchService().parseMessageLine(
+      "@badges=;display-name=Viewer;gifs=0-33|gif-1|https://media.example/gif.gif?token=a=b;id=gif-msg;mod=0;subscriber=0 PRIVMSG #channel :[GIF]",
+    );
+    expect(parsed?.gifs).toEqual([{
+      start: 0,
+      end: 33,
+      id: "gif-1",
+      url: "https://media.example/gif.gif?token=a=b",
+    }]);
+  });
+
   test("caps generated test messages", () => {
     expect(parseTestMessageCount("")).toBe(5);
     expect(parseTestMessageCount("12")).toBe(12);

@@ -17,6 +17,8 @@ export interface ChatConfig {
   youtubeChannel: string;
   youtubeWebSocketUrl: string;
   platformMarker: PlatformMarkerMode;
+  showGifs: boolean;
+  gifScale: number;
 
   animation: ChatAnimationMode;
   messageSpeed: number;
@@ -84,6 +86,8 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   youtubeChannel: "",
   youtubeWebSocketUrl: "wss://ytwss.ruina.team",
   platformMarker: "stripe",
+  showGifs: false,
+  gifScale: 1,
   size: 1,
   font: 2,
   fontWeight: DEFAULT_FONT_WEIGHT,
@@ -202,6 +206,8 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     kind: "string",
     aliases: ["platform_marker", "platformMarker"],
   },
+  showGifs: { query: "gifs", kind: "bool", aliases: ["show_gifs", "showGifs"] },
+  gifScale: { query: "gifscale", kind: "float", aliases: ["gif_scale", "gifScale"] },
 
   size: { query: "s", kind: "int", aliases: ["size"] },
   font: { query: "f", kind: "int", aliases: ["font"] },
@@ -599,6 +605,7 @@ export function parseChatConfigFromSearchParams(
   cfg.animation = normalizeChatAnimationMode(cfg.animation);
   cfg.ttsVolume = Math.min(Math.max(cfg.ttsVolume, 0), 1);
   cfg.ttsMaxLength = Math.max(cfg.ttsMaxLength, 1);
+  cfg.gifScale = Math.min(Math.max(cfg.gifScale, 0.25), 3);
   if (!["normal", "hide", "highlight"].includes(cfg.linkMode)) {
     cfg.linkMode = DEFAULT_CHAT_CONFIG.linkMode;
   }
