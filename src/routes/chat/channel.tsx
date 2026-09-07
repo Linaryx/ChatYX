@@ -105,7 +105,7 @@ export default function ChatOverlay() {
     DEFAULT_ANIMATION_OPTIONS.duration,
   );
   const [loadingProgress, setLoadingProgress] = createSignal(0);
-  const [loadingStatus, setLoadingStatus] = createSignal("Initializing...");
+  const [loadingStatus, setLoadingStatus] = createSignal("Подготавливаем чат...");
   const [isLoading, setIsLoading] = createSignal(true);
   const [commandStatus, setCommandStatus] = createSignal<ChatCommandStatus | null>(null);
   const [prediction, setPrediction] = createSignal<TwitchPredictionEvent | null>(
@@ -147,7 +147,7 @@ export default function ChatOverlay() {
     return `ChatYX • ${channelDisplayName() || channel || initialConfig.youtubeChannel}`;
   });
   const chatVisible = createMemo(() => !isLoading() || loadingProgress() >= 100);
-  const hasMessages = createMemo(() => messages().length > 0);
+
   const showPredictionsBar = createMemo(
     () => Boolean((config() ?? initialConfig).showPredictions) && Boolean(channel),
   );
@@ -303,6 +303,11 @@ export default function ChatOverlay() {
 
   const overlayRootStyle = createMemo(() => {
     const cfg = config() ?? initialConfig;
+    const bgOpacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
+    const borderOpacity = clamp(cfg.overlayBorderOpacity, 0, 100) / 100;
+    const borderRadius = clamp(cfg.overlayBackgroundRadius, 0, 128);
+    const fadeDurationMs = chatService()?.getConfig().fade.fadeOutDuration ?? 1000;
+
     return {
       position: "absolute",
       inset: "0",
@@ -314,46 +319,37 @@ export default function ChatOverlay() {
       "align-items": "stretch",
       "justify-content":
         cfg.reverseLineOrder && !cfg.horizontal ? "flex-start" : "flex-end",
-      padding: "10px",
+      padding: isPreview ? "0px" : "10px",
       "box-sizing": "border-box",
       "z-index": "10000",
       "pointer-events": "none",
       opacity: chatVisible() ? "1" : "0",
       overflow: "hidden",
-      transition: "opacity 0.5s ease-in",
+      transition: [
+        "opacity 0.5s ease-in",
+        `background-color ${fadeDurationMs}ms ease-out`,
+        `border-color ${fadeDurationMs}ms ease-out`,
+      ].join(", "),
+      "background-color": `rgba(${hexToRgb(cfg.overlayBackgroundColor)}, ${bgOpacity})`,
+      border: borderOpacity > 0
+        ? `1px solid rgba(255, 255, 255, ${borderOpacity})`
+        : "1px solid transparent",
+      "border-radius": `${borderRadius}px`,
     } as const;
   });
 
   const chromeStyle = createMemo(() => {
-    const cfg = config() ?? initialConfig;
-    const withPrediction = hasPredictionBar();
-    const chromeVisible = hasMessages() || withPrediction;
-    const bgOpacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
-    const borderOpacity = clamp(cfg.overlayBorderOpacity, 0, 100) / 100;
-    const borderRadius = clamp(cfg.overlayBackgroundRadius, 0, 128);
-    const fadeDurationMs = chatService()?.getConfig().fade.fadeOutDuration ?? 1000;
-
     return {
       position: "relative",
       width: "100%",
       "max-width": "100%",
-      "max-height": "calc(100vh - 20px)",
+      "max-height": isPreview ? "100vh" : "calc(100vh - 20px)",
       display: "block",
       "flex-shrink": "1",
-      "min-height": withPrediction && !hasMessages() ? "72px" : "0",
       padding: "0",
       "box-sizing": "border-box",
       "pointer-events": "none",
       overflow: "hidden",
-      transition: [
-        `background-color ${fadeDurationMs}ms ease-out`,
-        `border-color ${fadeDurationMs}ms ease-out`,
-      ].join(", "),
-      "background-color": `rgba(${hexToRgb(cfg.overlayBackgroundColor)}, ${chromeVisible ? bgOpacity : 0})`,
-      border: chromeVisible && borderOpacity > 0
-        ? `1px solid rgba(255, 255, 255, ${borderOpacity})`
-        : "1px solid transparent",
-      "border-radius": chromeVisible ? `${borderRadius}px` : "0px",
     } as const;
   });
 
@@ -415,14 +411,14 @@ export default function ChatOverlay() {
 
       void (async () => {
         const isRealChannel = Boolean(channel && channel !== "chatyxpreview");
-        setLoadingStatus("Preparing preview...");
+        setLoadingStatus("Подготавливаем предпросмотр...");
         setLoadingProgress(25);
 
         previewChannelId = isRealChannel
           ? await withTimeout(resolveChannelId(channel), 8000, "0")
           : "0";
 
-        setLoadingStatus("Loading preview data...");
+        setLoadingStatus("Загружаем данные предпросмотра...");
         setLoadingProgress(55);
 
         const hasResolvedChannelId = isTwitchUserId(previewChannelId);
@@ -459,7 +455,7 @@ export default function ChatOverlay() {
         }
         await bgLoading;
 
-        setLoadingStatus("Rendering preview...");
+        setLoadingStatus("Отрисовываем предпросмотр...");
         setLoadingProgress(85);
 
         window.setTimeout(() => {
@@ -480,14 +476,14 @@ export default function ChatOverlay() {
             getAnimationScrollBehavior(previewConfig.animation),
           );
           setLoadingProgress(100);
-          setLoadingStatus("Preview ready");
+          setLoadingStatus("Предпросмотр готов");
           setIsLoading(false);
           previewReady = true;
           if (previewIntervalMs !== null) restartPreviewInterval();
         }, 700);
       })().catch((error) => {
         console.error("[Preview] Initialization failed:", error);
-        setLoadingStatus("Preview failed to load");
+        setLoadingStatus("Не удалось загрузить предпросмотр");
         setLoadingProgress(100);
         setIsLoading(false);
       });
@@ -525,7 +521,7 @@ export default function ChatOverlay() {
       <Title>{pageTitle()}</Title>
       <Show
         when={hasChannel}
-        fallback={<div>Error: Channel parameter is required</div>}
+        fallback={<div>Укажи канал в параметре ссылки</div>}
       >
         <>
           <Show when={isLoading()}>

@@ -23,7 +23,12 @@ export class AnnouncementColorResolver {
 
   async apply(message: TwitchMessage) {
     const event = message.twitchEvent;
-    if (event?.type !== "announcement" || event.level !== "PRIMARY") return;
+    if (
+      message.platform === "youtube" ||
+      event?.type !== "announcement" ||
+      event.level !== "PRIMARY"
+    )
+      return;
 
     const color = this.color || (await this.resolve());
     if (color) event.color = color;

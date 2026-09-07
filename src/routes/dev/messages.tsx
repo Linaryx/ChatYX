@@ -25,6 +25,7 @@ import "./messages.css";
 type DevCase = {
   title: string;
   message: TwitchMessage;
+  companionMessage?: TwitchMessage;
 };
 
 const DEV_STYLE_ID = "chat-dev-message-style-overrides";
@@ -76,7 +77,9 @@ function createMessage(
     displayName: username,
     message: text,
     color: patch.color || "#8A2BE2",
-    badges: patch.badges || ["subscriber/12"],
+    // These role and vanity badges have local CDN fallbacks, so the preview
+    // remains useful without waiting for a channel badge request.
+    badges: patch.badges ?? ["moderator/1", "vip/1", "founder/0"],
     emotes: {},
     userType: "",
     isModerator: false,
@@ -156,6 +159,21 @@ function createDevCases(): DevCase[] {
           title: "Очень длинное название награды канала для проверки обрезки через многоточие",
           prompt: "",
           cost: 5000,
+        },
+      }),
+    },
+    {
+      title: "Награда канала без текста",
+      message: createMessage("dev-7-empty", "rewardUser", "", {
+        twitchEvent: event("reward", "Награда", {
+          detail: "Включить звук",
+          count: 1_500,
+        }),
+        channelPointReward: {
+          id: "dev-reward-empty",
+          title: "Включить звук",
+          prompt: "",
+          cost: 1_500,
         },
       }),
     },
@@ -279,11 +297,17 @@ function createDevCases(): DevCase[] {
       message: createMessage("dev-14", "linkUser", "Расписание на неделю: https://example.com/schedule"),
     },
     {
-      title: "YouTube marker",
-      message: createMessage("dev-15", "youtubeUser", "Сообщение с YouTube-маркером", {
-        platform: "youtube",
-        platformBadges: [{ url: "https://www.youtube.com/s/desktop/3748dff5/img/favicon_32x32.png", title: "YouTube" }],
-      }),
+      title: "Twitch и YouTube",
+      message: createMessage("dev-15-twitch", "twitchUser", "Обычное Twitch-сообщение"),
+      companionMessage: createMessage(
+        "dev-15-youtube",
+        "youtubeUser",
+        "Сообщение с YouTube-маркером",
+        {
+          platform: "youtube",
+          badges: [],
+        },
+      ),
     },
   ];
 }
@@ -314,7 +338,9 @@ export default function MessageStylesDevPage() {
   const [highlightEvents, setHighlightEvents] = createSignal(true);
   const [showNames, setShowNames] = createSignal(true);
   const cases = createDevCases();
-  const messages = cases.map((item) => item.message);
+  const messages = cases.flatMap((item) =>
+    item.companionMessage ? [item.message, item.companionMessage] : [item.message],
+  );
   const config = createMemo(() =>
     createDevConfig({
       size: size(),
@@ -323,6 +349,10 @@ export default function MessageStylesDevPage() {
       hideNames: !showNames(),
     }),
   );
+  const platformComparisonConfig = createMemo(() => ({
+    ...config(),
+    youtubeChannel: "chatyxdevyoutube",
+  }));
   const service = new ChatPresentationService({
     ...createChatPresentationConfig(config()),
     fade: { enabled: false, timeout: 0, fadeOutDuration: 0 },
@@ -398,10 +428,20 @@ export default function MessageStylesDevPage() {
                   <div class="message-style-dev__case-message">
                     <ChatMessage
                       message={item.message}
-                      config={config()}
+                      config={item.companionMessage ? platformComparisonConfig() : config()}
                       service={service}
                       animationDurationMs={0}
                     />
+                    <For each={item.companionMessage ? [item.companionMessage] : []}>
+                      {(message) => (
+                        <ChatMessage
+                          message={message}
+                          config={platformComparisonConfig()}
+                          service={service}
+                          animationDurationMs={0}
+                        />
+                      )}
+                    </For>
                   </div>
                 </article>
               )}

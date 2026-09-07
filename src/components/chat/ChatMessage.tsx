@@ -264,11 +264,57 @@ export const ChatMessage = (props: ChatMessageProps) => {
   const eventSummary = createMemo(() => {
     const event = visibleTwitchEvent();
     if (!event) return undefined;
-    if (!hasEventMessageText() || event.type === "watch-streak") return event;
+    if (
+      !hasEventMessageText() ||
+      event.type === "watch-streak" ||
+      event.type === "reward"
+    )
+      return event;
     return undefined;
   });
   const showPlatformMarker = createMemo(() =>
     Boolean(props.config.channel.trim() && props.config.youtubeChannel.trim()),
+  );
+  const platformMarkerMode = createMemo(() =>
+    showPlatformMarker() ? props.config.platformMarker : "none",
+  );
+  const isGigantifiedEmote = createMemo(
+    () =>
+      Boolean(
+        props.message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
+      ),
+  );
+  const isReward = createMemo(
+    () => visibleTwitchEvent()?.type === "reward",
+  );
+  const MessageIdentity = (identityProps: { showColon?: boolean } = {}) => (
+    <>
+      <ChatBadges message={props.message} config={props.config} service={props.service} />
+      <ChatNick
+        message={props.message}
+        nickStyle={nickStyle()}
+        fontWeight={nickFontWeight()}
+        paintClasses={paintClasses()}
+        paintAttributes={paintAttributes()}
+        colonColor={has7tvPaint() ? "#fff" : userColor()}
+        isAction={isAction()}
+        uppercase={props.config.smallCaps}
+        showColon={identityProps.showColon}
+      />
+    </>
+  );
+  const MessageText = () => (
+    <ChatText
+      message={{
+        ...props.message,
+        isGigantifiedEmote: isGigantifiedEmote(),
+      }}
+      displayText={processedMessage()}
+      config={props.config}
+      service={props.service}
+      color={messageTextColor()}
+      fontWeight={fontWeight()}
+    />
   );
 
   onMount(() => {
@@ -348,9 +394,9 @@ export const ChatMessage = (props: ChatMessageProps) => {
       class="chat_line"
       classList={{
         "gigantified-emote": Boolean(
-          props.message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
+          isGigantifiedEmote(),
         ),
-        "platform-marked": showPlatformMarker(),
+        "platform-marked": platformMarkerMode() === "stripe",
         "chat-event": Boolean(visibleTwitchEvent()),
         "chat-event-highlight": Boolean(
           visibleTwitchEvent() &&
@@ -449,7 +495,9 @@ export const ChatMessage = (props: ChatMessageProps) => {
                           >
                             {props.message.displayName || event().detail}
                           </span>
-                          {` · ${formatWatchStreakCount(event().count)}`}
+                          <span class="chat-watch-streak-count">
+                            {` · ${formatWatchStreakCount(event().count)}`}
+                          </span>
                         </>
                       }
                     >
@@ -512,30 +560,31 @@ export const ChatMessage = (props: ChatMessageProps) => {
           </span>
         )}
       </Show>
-      <Show when={!visibleTwitchEvent() || processedMessage().trim()}>
-        <ChatBadges message={props.message} config={props.config} service={props.service} />
-        <ChatNick
-          message={props.message}
-          nickStyle={nickStyle()}
-          fontWeight={nickFontWeight()}
-          paintClasses={paintClasses()}
-          paintAttributes={paintAttributes()}
-          colonColor={has7tvPaint() ? "#fff" : userColor()}
-          isAction={isAction()}
-          uppercase={props.config.smallCaps}
-        />
-        <ChatText
-          message={{
-            ...props.message,
-            message: processedMessage(),
-            isGigantifiedEmote:
-              props.message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
-          }}
-          config={props.config}
-          service={props.service}
-          color={messageTextColor()}
-          fontWeight={fontWeight()}
-        />
+      <Show
+        when={
+          !visibleTwitchEvent() || processedMessage().trim() || isReward()
+        }
+      >
+        <Show
+          when={isReward()}
+          fallback={
+            <>
+              <Show when={isGigantifiedEmote()} fallback={<MessageIdentity />}>
+                <span class="gigantified-emote-header">
+                  <MessageIdentity />
+                </span>
+              </Show>
+              <MessageText />
+            </>
+          }
+        >
+          <div class="chat-event-message-body">
+            <MessageIdentity showColon={hasEventMessageText()} />
+            <Show when={hasEventMessageText()}>
+              <MessageText />
+            </Show>
+          </div>
+        </Show>
       </Show>
     </div>
   );

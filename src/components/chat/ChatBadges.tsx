@@ -2,6 +2,7 @@ import { createMemo, type JSX } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
 import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { badgeService } from "~/services/badges";
+import { getPublicAssetUrl } from "~/utils/appBase";
 import {
   isTwitchRoleBadge,
   isTwitchSubBadge,
@@ -21,7 +22,25 @@ type ChatBadgesProps = {
 export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
   const renderedBadges = createMemo(() => {
     const { message, config, service } = props;
+    const showPlatformIcon =
+      config.platformMarker === "icon" &&
+      Boolean(config.channel.trim() && config.youtubeChannel.trim()) &&
+      !message.twitchEvent;
+    const platformIcon = showPlatformIcon ? (
+      <img
+        class="badge chat-platform-icon"
+        src={getPublicAssetUrl(
+          `img/platform-${message.platform === "youtube" ? "youtube" : "twitch"}.svg`,
+        )}
+        alt={message.platform === "youtube" ? "YouTube" : "Twitch"}
+      />
+    ) : null;
+    if (message.platform === "youtube") {
+      return platformIcon ? [platformIcon] : [] as JSX.Element[];
+    }
+
     const badges: JSX.Element[] = [];
+    if (platformIcon) badges.push(platformIcon);
     const roleBadgeMap = new Map<string, JSX.Element>();
     const vanityBadgeElements: JSX.Element[] = [];
     const subBadgeMap = new Map<string, JSX.Element>();

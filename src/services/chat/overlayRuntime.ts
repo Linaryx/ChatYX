@@ -511,15 +511,24 @@ export class OverlayRuntime {
         const refreshScope = parseChatRefreshScope(command.args);
         if (!refreshScope) {
           this.setCommandStatus(
-            { text: "Используй: refresh [all|emotes|badges|cosmetics]" },
+            {
+              text: "Используй: refresh [all — всё, emotes — эмоуты, badges — бейджи, cosmetics — оформление]",
+            },
             4000,
           );
           break;
         }
 
+        const refreshScopeLabel = {
+          all: "все данные чата",
+          emotes: "эмоуты",
+          badges: "бейджи",
+          cosmetics: "оформление пользователей",
+        }[refreshScope];
+
         this.refreshInProgress = true;
         this.setCommandStatus({
-          text: `Обновляем ${refreshScope === "all" ? "ассеты" : refreshScope}...`,
+          text: `Обновляем ${refreshScopeLabel}...`,
         });
         const visibleMessages = this.messageQueue.captureVisibleMessages();
         const cosmeticUsers = [
@@ -590,7 +599,7 @@ export class OverlayRuntime {
         this.hooks.onMessagesChange(() => []);
         break;
       case "ping":
-        this.commandFeedback.showNotice("Pong! ChatYX работает");
+        this.commandFeedback.showNotice("Связь с ChatYX работает");
         break;
       case "test":
         this.appendTestMessages(message, parseTestMessageCount(command.args));

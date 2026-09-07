@@ -142,10 +142,11 @@ export function renderMessageWithEmotes(
   message: TwitchMessage,
   config: ChatConfig,
   service: ChatPresentationService,
+  displayText: string = message.message,
 ): JSX.Element {
   const size =
     SIZE_CONFIGS[config.size as keyof typeof SIZE_CONFIGS] || SIZE_CONFIGS[2];
-  const rawMessage = message.message;
+  const rawMessage = displayText;
   const emoteScale = getEmoteScale(config);
 
   type Replacement =
@@ -178,9 +179,10 @@ export function renderMessageWithEmotes(
           const endCP = Number(endRaw);
           if (!Number.isFinite(startCP) || !Number.isFinite(endCP)) return;
 
-          const start = codePointToCodeUnit(rawMessage, startCP);
-          const end = codePointToCodeUnit(rawMessage, endCP + 1);
-          const emoteCode = rawMessage.substring(start, end);
+          // Twitch positions refer to the original text, before reply mentions are hidden.
+          const start = codePointToCodeUnit(message.message, startCP);
+          const end = codePointToCodeUnit(message.message, endCP + 1);
+          const emoteCode = message.message.substring(start, end);
           if (!emoteCode || /^\s*$/.test(emoteCode)) return;
 
           replacements[emoteCode] = {

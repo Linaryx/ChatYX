@@ -10,6 +10,7 @@ type ChatNickProps = {
   colonColor: string;
   isAction: boolean;
   uppercase: boolean;
+  showColon?: boolean;
 };
 
 export const ChatNick = (props: ChatNickProps): JSX.Element => {
@@ -24,8 +25,8 @@ export const ChatNick = (props: ChatNickProps): JSX.Element => {
       >
         {props.uppercase ? displayName().toUpperCase() : displayName()}
       </span>
-      {props.isAction ? (
-        <span>&nbsp;</span>
+      {props.isAction || props.showColon === false ? (
+        props.isAction ? <span>&nbsp;</span> : null
       ) : (
         <span
           class="colon"

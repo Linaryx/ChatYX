@@ -1,5 +1,4 @@
 import { Show, createEffect, createSignal, onCleanup } from "solid-js";
-import { getPublicAssetUrl } from "~/utils/appBase";
 
 interface LoadingScreenProps {
   progress: number;
@@ -9,7 +8,7 @@ interface LoadingScreenProps {
   background?: string;
 }
 
-const loadingImageSrc = getPublicAssetUrl("img/Peepo.png");
+const loadingImageSrc = "https://cdn.7tv.app/emote/01G9TPJZE0000AGTWTH4BHTCRD/4x.webp";
 
 export function LoadingScreen(props: LoadingScreenProps) {
   const [showFinalScreen, setShowFinalScreen] = createSignal(false);
@@ -59,7 +58,6 @@ export function LoadingScreen(props: LoadingScreenProps) {
             style={{
               width: "64px",
               height: "64px",
-              animation: "spin 1.5s linear infinite",
               "margin-bottom": "10px",
             }}
           />
@@ -79,7 +77,7 @@ export function LoadingScreen(props: LoadingScreenProps) {
         </div>
       </Show>
 
-      {/* Сцена 1: Крутящийся Peepo со статусом (с фоном) */}
+      {/* Сцена 1: Крутящийся эмоут со статусом (с фоном) */}
       <Show when={!props.overlay && !showFinalScreen()}>
         <div
           role="status"
@@ -106,7 +104,6 @@ export function LoadingScreen(props: LoadingScreenProps) {
             style={{
               width: "128px",
               height: "128px",
-              animation: "spin 1.5s linear infinite",
               "margin-bottom": "20px",
             }}
           />
@@ -158,10 +155,6 @@ export function LoadingScreen(props: LoadingScreenProps) {
       <style>
         {`
                     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
-                    @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
                     @keyframes fadeIn {
                         from { opacity: 0; transform: scale(0.9); }
                         to { opacity: 1; transform: scale(1); }

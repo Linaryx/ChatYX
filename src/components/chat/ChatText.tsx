@@ -5,6 +5,7 @@ import { renderMessageWithEmotes } from "./renderMessageContent";
 
 type ChatTextProps = {
   message: TwitchMessage;
+  displayText?: string;
   config: ChatConfig;
   service: ChatPresentationService;
   color: string;
@@ -20,7 +21,7 @@ export const ChatText = (props: ChatTextProps): JSX.Element => {
         "font-weight": props.fontWeight ?? "800",
       }}
     >
-      {renderMessageWithEmotes(props.message, props.config, props.service)}
+      {renderMessageWithEmotes(props.message, props.config, props.service, props.displayText)}
     </span>
   );
 };

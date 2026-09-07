@@ -180,6 +180,10 @@ html.message-style-dev-scroll #root {
   margin-bottom: 0 !important;
 }
 
+.message-style-dev__case-message .chat_line + .chat_line {
+  margin-top: 8px !important;
+}
+
 .message-style-dev #chat_container.layout-horizontal .chat_line {
   margin-right: 0 !important;
   margin-bottom: 0 !important;
