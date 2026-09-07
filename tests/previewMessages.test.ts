@@ -34,6 +34,19 @@ describe("chat preview messages", () => {
     expect(new Set(chatTexts).size).toBeGreaterThan(1);
   });
 
+  test("adds the animated GIF preview only when GIFs are enabled", () => {
+    resetUserPool();
+    const disabled = createPreviewMessages("channel", service, "0", "pasta", 6, false);
+    expect(disabled.some((message) => message.gifs)).toBe(false);
+
+    resetUserPool();
+    const enabled = createPreviewMessages("channel", service, "0", "pasta", 6, true);
+    const gif = enabled.find((message) => message.gifs);
+    expect(gif?.message).toBe("[GIF]");
+    expect(gif?.gifs?.[0]?.url).toContain("giphy.webp");
+    expect(gif?.reply).toBeUndefined();
+  });
+
   test("limits reply previews to reply-capable authored messages", () => {
     expect(isReplyEligibleEvent(undefined)).toBeTrue();
     expect(isReplyEligibleEvent("first-message")).toBeTrue();

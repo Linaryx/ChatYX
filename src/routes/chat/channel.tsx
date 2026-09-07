@@ -230,6 +230,7 @@ export default function ChatOverlay() {
       previewService,
       previewChannelId,
       previewDemoKind,
+      activePreviewConfig.showGifs,
     );
     mentionStyleService.registerMessageAuthor(nextMsg);
     setMessages((current) => {
@@ -468,6 +469,8 @@ export default function ChatOverlay() {
             service,
             previewChannelId,
             previewDemoKind,
+            6,
+            previewConfig.showGifs,
           );
           previewMessages.forEach((msg) => mentionStyleService.registerMessageAuthor(msg));
 

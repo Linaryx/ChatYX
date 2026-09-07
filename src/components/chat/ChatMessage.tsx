@@ -253,11 +253,13 @@ export const ChatMessage = (props: ChatMessageProps) => {
     return {} as Record<string, string>;
   });
   const messageTextColor = createMemo(() => (isAction() ? userColor() : "white"));
-  const replyText = createMemo(() =>
-    isReplyEligibleEvent(props.message.twitchEvent?.type)
+  const replyText = createMemo(() => {
+    // Twitch GIF messages are media-only and cannot be replies.
+    if (props.message.gifs?.length) return null;
+    return isReplyEligibleEvent(props.message.twitchEvent?.type)
       ? getReplyText(props.message)
-      : null,
-  );
+      : null;
+  });
   const hasEventMessageText = createMemo(() =>
     Boolean(visibleTwitchEvent() && processedMessage().trim()),
   );
@@ -283,6 +285,9 @@ export const ChatMessage = (props: ChatMessageProps) => {
       Boolean(
         props.message.isGigantifiedEmote && props.config.showGigantifiedEmotes,
       ),
+  );
+  const isGifMessage = createMemo(
+    () => Boolean(props.config.showGifs && props.message.gifs?.length),
   );
   const isReward = createMemo(
     () => visibleTwitchEvent()?.type === "reward",
@@ -396,6 +401,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
         "gigantified-emote": Boolean(
           isGigantifiedEmote(),
         ),
+        "gif-message": isGifMessage(),
         "platform-marked": platformMarkerMode() === "stripe",
         "chat-event": Boolean(visibleTwitchEvent()),
         "chat-event-highlight": Boolean(
@@ -569,12 +575,22 @@ export const ChatMessage = (props: ChatMessageProps) => {
           when={isReward()}
           fallback={
             <>
-              <Show when={isGigantifiedEmote()} fallback={<MessageIdentity />}>
-                <span class="gigantified-emote-header">
-                  <MessageIdentity />
-                </span>
+              <Show
+                when={isGifMessage()}
+                fallback={
+                  <>
+                    <Show when={isGigantifiedEmote()} fallback={<MessageIdentity />}>
+                      <span class="gigantified-emote-header">
+                        <MessageIdentity />
+                      </span>
+                    </Show>
+                    <MessageText />
+                  </>
+                }
+              >
+                <span class="gif-message-header"><MessageIdentity /></span>
+                <div class="gif-message-line"><MessageText /></div>
               </Show>
-              <MessageText />
             </>
           }
         >

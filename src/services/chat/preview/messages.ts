@@ -183,6 +183,7 @@ export function nextPreviewMessage(
   service: ChatPresentationService,
   channelId: string,
   demoKind: PreviewDemoKind = "pasta",
+  showGifs = false,
 ): TwitchMessage {
   const index = messageCounter++;
 
@@ -235,6 +236,7 @@ export function nextPreviewMessage(
           if (selectedEmotes.length > 0) text += ` ${selectedEmotes.join(" ")}`;
           return text;
         })();
+  const isGifPreview = showGifs && index % 16 === 1;
 
   let badges: string[];
   let isSubscriber: boolean;
@@ -267,10 +269,9 @@ export function nextPreviewMessage(
     id: `preview-live-${Date.now()}-${index}`,
     username,
     displayName,
-    message:
-      twitchEvent?.type === "raid" || twitchEvent?.type === "watch-streak"
-        ? ""
-        : messageText,
+    message: twitchEvent?.type === "raid" || twitchEvent?.type === "watch-streak"
+      ? ""
+      : isGifPreview ? "[GIF]" : messageText,
     color,
     badges,
     emotes: {},
@@ -280,6 +281,14 @@ export function nextPreviewMessage(
     timestamp: new Date(),
     userId: realUserId || String(2000 + index),
     twitchEvent,
+    gifs: isGifPreview
+      ? [{
+          start: 0,
+          end: 4,
+          id: "preview-gif-1",
+          url: "https://media4.giphy.com/media/joSNxeswxuc74Juo8X/giphy.webp",
+        }]
+      : undefined,
     msgId:
       twitchEvent?.type === "highlighted-message"
         ? "highlighted-message"
@@ -298,6 +307,7 @@ export function nextPreviewMessage(
         : undefined,
     reply:
       demoKind === "pasta" &&
+      !isGifPreview &&
       canReply &&
       index > 0 &&
       previewRandom(index + 470) < 0.45
@@ -321,10 +331,11 @@ export function createPreviewMessages(
   channelId: string,
   demoKind: PreviewDemoKind = "pasta",
   count = 6,
+  showGifs = false,
 ): TwitchMessage[] {
   resetMessageState();
   return Array.from({ length: count }, () =>
-    nextPreviewMessage(channel, service, channelId, demoKind),
+    nextPreviewMessage(channel, service, channelId, demoKind, showGifs),
   ).map((msg, i, list) => ({
     ...msg,
     id: `preview-${i + 1}`,

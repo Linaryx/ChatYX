@@ -469,6 +469,23 @@ img.badge {
   vertical-align: middle;
 }
 
+.gif-message {
+  white-space: normal;
+}
+
+.gif-message-header {
+  display: block;
+  inline-size: max-content;
+  max-inline-size: 100%;
+  white-space: nowrap;
+}
+
+.gif-message-line {
+  display: block;
+  max-inline-size: 100%;
+  line-height: 1;
+}
+
 .emote-modified {
   vertical-align: middle;
 }
