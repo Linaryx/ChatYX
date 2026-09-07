@@ -134,13 +134,13 @@ describe("renderMessageWithEmotes display text", () => {
     expect(render(original, "")).toBe("");
   });
 
-  test("renders enabled Twitch GIFs as WebP at the configured scale", () => {
+  test("renders enabled Twitch GIFs using Twitch's full URL at the configured scale", () => {
     const original = message("[GIF]", []);
     original.gifs = [{
       start: 0,
       end: 4,
       id: "gif-1",
-      url: "https://media.example/gif.gif?token=a=b",
+      url: "https://media.example/200.webp?token=a=b",
     }];
     const html = render(original, undefined, {
       ...DEFAULT_CHAT_CONFIG,
@@ -149,7 +149,7 @@ describe("renderMessageWithEmotes display text", () => {
     });
 
     expect(html).toContain('class="chat-gif"');
-    expect(html).toContain("gif.webp?token=a=b");
+    expect(html).toContain("/200.webp?token=a=b");
     expect(html).toContain('alt="GIF"');
   });
 

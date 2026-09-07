@@ -136,9 +136,14 @@ function getEmoteScale(config: ChatConfig): number {
     : 1;
 }
 
-function webpGifUrl(rawUrl: string): string {
-  const url = sanitizeImageUrl(rawUrl);
-  return url.replace(/\.gif(?=($|[?#]))/i, ".webp");
+function twitchGifUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  try {
+    const url = new URL(trimmed);
+    return ["http:", "https:"].includes(url.protocol) ? trimmed : "";
+  } catch {
+    return "";
+  }
 }
 
 /**
@@ -179,11 +184,11 @@ export function renderMessageWithEmotes(
       const start = codePointToCodeUnit(message.message, gif.start);
       const end = codePointToCodeUnit(message.message, gif.end + 1);
       const token = message.message.substring(start, end);
-      const url = webpGifUrl(gif.url);
+      const url = twitchGifUrl(gif.url);
       if (!token || !url) continue;
       replacements[token] = {
         kind: "html",
-        html: `<span class="gif-container"><img class="chat-gif" src="${url}" alt="GIF" title="GIF" style="max-height: ${Math.round(size.emoteMaxHeight * 5 * gifScale)}px;" /></span>`,
+        html: `<span class="gif-container"><img class="chat-gif" src="${escapeAttr(url)}" alt="GIF" title="GIF" style="max-height: ${Math.round(size.emoteMaxHeight * 5 * gifScale)}px;" /></span>`,
         isOverlayTarget: true,
       };
     }
