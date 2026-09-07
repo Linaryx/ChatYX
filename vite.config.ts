@@ -37,15 +37,29 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
+            // Keep the framework cacheable independently from application code.
             {
-              name: "solid",
+              name: "framework",
               test: /[\\/]node_modules[\\/](solid-js|@solidjs)[\\/]/,
+              priority: 30,
+            },
+            // The setup screen's controls and icons change together more often
+            // than the framework, so give the UI stack its own cache boundary.
+            {
+              name: "ui",
+              test: /[\\/]node_modules[\\/](?:@kobalte|@corvu|@floating-ui|@internationalized|@solid-primitives|lucide-solid|lucid-color-picker|solid-presence|solid-prevent-scroll)[\\/]/,
               priority: 20,
             },
+            // Tiny utility packages are shared broadly but are independent of
+            // both the framework and UI components.
             {
-              name: "vendor",
-              test: /[\\/]node_modules[\\/]/,
+              name: "utilities",
+              test: /[\\/]node_modules[\\/](?:clsx|tailwind-merge|class-variance-authority)[\\/]/,
               priority: 10,
+            },
+            {
+              name: "index",
+              tags: ["$initial"],
             },
           ],
         },
@@ -55,6 +69,11 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // The setup route is the default page. Cache its transform graph before
+    // the first browser request so the initial navigation has no JSX waterfall.
+    warmup: {
+      clientFiles: ["./src/index.tsx", "./src/routes/setup.tsx"],
+    },
     watch: {
       ignored: ["**/codesnippets/**"],
     },
