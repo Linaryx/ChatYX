@@ -110,6 +110,17 @@ function createDevCases(): DevCase[] {
       message: createMessage("dev-1", "regularViewer", "Всем привет! Обычная строка чата"),
     },
     {
+      title: "Twitch GIF (WebP URL)",
+      message: createMessage("dev-gif", "gifViewer", "[GIF]", {
+        gifs: [{
+          start: 0,
+          end: 4,
+          id: "dev-gif-1",
+          url: "https://media4.giphy.com/media/joSNxeswxuc74Juo8X/giphy.webp",
+        }],
+      }),
+    },
+    {
       title: "Ответ",
       message: createMessage("dev-2", "replyViewer", "Отвечаю на старое сообщение", { reply }),
     },
@@ -183,6 +194,29 @@ function createDevCases(): DevCase[] {
         twitchEvent: event("subscription", "Продление подписки", {
           detail: "subViewer подписан(а) уже 3 мес.",
         }),
+      }),
+    },
+    {
+      title: "Новая подписка",
+      message: createMessage("dev-8-new", "newSubViewer", "Рад присоединиться к каналу", {
+        twitchEvent: event("subscription", "Новая подписка", {
+          detail: "newSubViewer оформил(а) подписку",
+        }),
+      }),
+    },
+    {
+      title: "Подарочная подписка",
+      message: createMessage("dev-8-gift", "giftViewer", "", {
+        twitchEvent: event("subscription", "Подарочная подписка", {
+          detail: "giftViewer подарил(а) подписку для luckyViewer",
+        }),
+      }),
+    },
+    {
+      title: "Cheer / Bits",
+      message: createMessage("dev-cheer", "cheerViewer", "Спасибо за эфир!", {
+        bits: 100,
+        cheerPrefix: "Cheer",
       }),
     },
     {
@@ -337,6 +371,7 @@ export default function MessageStylesDevPage() {
   const [horizontal, setHorizontal] = createSignal(false);
   const [highlightEvents, setHighlightEvents] = createSignal(true);
   const [showNames, setShowNames] = createSignal(true);
+  const [showGifs, setShowGifs] = createSignal(false);
   const cases = createDevCases();
   const messages = cases.flatMap((item) =>
     item.companionMessage ? [item.message, item.companionMessage] : [item.message],
@@ -347,6 +382,7 @@ export default function MessageStylesDevPage() {
       horizontal: horizontal(),
       highlightTwitchEvents: highlightEvents(),
       hideNames: !showNames(),
+      showGifs: showGifs(),
     }),
   );
   const platformComparisonConfig = createMemo(() => ({
@@ -401,6 +437,7 @@ export default function MessageStylesDevPage() {
           <button classList={{ active: horizontal() }} onClick={() => setHorizontal((value) => !value)}>Horizontal</button>
           <button classList={{ active: highlightEvents() }} onClick={() => setHighlightEvents((value) => !value)}>Event BG</button>
           <button classList={{ active: showNames() }} onClick={() => setShowNames((value) => !value)}>Names</button>
+          <button classList={{ active: showGifs() }} onClick={() => setShowGifs((value) => !value)}>GIFs</button>
         </div>
       </header>
 
