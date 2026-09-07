@@ -29,6 +29,8 @@ describe("RTE proxy transport", () => {
       "https://api.frankerfacez.com/v1/set/global",
       "https://cdn.frankerfacez.com/emoticon/1/4",
       "https://api.ffzap.com/v1/supporters",
+      "https://media4.giphy.com/media/example/giphy.webp",
+      "https://i.giphy.com/example.gif",
     ];
 
     expect(targets.map((target) => rewriteRteHttpUrl(target, true))).toEqual(
@@ -47,6 +49,7 @@ describe("RTE proxy transport", () => {
       "https://cdn.jtvnw.net/emoticons/v2/25/default/dark/3.0",
       "https://7tv.io.evil.example/data",
       "https://sub.7tv.io/data",
+      "https://media4.giphy.com.evil.example/data",
       "https://user:secret@7tv.io/data",
       "https://7tv.io:9443/data",
       "http://7tv.io/data",

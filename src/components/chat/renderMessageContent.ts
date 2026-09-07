@@ -96,9 +96,12 @@ function twitchEmoteImageAttrs(
   const emoteScale = Number.isFinite(config.emoteScale)
     ? Math.min(Math.max(config.emoteScale, 0.25), 3)
     : 1;
-  const dimension = Math.round(size.emoteMaxHeight * emoteScale);
+  const maxWidth = Number.parseFloat(size.emoteMaxWidth) * emoteScale;
+  const maxHeight = Math.round(size.emoteMaxHeight * emoteScale);
 
-  return ` width="${dimension}" height="${dimension}" style="width: ${dimension}px; height: ${dimension}px;"`;
+  // Twitch's CDN preserves an emote's intrinsic aspect ratio. Do not force
+  // it into a square: wide emotes such as :D would otherwise be squeezed.
+  return ` style="width: auto; height: auto; max-width: ${maxWidth}px; max-height: ${maxHeight}px;"`;
 }
 
 function renderMentionHtml(
@@ -186,9 +189,10 @@ export function renderMessageWithEmotes(
       const token = message.message.substring(start, end);
       const url = twitchGifUrl(gif.url);
       if (!token || !url) continue;
+      const resolvedUrl = networkClient.resolveHttpUrl(url, "rte");
       replacements[token] = {
         kind: "html",
-        html: `<span class="gif-container"><img class="chat-gif" src="${escapeAttr(url)}" alt="GIF" title="GIF" style="max-height: ${Math.round(size.emoteMaxHeight * 5 * gifScale)}px;" /></span>`,
+        html: `<span class="gif-container"><img class="chat-gif" src="${escapeAttr(resolvedUrl)}" alt="GIF" title="GIF" style="max-height: ${Math.round(size.emoteMaxHeight * 5 * gifScale)}px;" /></span>`,
         isOverlayTarget: true,
       };
     }

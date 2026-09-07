@@ -18,6 +18,14 @@ const RTE_PROXY_HTTP_HOSTS: Record<string, true> = {
   "chatterinohomies.com": true,
   "fourtf.com": true,
   "cdn.chatterinohomies.com": true,
+  "i.giphy.com": true,
+  "media.giphy.com": true,
+  "media0.giphy.com": true,
+  "media1.giphy.com": true,
+  "media2.giphy.com": true,
+  "media3.giphy.com": true,
+  "media4.giphy.com": true,
+  "media5.giphy.com": true,
 };
 
 const RTE_PROXY_WS_HOSTS: Record<string, true> = {

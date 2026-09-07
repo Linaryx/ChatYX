@@ -4,6 +4,7 @@ import { DEFAULT_CHAT_CONFIG } from "../src/config/chatUrlParams";
 import type { ChatPresentationService } from "../src/services/chat/chatPresentationService";
 import type { TwitchMessage } from "../src/services/chat/twitchService";
 import { createMessageTokenSnapshot } from "../src/utils/chat/emojiUtils";
+import { setRteProxyEnabled } from "../src/services/network/rteProxyTransport";
 
 function message(text: string, positions: string[]): TwitchMessage {
   return {
@@ -73,6 +74,17 @@ function expectKappa(html: string, count = 1): void {
 }
 
 describe("renderMessageWithEmotes display text", () => {
+  test("preserves the intrinsic aspect ratio of Twitch emotes", () => {
+    const html = render(message(":D", ["0-1"]));
+
+    expect(html).toContain('title=":D"');
+    expect(html).toContain("width: auto; height: auto;");
+    expect(html).toContain("max-width:");
+    expect(html).toContain("max-height:");
+    expect(html).not.toContain('width="');
+    expect(html).not.toContain('height="');
+  });
+
   test("uses original Twitch positions after hiding a reply mention", () => {
     const original = message("@viewer Kappa", ["8-12"]);
     const html = render(original, "Kappa");
@@ -151,6 +163,29 @@ describe("renderMessageWithEmotes display text", () => {
     expect(html).toContain('class="chat-gif"');
     expect(html).toContain("/200.webp?token=a=b");
     expect(html).toContain('alt="GIF"');
+  });
+
+  test("routes Giphy GIFs through RTE when the proxy is enabled", () => {
+    const original = message("[GIF]", []);
+    original.gifs = [{
+      start: 0,
+      end: 4,
+      id: "gif-1",
+      url: "https://media4.giphy.com/media/example/giphy.webp",
+    }];
+
+    setRteProxyEnabled(true);
+    try {
+      const html = render(original, undefined, {
+        ...DEFAULT_CHAT_CONFIG,
+        showGifs: true,
+      });
+      expect(html).toContain(
+        'src="https://ext.rte.net.ru:8443/https://media4.giphy.com/media/example/giphy.webp"',
+      );
+    } finally {
+      setRteProxyEnabled(false);
+    }
   });
 
   test("keeps GIF text when the feature is disabled", () => {
