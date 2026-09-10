@@ -16,6 +16,7 @@ export { sevenTVEventApi } from "./sevenTVEventApi";
 export type { SevenTVEventApiService } from "./sevenTVEventApi";
 export { TwitchService } from "./twitchService";
 export type { TwitchEvent, TwitchMessage } from "./twitchService";
+export type { ChatMessage, ChatPlatform } from "./message";
 export { twitchGqlService } from "./twitchGqlService";
 export type {
   TwitchGqlBadge,
@@ -25,5 +26,7 @@ export type {
 } from "./twitchGqlService";
 export { chatFeatureIntegration } from "./chatFeatureIntegration";
 export { YouTubeChatService } from "./youtubeChatService";
+export { ExternalChatService } from "./externalChatService";
+export type { ExternalChatEvent } from "./externalChatService";
 export { OverlayRuntime } from "./overlayRuntime";
 export type { ChatCommandStatus } from "./overlayRuntime";

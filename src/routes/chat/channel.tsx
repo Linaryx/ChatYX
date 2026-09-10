@@ -94,7 +94,9 @@ export default function ChatOverlay() {
   const isDebug = urlParams.get("debug") === "true";
   const initialConfig = parseChatConfigFromSearchParams(urlParams);
   const channel = initialConfig.channel || (isPreview ? "chatyxpreview" : "");
-  const hasChannel = Boolean(channel || initialConfig.youtubeChannel);
+  const hasChannel = Boolean(
+    channel || initialConfig.youtubeChannel || initialConfig.kickChannel,
+  );
 
   const [channelDisplayName, setChannelDisplayName] = createSignal("");
   const [config, setConfig] = createSignal<ChatConfig | null>(null);
@@ -144,7 +146,7 @@ export default function ChatOverlay() {
   const pageTitle = createMemo(() => {
     if (!hasChannel) return "ChatYX";
     if (isPreview) return "ChatYX • Preview";
-    return `ChatYX • ${channelDisplayName() || channel || initialConfig.youtubeChannel}`;
+    return `ChatYX • ${channelDisplayName() || channel || initialConfig.youtubeChannel || initialConfig.kickChannel}`;
   });
   const chatVisible = createMemo(() => !isLoading() || loadingProgress() >= 100);
 
@@ -258,6 +260,8 @@ export default function ChatOverlay() {
     nextConfig.channel === activePreviewConfig.channel &&
     nextConfig.youtubeChannel === activePreviewConfig.youtubeChannel &&
     nextConfig.youtubeWebSocketUrl === activePreviewConfig.youtubeWebSocketUrl &&
+    nextConfig.kickChannel === activePreviewConfig.kickChannel &&
+    nextConfig.kickWebSocketUrl === activePreviewConfig.kickWebSocketUrl &&
     nextConfig.show7tvUnlisted === activePreviewConfig.show7tvUnlisted;
 
   const handlePreviewConfigMessage = (event: MessageEvent<unknown>) => {

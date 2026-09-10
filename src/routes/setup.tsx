@@ -265,6 +265,7 @@ export default function ChatSetup() {
     readStoredSetupValue(SETUP_STORAGE_KEYS.twitchChannel),
   );
   const [youtubeChannel, setYoutubeChannel] = createSignal("");
+  const [kickChannel, setKickChannel] = createSignal("");
   const [platformMarker, setPlatformMarker] = createSignal<PlatformMarkerMode>(
     DEFAULT_CHAT_CONFIG.platformMarker,
   );
@@ -523,6 +524,7 @@ export default function ChatSetup() {
     applySetupImport(patch, {
       channel: setChannel,
       youtubeChannel: setYoutubeChannel,
+      kickChannel: setKickChannel,
       platformMarker: setPlatformMarker,
       showGifs: setShowGifs,
       gifScale: setGifScale,
@@ -634,6 +636,7 @@ export default function ChatSetup() {
     ...DEFAULT_CHAT_CONFIG,
     channel: selectedChannel,
     youtubeChannel: youtubeChannel().trim().replace(/^@/, ""),
+    kickChannel: kickChannel().trim().replace(/^@/, ""),
     size: toInt(size(), DEFAULT_CHAT_CONFIG.size),
     font: toInt(font(), DEFAULT_CHAT_CONFIG.font),
     fontWeight: toClampedInt(
@@ -759,11 +762,12 @@ export default function ChatSetup() {
 
   const hasTwitchChannel = createMemo(() => Boolean(channel().trim()));
   const hasYouTubeChannel = createMemo(() => Boolean(youtubeChannel().trim()));
-  const isYouTubeOnly = createMemo(
-    () => hasYouTubeChannel() && !hasTwitchChannel(),
+  const hasKickChannel = createMemo(() => Boolean(kickChannel().trim()));
+  const isExternalOnly = createMemo(
+    () => (hasYouTubeChannel() || hasKickChannel()) && !hasTwitchChannel(),
   );
   const previewChannel = createMemo(() =>
-    channel().trim() || (hasYouTubeChannel() ? "" : "chatyxpreview"),
+    channel().trim() || (hasYouTubeChannel() || hasKickChannel() ? "" : "chatyxpreview"),
   );
   // Preview playback is deliberately separate from the exported OBS configuration.
   const previewConfig = createMemo(() => ({
@@ -856,7 +860,7 @@ export default function ChatSetup() {
   });
 
   createEffect(() => {
-    if (isYouTubeOnly() && previewMode() === "demo") {
+    if (isExternalOnly() && previewMode() === "demo") {
       setPreviewMode("live");
     }
   });
@@ -876,7 +880,8 @@ export default function ChatSetup() {
   createEffect(() => {
     const currentChannel = channel().trim();
     const currentYouTubeChannel = youtubeChannel().trim();
-    if (!currentChannel && !currentYouTubeChannel) {
+    const currentKickChannel = kickChannel().trim();
+    if (!currentChannel && !currentYouTubeChannel && !currentKickChannel) {
       setGeneratedUrl("");
       return;
     }
@@ -1564,7 +1569,7 @@ export default function ChatSetup() {
           <main class="setup-body setup-pane-scroll" ref={bodyScrollRef}>
             <div class="setup-source-row">
             <section class="setup-connection" aria-label="Подключение каналов">
-              <div class="setup-connection-intro"><h2>Подключение</h2><p>Укажи Twitch, YouTube или оба канала.</p></div>
+              <div class="setup-connection-intro"><h2>Подключение</h2><p>Укажи Twitch, YouTube, Kick или несколько каналов.</p></div>
               <div class="setup-channel-field">
                 <span class="setup-field-label setup-platform-label">
                   <svg class="setup-platform-logo setup-platform-logo--twitch" viewBox="0 0 24 24" aria-hidden="true">
@@ -1589,6 +1594,22 @@ export default function ChatSetup() {
                   value={youtubeChannel()}
                   onInput={(e) => setYoutubeChannel(e.currentTarget.value)}
                   placeholder="@канал или ID канала"
+                  class="h-10"
+                />
+              </div>
+              <div class="setup-channel-field">
+                <label class="setup-field-label setup-platform-label" for="setup-kick">
+                  <img class="setup-platform-logo" src={getPublicAssetUrl("img/platform-kick.svg")} alt="" />
+                  Kick <span>необязательно</span>
+                </label>
+                <Input
+                  id="setup-kick"
+                  type="text"
+                  autocomplete="off"
+                  spellcheck={false}
+                  value={kickChannel()}
+                  onInput={(event) => setKickChannel(event.currentTarget.value)}
+                  placeholder="название канала"
                   class="h-10"
                 />
               </div>
@@ -1852,7 +1873,7 @@ export default function ChatSetup() {
                       <div
                         class={cn(
                           "setup-preview-controls grid gap-2",
-                          isYouTubeOnly()
+                          isExternalOnly()
                             ? "grid-cols-1"
                             : "grid-cols-1 min-[1100px]:grid-cols-1 xl:grid-cols-2",
                         )}
@@ -1866,7 +1887,7 @@ export default function ChatSetup() {
                             value={previewMode()}
                             onChange={(event) =>
                               setPreviewMode(
-                                isYouTubeOnly() ||
+                                isExternalOnly() ||
                                   event.currentTarget.value === "live"
                                   ? "live"
                                   : "demo",
@@ -1875,12 +1896,12 @@ export default function ChatSetup() {
                             class="h-9"
                           >
                             <option value="live">Чат канала</option>
-                            <Show when={!isYouTubeOnly()}>
+                            <Show when={!isExternalOnly()}>
                               <option value="demo">Демо</option>
                             </Show>
                           </SetupSelect>
                         </div>
-                        <Show when={!isYouTubeOnly()}>
+                        <Show when={!isExternalOnly()}>
                           <div class="flex min-w-0 flex-col gap-1">
                             <div class="text-xs font-medium sm:text-sm">
                               Сценарий демо
@@ -1969,8 +1990,8 @@ export default function ChatSetup() {
                           </div>
                       </div>
                       <div class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
-                        {isYouTubeOnly()
-                          ? "Для YouTube доступен только чат канала."
+                        {isExternalOnly()
+                          ? "Для внешних источников доступен только чат канала."
                           : "Чат канала показывает сообщения в реальном времени. Демо выводит тестовые сообщения."}
                       </div>
                     </div>

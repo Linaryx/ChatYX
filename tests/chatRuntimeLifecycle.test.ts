@@ -376,7 +376,7 @@ describe("overlay runtime lifecycle", () => {
     (runtime as any).connectionManager.connectTwitch = () => {
       twitchConnections += 1;
     };
-    (runtime as any).connectionManager.connectYouTube = () => {};
+    (runtime as any).connectionManager.connectExternal = () => {};
 
     await runtime.initialize();
 

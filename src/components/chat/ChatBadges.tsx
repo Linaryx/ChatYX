@@ -1,5 +1,5 @@
 import { createMemo, type JSX } from "solid-js";
-import type { ChatConfig } from "~/utils/chat";
+import { hasMultipleChatSources, type ChatConfig } from "~/config/chatUrlParams";
 import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { badgeService } from "~/services/badges";
 import { getPublicAssetUrl } from "~/utils/appBase";
@@ -24,19 +24,28 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
     const { message, config, service } = props;
     const showPlatformIcon =
       config.platformMarker === "icon" &&
-      Boolean(config.channel.trim() && config.youtubeChannel.trim()) &&
+      hasMultipleChatSources(config) &&
       !message.twitchEvent;
     const platformIcon = showPlatformIcon ? (
       <img
         class="badge chat-platform-icon"
         src={getPublicAssetUrl(
-          `img/platform-${message.platform === "youtube" ? "youtube" : "twitch"}.svg`,
+          `img/platform-${message.platform}.svg`,
         )}
-        alt={message.platform === "youtube" ? "YouTube" : "Twitch"}
+        alt={message.platform === "youtube" ? "YouTube" : message.platform === "kick" ? "Kick" : "Twitch"}
       />
     ) : null;
-    if (message.platform === "youtube") {
-      return platformIcon ? [platformIcon] : [] as JSX.Element[];
+    if (message.platform !== "twitch") {
+      const badges = platformIcon ? [platformIcon] : [] as JSX.Element[];
+      message.platformBadges
+        ?.filter((badge) => badge.url)
+        .forEach((badge) => {
+          const title = badge.title || "Platform badge";
+          badges.push(
+            <img class="badge" src={badge.url} title={title} alt={title} loading="lazy" />,
+          );
+        });
+      return badges;
     }
 
     const badges: JSX.Element[] = [];

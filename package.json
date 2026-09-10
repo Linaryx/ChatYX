@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "private": true,
   "license": "GPL-3.0-only",
-  "description": "Modern Twitch and YouTube chat overlay with multi-platform emote support",
+  "description": "Modern Twitch, YouTube, and Kick chat overlay with multi-platform emote support",
   "type": "module",
   "workspaces": ["services/*"],
   "scripts": {
@@ -13,6 +13,8 @@
     "start": "vite preview --host",
     "youtube:dev": "bun run --cwd services/youtube-websocket dev",
     "youtube:start": "bun run --cwd services/youtube-websocket start",
+    "sources:dev": "bun run --cwd services/youtube-websocket dev",
+    "sources:start": "bun run --cwd services/youtube-websocket start",
     "lint": "bun run lint:app && bun run lint:youtube",
     "lint:app": "oxlint -c ./.oxlintrc.json --tsconfig ./tsconfig.app.json src",
     "lint:youtube": "oxlint -c ./.oxlintrc.json services/youtube-websocket/src",

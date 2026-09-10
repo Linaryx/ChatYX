@@ -1,6 +1,7 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
 import { TwitchService, type TwitchMessage } from "../twitchService";
-import { YouTubeChatService } from "../youtubeChatService";
+import { ExternalChatService } from "../externalChatService";
+import type { ChatPlatform } from "../message";
 
 type ChatConnectionManagerOptions = {
   onChatClear: () => void;
@@ -8,14 +9,18 @@ type ChatConnectionManagerOptions = {
   onTwitchConnectionChange: (connected: boolean) => void;
   onTwitchMessage: (message: TwitchMessage) => void | Promise<void>;
   onTwitchUserClear: (username: string) => void;
-  onYouTubeConnectionChange: (connected: boolean) => void;
-  onYouTubeMessage: (message: TwitchMessage) => void | Promise<void>;
-  onYouTubeUserBan: (userId: string) => void;
+  onExternalConnectionChange: (
+    platform: Exclude<ChatPlatform, "twitch">,
+    connected: boolean,
+  ) => void;
+  onExternalMessage: (message: TwitchMessage) => void | Promise<void>;
+  onExternalUserBan: (userId: string) => void;
 };
 
 export class ChatConnectionManager {
   private readonly twitchService = new TwitchService();
-  private readonly youtubeService = new YouTubeChatService();
+  private readonly youtubeService = new ExternalChatService();
+  private readonly kickService = new ExternalChatService();
   private twitchConnected = false;
 
   constructor(private readonly options: ChatConnectionManagerOptions) {}
@@ -43,20 +48,25 @@ export class ChatConnectionManager {
     log.info(LOG_CATEGORIES.TWITCH_IRC, "Twitch IRC connection initialized");
   }
 
-  connectYouTube(channel: string, webSocketUrl: string) {
+  connectExternal(
+    platform: Exclude<ChatPlatform, "twitch">,
+    channel: string,
+    webSocketUrl: string,
+  ) {
     if (!channel) return;
 
-    log.info(LOG_CATEGORIES.CHAT, `Connecting to YouTube channel: ${channel}`);
-    this.youtubeService.connect(channel, webSocketUrl, {
-      onMessage: (message) => this.options.onYouTubeMessage(message),
+    const service = platform === "youtube" ? this.youtubeService : this.kickService;
+    log.info(LOG_CATEGORIES.CHAT, `Connecting to ${platform} channel: ${channel}`);
+    service.connect(platform, channel, webSocketUrl, {
+      onMessage: (message) => this.options.onExternalMessage(message),
       onDelete: this.options.onMessageDelete,
-      onBan: this.options.onYouTubeUserBan,
+      onBan: this.options.onExternalUserBan,
       onConnectionChange: (connected) => {
         log.info(
           LOG_CATEGORIES.CHAT,
-          `YouTube chat ${connected ? "connected" : "disconnected"}`,
+          `${platform} chat ${connected ? "connected" : "disconnected"}`,
         );
-        this.options.onYouTubeConnectionChange(connected);
+        this.options.onExternalConnectionChange(platform, connected);
       },
     });
   }
@@ -68,6 +78,7 @@ export class ChatConnectionManager {
   destroy() {
     this.twitchService.disconnect();
     this.youtubeService.disconnect();
+    this.kickService.disconnect();
     this.twitchConnected = false;
   }
 }

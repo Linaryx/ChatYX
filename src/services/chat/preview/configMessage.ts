@@ -31,6 +31,7 @@ export function isChatPreviewConfigMessage(
     typeof candidate.config === "object" &&
     typeof candidate.config.channel === "string" &&
     typeof candidate.config.youtubeChannel === "string" &&
+    typeof candidate.config.kickChannel === "string" &&
     typeof candidate.config.size === "number"
   );
 }
@@ -46,6 +47,8 @@ export function getChatPreviewSessionKey(
     channel: config.channel,
     youtubeChannel: config.youtubeChannel,
     youtubeWebSocketUrl: config.youtubeWebSocketUrl,
+    kickChannel: config.kickChannel,
+    kickWebSocketUrl: config.kickWebSocketUrl,
     show7tvUnlisted: config.show7tvUnlisted,
   });
 }

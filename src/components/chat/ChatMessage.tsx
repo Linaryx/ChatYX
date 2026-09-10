@@ -8,7 +8,7 @@ import {
   type JSX,
 } from "solid-js";
 import type { ChatConfig } from "~/utils/chat";
-import { normalizeFontWeight } from "~/config/chatUrlParams";
+import { hasMultipleChatSources, normalizeFontWeight } from "~/config/chatUrlParams";
 import {
   sevenTVCosmeticsService,
   type TwitchMessage,
@@ -275,7 +275,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
     return undefined;
   });
   const showPlatformMarker = createMemo(() =>
-    Boolean(props.config.channel.trim() && props.config.youtubeChannel.trim()),
+    hasMultipleChatSources(props.config),
   );
   const platformMarkerMode = createMemo(() =>
     showPlatformMarker() ? props.config.platformMarker : "none",

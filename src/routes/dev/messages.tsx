@@ -73,6 +73,7 @@ function createMessage(
 ): TwitchMessage {
   return {
     id,
+    platform: "twitch",
     username,
     displayName: username,
     message: text,

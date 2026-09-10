@@ -267,6 +267,7 @@ export function nextPreviewMessage(
 
   const message: TwitchMessage = {
     id: `preview-live-${Date.now()}-${index}`,
+    platform: "twitch",
     username,
     displayName,
     message: twitchEvent?.type === "raid" || twitchEvent?.type === "watch-streak"

@@ -1,29 +1,16 @@
 // Сервис для подключения к Twitch IRC
 
 import { log, LOG_CATEGORIES } from "../../utils/logger";
-import type { ReplyThread } from "../../types/replyThread";
 import { parseReplyThread } from "../../utils/chat/replyParser";
-import type { MessageTokenSnapshot } from "../../utils/chat/emojiUtils";
+import type {
+  ChatGif,
+  ChatMessage,
+  TwitchEvent,
+} from "./message";
 
-export type TwitchEventType =
-  | "first-message"
-  | "raid"
-  | "subscription"
-  | "watch-streak"
-  | "highlighted-message"
-  | "reward"
-  | "power-up"
-  | "announcement";
-
-export type TwitchEvent = {
-  type: TwitchEventType;
-  label: string;
-  detail?: string;
-  level?: string;
-  count?: number;
-  points?: number;
-  color?: string;
-};
+export type { ChatPlatform, TwitchEvent, TwitchEventType } from "./message";
+export type TwitchMessage = ChatMessage;
+export type TwitchGif = ChatGif;
 
 const ANNOUNCEMENT_COLORS: Record<string, string> = {
   PRIMARY: "#9147ff",
@@ -33,59 +20,6 @@ const ANNOUNCEMENT_COLORS: Record<string, string> = {
   PURPLE: "#9900fe",
 };
 
-export interface TwitchMessage {
-  id: string;
-  username: string;
-  displayName: string;
-  message: string;
-  color: string;
-  badges: string[];
-  emotes: any;
-  userType: string;
-  isModerator: boolean;
-  isSubscriber: boolean;
-  timestamp: Date;
-  userId?: string;
-  reply?: ReplyThread;
-  msgId?: string;
-  customRewardId?: string;
-  channelPointReward?: {
-    id: string;
-    title: string;
-    prompt: string;
-    cost: number;
-  };
-  platform?: "twitch" | "youtube";
-  gifs?: TwitchGif[];
-  platformBadges?: Array<{
-    url: string;
-    title?: string;
-  }>;
-  isGigantifiedEmote?: boolean;
-  // Cheer события
-  bits?: number;
-  cheerPrefix?: string;
-  // Snapshot of emotes at message creation time (to prevent updates when emote sets change)
-  emoteSnapshot?: Map<string, any>;
-  tokenSnapshot?: MessageTokenSnapshot;
-  sourceChannel?: string;
-  sourceMessageId?: string;
-  sourceChannelId?: string;
-  targetChannelId?: string;
-  targetBadges?: string[];
-  sourceChannelLogin?: string;
-  sourceChannelDisplayName?: string;
-  sourceChannelAvatarUrl?: string;
-  showSourceChannelBadge?: boolean;
-  twitchEvent?: TwitchEvent;
-}
-
-export type TwitchGif = {
-  start: number;
-  end: number;
-  id: string;
-  url: string;
-};
 
 function parseGifs(raw: string | undefined): TwitchGif[] | undefined {
   if (!raw) return undefined;

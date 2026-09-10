@@ -19,10 +19,11 @@ describe("chat URL params", () => {
     );
   });
 
-  test("uses the hosted YouTube websocket by default", () => {
+  test("uses the hosted external-chat websocket by default", () => {
     expect(DEFAULT_CHAT_CONFIG.youtubeWebSocketUrl).toBe(
       "wss://ytwss.ruina.team",
     );
+    expect(DEFAULT_CHAT_CONFIG.kickWebSocketUrl).toBe("wss://ytwss.ruina.team");
     expect(DEFAULT_CHAT_CONFIG.bots).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.showGifs).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.gifScale).toBe(1);
@@ -30,7 +31,7 @@ describe("chat URL params", () => {
 
   test("parses aliases and typed values", () => {
     const params = new URLSearchParams(
-      "channel=forsen&yt=@someyt&ytws=ws://localhost:9905&s=2&fw=700&nfw=900&sh=0&fd=0&a=false&ms=91&rm=false&b=false&cmd=false&es=1.5&gifs=true&gifscale=1.8&sg=someuser&u7=false",
+      "channel=forsen&yt=@someyt&ytws=ws://localhost:9905&kick=xqc&kickws=ws://localhost:9906&s=2&fw=700&nfw=900&sh=0&fd=0&a=false&ms=91&rm=false&b=false&cmd=false&es=1.5&gifs=true&gifscale=1.8&sg=someuser&u7=false",
     );
 
     const cfg = parseChatConfigFromSearchParams(params);
@@ -38,6 +39,8 @@ describe("chat URL params", () => {
     expect(cfg.channel).toBe("forsen");
     expect(cfg.youtubeChannel).toBe("@someyt");
     expect(cfg.youtubeWebSocketUrl).toBe("ws://localhost:9905");
+    expect(cfg.kickChannel).toBe("xqc");
+    expect(cfg.kickWebSocketUrl).toBe("ws://localhost:9906");
     expect(cfg.size).toBe(2);
     expect(cfg.fontWeight).toBe(700);
     expect(cfg.nickFontWeight).toBe(900);
@@ -61,6 +64,8 @@ describe("chat URL params", () => {
       channel: "xqc",
       youtubeChannel: "someyt",
       youtubeWebSocketUrl: "ws://localhost:9905",
+      kickChannel: "kickstreamer",
+      kickWebSocketUrl: "ws://localhost:9906",
       bots: true,
       fade: false,
       recentMessages: false,
@@ -89,6 +94,8 @@ describe("chat URL params", () => {
     expect(params.get("c")).toBe("xqc");
     expect(params.get("yt")).toBe("someyt");
     expect(params.get("ytws")).toBe("ws://localhost:9905");
+    expect(params.get("kick")).toBe("kickstreamer");
+    expect(params.get("kickws")).toBe("ws://localhost:9906");
     expect(params.get("b")).toBe("true");
     expect(params.get("fd")).toBe("0");
     expect(params.get("rm")).toBe("false");

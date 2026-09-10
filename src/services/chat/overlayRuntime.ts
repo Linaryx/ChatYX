@@ -106,6 +106,7 @@ export class OverlayRuntime {
   private refreshInProgress = false;
   private reloadInProgress = false;
   private initializationGeneration = 0;
+  private readonly externalConnectedPlatforms = new Set<"youtube" | "kick">();
   private readonly eventHandlers = {
     messageDeleted: (event: Event) => {
       const customEvent = event as CustomEvent<{ messageId: string }>;
@@ -211,17 +212,19 @@ export class OverlayRuntime {
         if (preparedMessage) this.appendMessage(preparedMessage);
       },
       onTwitchUserClear: (username) => this.clearUserMessages(username),
-      onYouTubeConnectionChange: (connected) => {
+      onExternalConnectionChange: (platform, connected) => {
         if (this.channel.trim()) return;
-        this.hooks.onConnectionChange(connected);
+        if (connected) this.externalConnectedPlatforms.add(platform);
+        else this.externalConnectedPlatforms.delete(platform);
+        this.hooks.onConnectionChange(this.externalConnectedPlatforms.size > 0);
         if (connected) this.setLoading("Готово!", 100);
       },
-      onYouTubeMessage: async (message) => {
+      onExternalMessage: async (message) => {
         if (!this.activeConfig) return;
         const preparedMessage = await this.prepareMessageForDisplay(message);
         if (preparedMessage) this.appendMessage(preparedMessage);
       },
-      onYouTubeUserBan: (userId) => this.banYouTubeUser(userId),
+      onExternalUserBan: (userId) => this.banExternalUser(userId),
     });
   }
 
@@ -285,7 +288,7 @@ export class OverlayRuntime {
     this.hooks.onServiceReady(service);
 
     this.setLoading(
-      hasTwitchChannel ? "Получение ID канала..." : "Подготовка YouTube...",
+      hasTwitchChannel ? "Получение ID канала..." : "Подготовка внешних источников...",
       45,
     );
     const channelResolution = hasTwitchChannel
@@ -349,7 +352,7 @@ export class OverlayRuntime {
     this.setupEventListeners();
 
     this.setLoading(
-      hasTwitchChannel ? "Подключение к Twitch IRC..." : "Подключение к YouTube...",
+      hasTwitchChannel ? "Подключение к Twitch IRC..." : "Подключение источников...",
       95,
     );
     if (loadedRecentMessages > 0) {
@@ -360,9 +363,15 @@ export class OverlayRuntime {
         CHATYX_DEVELOPER_CHANNEL,
       ]);
     }
-    this.connectionManager.connectYouTube(
+    this.connectionManager.connectExternal(
+      "youtube",
       chatConfig.youtubeChannel,
       chatConfig.youtubeWebSocketUrl,
+    );
+    this.connectionManager.connectExternal(
+      "kick",
+      chatConfig.kickChannel,
+      chatConfig.kickWebSocketUrl,
     );
     this.initialized = true;
     log.info(LOG_CATEGORIES.CHAT, "Chat overlay initialized");
@@ -376,6 +385,7 @@ export class OverlayRuntime {
     this.messagePipeline.clear();
     this.removeEventListeners();
     this.connectionManager.destroy();
+    this.externalConnectedPlatforms.clear();
     this.commandFeedback.destroy();
     if (preserveRteRuntime) this.rteRuntime.cancelAll();
     else this.rteRuntime.destroy();
@@ -473,7 +483,7 @@ export class OverlayRuntime {
     removeMessageElements(`[data-nick="${username}"]`, this.pendingTimers);
   }
 
-  private banYouTubeUser(userId: string) {
+  private banExternalUser(userId: string) {
     this.rteRuntime.cancelUser({ userId });
     this.messagePipeline.cancelUserId(userId);
     this.messageQueue.discard((message) => message.userId === userId);

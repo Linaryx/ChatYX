@@ -4,7 +4,7 @@ import { chatConfigToSearchParams, DEFAULT_CHAT_CONFIG, type ChatConfig } from "
 import { applySetupImport, type SetupImportSetters } from "../src/components/setup/setupImportAdapter";
 
 const runtimeOnlyKeys = [
-  "youtubeWebSocketUrl", "ffzBotMix", "ffzBotMixCustom", "ttsReadChat", "ttsReadBots",
+  "youtubeWebSocketUrl", "kickWebSocketUrl", "ffzBotMix", "ffzBotMixCustom", "ttsReadChat", "ttsReadBots",
   "ttsVoice", "ttsChatIsVoice", "ttsVolume", "ttsMaxLength",
 ];
 
@@ -19,7 +19,7 @@ function formSettings(config: ChatConfig) {
 
 const nativeConfig: ChatConfig = {
   ...DEFAULT_CHAT_CONFIG,
-  channel: "streamer", youtubeChannel: "video",
+  channel: "streamer", youtubeChannel: "video", kickChannel: "kickstreamer",
   size: 3, font: 0, fontCustom: "Comic Sans MS", fontWeight: 650, nickFontWeight: 450,
   shadow: false, stroke: 4, fade: false, animation: "flow", messageSpeed: 72,
   showHomies: false, recentMessages: false, bots: true, commands: false,
@@ -134,17 +134,17 @@ describe("native setup import", () => {
   });
 
   test("clears explicit empty lists and channels rather than keeping old values", () => {
-    const result = parseSetupImport("c=&yt=&bn=&sg=&fc=", "chatyx");
+    const result = parseSetupImport("c=&yt=&kick=&bn=&sg=&fc=", "chatyx");
     expect(result.kind === "parsed" && result.patch).toMatchObject({
-      channel: "", youtubeChannel: "", botNames: [], singleChatter: [], fontCustom: "",
+      channel: "", youtubeChannel: "", kickChannel: "", botNames: [], singleChatter: [], fontCustom: "",
     });
   });
 
   test("reports non-default runtime-only settings instead of pretending to restore them", () => {
-    const result = parseSetupImport("c=foo&ytws=wss%3A%2F%2Fexample.com&ttsread=true&fm=2&fmc=false", "chatyx");
+    const result = parseSetupImport("c=foo&ytws=wss%3A%2F%2Fexample.com&kickws=wss%3A%2F%2Fkick.example.com&ttsread=true&fm=2&fmc=false", "chatyx");
     expect(result.kind).toBe("parsed");
     if (result.kind !== "parsed") throw new Error("Expected native import");
-    expect(result.unsupported).toEqual(["youtubeWebSocketUrl", "ffzBotMix", "ffzBotMixCustom", "ttsReadChat"]);
+    expect(result.unsupported).toEqual(["youtubeWebSocketUrl", "kickWebSocketUrl", "ffzBotMix", "ffzBotMixCustom", "ttsReadChat"]);
     for (const key of runtimeOnlyKeys) expect(result.patch).not.toHaveProperty(key);
   });
 

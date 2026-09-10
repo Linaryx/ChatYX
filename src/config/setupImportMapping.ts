@@ -10,7 +10,7 @@ export type SetupImportSource = "auto" | "chatyx" | "chatis" | "cyan" | "davii";
 export type DetectedSetupImportSource = Exclude<SetupImportSource, "auto">;
 
 type RuntimeOnlySetting =
-  | "youtubeWebSocketUrl" | "ffzBotMix" | "ffzBotMixCustom"
+  | "youtubeWebSocketUrl" | "kickWebSocketUrl" | "ffzBotMix" | "ffzBotMixCustom"
   | "ttsReadChat" | "ttsReadBots" | "ttsVoice" | "ttsChatIsVoice"
   | "ttsVolume" | "ttsMaxLength";
 
@@ -28,12 +28,12 @@ export type SetupImportMapping = {
 
 export function mapChatYxParams(params: URLSearchParams): SetupImportMapping {
   const {
-    youtubeWebSocketUrl, ffzBotMix, ffzBotMixCustom,
+    youtubeWebSocketUrl, kickWebSocketUrl, ffzBotMix, ffzBotMixCustom,
     ttsReadChat, ttsReadBots, ttsVoice, ttsChatIsVoice, ttsVolume, ttsMaxLength,
     botNames, singleChatter, ...settings
   } = parseChatConfigFromSearchParams(params);
   const runtimeOnly = {
-    youtubeWebSocketUrl, ffzBotMix, ffzBotMixCustom,
+    youtubeWebSocketUrl, kickWebSocketUrl, ffzBotMix, ffzBotMixCustom,
     ttsReadChat, ttsReadBots, ttsVoice, ttsChatIsVoice, ttsVolume, ttsMaxLength,
   };
   return {

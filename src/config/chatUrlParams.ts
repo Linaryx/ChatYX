@@ -16,6 +16,8 @@ export interface ChatConfig {
   channel: string;
   youtubeChannel: string;
   youtubeWebSocketUrl: string;
+  kickChannel: string;
+  kickWebSocketUrl: string;
   platformMarker: PlatformMarkerMode;
   showGifs: boolean;
   gifScale: number;
@@ -85,6 +87,8 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   channel: "",
   youtubeChannel: "",
   youtubeWebSocketUrl: "wss://ytwss.ruina.team",
+  kickChannel: "",
+  kickWebSocketUrl: "wss://ytwss.ruina.team",
   platformMarker: "stripe",
   showGifs: false,
   gifScale: 1,
@@ -196,6 +200,24 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     query: "ytws",
     kind: "string",
     aliases: ["youtube_ws", "youtubeWebSocketUrl"],
+    serialize: (value) => {
+      const normalized = String(value || "").trim().replace(/\/+$/, "");
+      return normalized || null;
+    },
+  },
+  kickChannel: {
+    query: "kick",
+    kind: "string",
+    aliases: ["kick_channel", "kickChannel"],
+    serialize: (value) => {
+      const normalized = String(value || "").trim().replace(/^@/, "");
+      return normalized || null;
+    },
+  },
+  kickWebSocketUrl: {
+    query: "kickws",
+    kind: "string",
+    aliases: ["kick_ws", "kickWebSocketUrl"],
     serialize: (value) => {
       const normalized = String(value || "").trim().replace(/\/+$/, "");
       return normalized || null;
@@ -652,4 +674,11 @@ export function chatConfigToSearchParams(cfg: ChatConfig): URLSearchParams {
   }
 
   return params;
+}
+
+export function hasMultipleChatSources(
+  config: Pick<ChatConfig, "channel" | "youtubeChannel" | "kickChannel">,
+): boolean {
+  return [config.channel, config.youtubeChannel, config.kickChannel]
+    .filter((channel) => Boolean(channel.trim())).length > 1;
 }
