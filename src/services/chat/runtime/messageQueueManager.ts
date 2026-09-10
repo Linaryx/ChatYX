@@ -63,7 +63,8 @@ export class MessageQueueManager {
 
       this.options.onMessagesChange((messages) => {
         const nextMessages = [...messages, ...batch];
-        return nextMessages.length > 100 ? nextMessages.slice(-100) : nextMessages;
+        if (nextMessages.length <= 100) return nextMessages;
+        return nextMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()).slice(-100);
       });
 
       const service = this.options.getService();

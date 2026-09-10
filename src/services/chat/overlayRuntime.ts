@@ -237,7 +237,8 @@ export class OverlayRuntime {
         if (restoredMessages.length === 0) return;
         this.hooks.onMessagesChange((current) => {
           const next = [...current, ...restoredMessages];
-          return next.length > 100 ? next.slice(-100) : next;
+          if (next.length <= 100) return next;
+          return next.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()).slice(-100);
         });
         this.scrollToLatestAfterRender(true);
       },
@@ -735,9 +736,8 @@ export class OverlayRuntime {
 
       this.hooks.onMessagesChange((messages) => {
         const nextMessages = [...messages, ...restoredMessages];
-        return nextMessages.length > 100
-          ? nextMessages.slice(-100)
-          : nextMessages;
+        if (nextMessages.length <= 100) return nextMessages;
+        return nextMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()).slice(-100);
       });
       this.scrollToLatestAfterRender(true);
 
