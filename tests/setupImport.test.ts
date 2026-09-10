@@ -28,7 +28,7 @@ const nativeConfig: ChatConfig = {
   nlAfterName: true, hideNames: true, reverseLineOrder: true, horizontal: true,
   ffzBotMixBroadcaster: true, ffzBotMixModerator: false, ffzBotMixVip: true,
   overlayBackgroundColor: "#123456", overlayBackgroundOpacity: 0,
-  overlayBackgroundRadius: 0, overlayBorderOpacity: 75,
+  overlayBackgroundRadius: 0, overlayPadding: 12, overlayBorderOpacity: 75,
   highlightTwitchEvents: false, twitchEventColor: "#abcdef",
   twitchEventBackgroundOpacity: 0, twitchEventBold: false, twitchEventItalic: true,
   showHighlightedMessages: false, showChannelPointRewards: false,

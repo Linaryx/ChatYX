@@ -54,6 +54,7 @@ export interface ChatConfig {
   overlayBackgroundColor: string;
   overlayBackgroundOpacity: number;
   overlayBackgroundRadius: number;
+  overlayPadding: number;
   overlayBorderOpacity: number;
   highlightTwitchEvents: boolean;
   twitchEventColor: string;
@@ -124,6 +125,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   overlayBackgroundColor: "#000000",
   overlayBackgroundOpacity: 50,
   overlayBackgroundRadius: 20,
+  overlayPadding: 10,
   overlayBorderOpacity: 0,
   highlightTwitchEvents: true,
   twitchEventColor: "#9146ff",
@@ -334,6 +336,11 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     query: "bgr",
     kind: "int",
     aliases: ["overlay_background_radius"],
+  },
+  overlayPadding: {
+    query: "bgp",
+    kind: "int",
+    aliases: ["overlay_padding", "overlayPadding"],
   },
   overlayBorderOpacity: {
     query: "bgb",

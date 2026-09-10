@@ -307,12 +307,6 @@ export default function ChatOverlay() {
   };
 
   const overlayRootStyle = createMemo(() => {
-    const cfg = config() ?? initialConfig;
-    const bgOpacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
-    const borderOpacity = clamp(cfg.overlayBorderOpacity, 0, 100) / 100;
-    const borderRadius = clamp(cfg.overlayBackgroundRadius, 0, 128);
-    const fadeDurationMs = chatService()?.getConfig().fade.fadeOutDuration ?? 1000;
-
     return {
       position: "absolute",
       inset: "0",
@@ -322,9 +316,6 @@ export default function ChatOverlay() {
       display: "flex",
       "flex-direction": "column",
       "align-items": "stretch",
-      "justify-content":
-        cfg.reverseLineOrder && !cfg.horizontal ? "flex-start" : "flex-end",
-      padding: isPreview ? "0px" : "10px",
       "box-sizing": "border-box",
       "z-index": "10000",
       "pointer-events": "none",
@@ -332,14 +323,41 @@ export default function ChatOverlay() {
       overflow: "hidden",
       transition: [
         "opacity 0.5s ease-in",
-        `background-color ${fadeDurationMs}ms ease-out`,
-        `border-color ${fadeDurationMs}ms ease-out`,
       ].join(", "),
+    } as const;
+  });
+
+  const surfaceStyle = createMemo(() => {
+    const cfg = config() ?? initialConfig;
+    const bgOpacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
+    const borderOpacity = clamp(cfg.overlayBorderOpacity, 0, 100) / 100;
+    const borderRadius = clamp(cfg.overlayBackgroundRadius, 0, 128);
+    const padding = borderRadius > 0 ? clamp(cfg.overlayPadding, 0, 128) : 0;
+    const fadeDurationMs = chatService()?.getConfig().fade.fadeOutDuration ?? 1000;
+
+    return {
+      position: "relative",
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      "flex-direction": "column",
+      "align-items": "stretch",
+      "justify-content":
+        cfg.reverseLineOrder && !cfg.horizontal ? "flex-start" : "flex-end",
+      padding: `${padding}px`,
+      "box-sizing": "border-box",
+      "pointer-events": "none",
+      overflow: "hidden",
       "background-color": `rgba(${hexToRgb(cfg.overlayBackgroundColor)}, ${bgOpacity})`,
       border: borderOpacity > 0
         ? `1px solid rgba(255, 255, 255, ${borderOpacity})`
         : "1px solid transparent",
       "border-radius": `${borderRadius}px`,
+      "--chat-surface-padding": `${padding}px`,
+      transition: [
+        `background-color ${fadeDurationMs}ms ease-out`,
+        `border-color ${fadeDurationMs}ms ease-out`,
+      ].join(", "),
     } as const;
   });
 
@@ -348,7 +366,7 @@ export default function ChatOverlay() {
       position: "relative",
       width: "100%",
       "max-width": "100%",
-      "max-height": isPreview ? "100vh" : "calc(100vh - 20px)",
+      "max-height": "100%",
       display: "block",
       "flex-shrink": "1",
       padding: "0",
@@ -540,32 +558,34 @@ export default function ChatOverlay() {
             />
           </Show>
           <div id="chat_overlay_root" style={overlayRootStyle()}>
-            <div
-              id="chat_chrome"
-              classList={{ "has-prediction": hasPredictionBar() }}
-              style={chromeStyle()}
-            >
-              <Show when={hasPredictionBar()}>
-                <div class="chat-prediction-slot">
-                  <PredictionProgressOverlay
-                    event={prediction()}
-                    now={predictionNow()}
-                    variant="chat"
+            <div id="chat_surface" style={surfaceStyle()}>
+              <div
+                id="chat_chrome"
+                classList={{ "has-prediction": hasPredictionBar() }}
+                style={chromeStyle()}
+              >
+                <Show when={hasPredictionBar()}>
+                  <div class="chat-prediction-slot">
+                    <PredictionProgressOverlay
+                      event={prediction()}
+                      now={predictionNow()}
+                      variant="chat"
+                    />
+                  </div>
+                </Show>
+                <div
+                  id="chat_container"
+                  data-connected={isConnected() ? "true" : "false"}
+                  style={containerStyle()}
+                >
+                  <ChatMessageList
+                    messages={messages()}
+                    config={config()}
+                    service={chatService()}
+                    animationDurationMs={animationDurationMs()}
+                    onMessageExpired={removeMessageById}
                   />
                 </div>
-              </Show>
-              <div
-                id="chat_container"
-                data-connected={isConnected() ? "true" : "false"}
-                style={containerStyle()}
-              >
-                <ChatMessageList
-                  messages={messages()}
-                  config={config()}
-                  service={chatService()}
-                  animationDurationMs={animationDurationMs()}
-                  onMessageExpired={removeMessageById}
-                />
               </div>
             </div>
           </div>

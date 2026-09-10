@@ -392,6 +392,9 @@ export default function ChatSetup() {
   const [overlayBackgroundRadius, setOverlayBackgroundRadius] = createSignal(
     String(DEFAULT_CHAT_CONFIG.overlayBackgroundRadius),
   );
+  const [overlayPadding, setOverlayPadding] = createSignal(
+    String(DEFAULT_CHAT_CONFIG.overlayPadding),
+  );
   const [overlayBorderOpacity, setOverlayBorderOpacity] = createSignal(
     String(DEFAULT_CHAT_CONFIG.overlayBorderOpacity),
   );
@@ -561,6 +564,7 @@ export default function ChatSetup() {
       overlayBackgroundColor: setOverlayBackgroundColor,
       overlayBackgroundOpacity: setOverlayBackgroundOpacity,
       overlayBackgroundRadius: setOverlayBackgroundRadius,
+      overlayPadding: setOverlayPadding,
       overlayBorderOpacity: setOverlayBorderOpacity,
       highlightTwitchEvents: setHighlightTwitchEvents,
       twitchEventColor: setTwitchEventColor,
@@ -694,6 +698,10 @@ export default function ChatSetup() {
     overlayBackgroundRadius: toInt(
       overlayBackgroundRadius(),
       DEFAULT_CHAT_CONFIG.overlayBackgroundRadius,
+    ),
+    overlayPadding: toInt(
+      overlayPadding(),
+      DEFAULT_CHAT_CONFIG.overlayPadding,
     ),
     overlayBorderOpacity: toInt(
       overlayBorderOpacity(),
@@ -1219,6 +1227,20 @@ export default function ChatSetup() {
           label="Скругление фона"
           value={overlayBackgroundRadius()}
           onChange={setOverlayBackgroundRadius}
+          min={0}
+          max={64}
+          step={1}
+        />
+      ),
+    },
+    {
+      label: "Внутренний отступ",
+      hint: "Применяется только при скруглении фона. При 0 px чат занимает всю ширину.",
+      control: (_labelId) => (
+        <SetupNumberField
+          label="Внутренний отступ"
+          value={overlayPadding()}
+          onChange={setOverlayPadding}
           min={0}
           max={64}
           step={1}
