@@ -85,6 +85,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
         flowInvertFrame = undefined;
 
         const newIds = orderedMessages()
+          .filter((message) => message.restored !== true)
           .map((m) => m.id)
           .filter((id) => !knownMessageIds.has(id));
         if (newIds.length === 0) return;

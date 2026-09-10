@@ -1,6 +1,7 @@
 import type {
   ChatSourceAuthor,
   ChatSourceEvent,
+  ChatSourceMessage,
   ChatSourceListener,
   ChatSourceWorker,
 } from "../source-events";
@@ -8,8 +9,13 @@ import type {
 const KICK_CHANNEL_ENDPOINT = "https://kick.com/api/v2/channels";
 const KICK_REALTIME_ENDPOINT = "https://web.kick.com/api/v1/realtime";
 const KICK_CHAT_EVENT = "App\\Events\\ChatMessageEvent";
+const KICK_DELETE_EVENTS = new Set([
+  "App\\Events\\ChatMessageDeletedEvent",
+  "App\\Events\\MessageDeletedEvent",
+]);
 const MAX_RECONNECT_DELAY_MS = 30_000;
 const GUEST_TOKEN_REFRESH_MARGIN_SECONDS = 60;
+const MAX_HISTORY_MESSAGES = 50;
 
 type KickBadge = {
   type?: unknown;
@@ -133,7 +139,7 @@ function parseReply(metadata: unknown) {
   }
 }
 
-export function normalizeKickMessage(value: unknown): ChatSourceEvent | null {
+export function normalizeKickMessage(value: unknown): ChatSourceMessage | null {
   const message = value as KickMessage;
   const id = asString(message.id);
   const author = normalizeSender(message.sender);
@@ -150,18 +156,60 @@ export function normalizeKickMessage(value: unknown): ChatSourceEvent | null {
   };
 }
 
-export function normalizeKickRealtimeMessage(value: unknown): ChatSourceEvent | null {
+function parseKickRealtimePublication(value: unknown) {
   const envelope = asRecord(value);
   const publication = asRecord(asRecord(asRecord(envelope.push).pub).data);
-  if (asString(publication.event) !== KICK_CHAT_EVENT) return null;
+  const event = asString(publication.event);
+  if (!event) return null;
   const rawMessage = publication.data;
   try {
-    return normalizeKickMessage(
-      typeof rawMessage === "string" ? JSON.parse(rawMessage) : rawMessage,
-    );
+    return {
+      event,
+      payload: typeof rawMessage === "string" ? JSON.parse(rawMessage) : rawMessage,
+    };
   } catch {
     return null;
   }
+}
+
+function getDeletedMessageId(value: unknown): string {
+  const payload = asRecord(value);
+  return asId(asRecord(payload.message).id)
+    || asId(payload.id)
+    || asId(payload.message_id)
+    || asId(payload.messageId)
+    || asId(payload.message);
+}
+
+export function normalizeKickRealtimeEvent(value: unknown): ChatSourceEvent | null {
+  const publication = parseKickRealtimePublication(value);
+  if (!publication) return null;
+  if (publication.event === KICK_CHAT_EVENT) {
+    return normalizeKickMessage(publication.payload);
+  }
+  if (KICK_DELETE_EVENTS.has(publication.event)) {
+    const messageId = getDeletedMessageId(publication.payload);
+    return messageId ? { type: "delete", platform: "kick", messageId } : null;
+  }
+  return null;
+}
+
+export function normalizeKickRealtimeMessage(value: unknown): ChatSourceMessage | null {
+  const event = normalizeKickRealtimeEvent(value);
+  return event?.type === "message" ? event : null;
+}
+
+export function normalizeKickHistory(value: unknown): ChatSourceMessage[] {
+  const data = asRecord(value);
+  const rawMessages = asRecord(data.data).messages;
+  const messages: unknown[] = Array.isArray(rawMessages)
+    ? rawMessages
+    : [];
+  return messages
+    .map(normalizeKickMessage)
+    .filter((message): message is ChatSourceMessage => message !== null)
+    .sort((left, right) => left.unix - right.unix)
+    .slice(-MAX_HISTORY_MESSAGES);
 }
 
 async function fetchKickJson(
@@ -203,6 +251,15 @@ async function resolveKickChannel(slug: string): Promise<KickChannel> {
   return { channelId, chatroomId };
 }
 
+async function fetchKickHistory(channelId: string): Promise<ChatSourceMessage[]> {
+  const response = await fetch(
+    `https://web.kick.com/api/v1/chat/${encodeURIComponent(channelId)}/history`,
+    { headers: { accept: "application/json" } },
+  );
+  if (!response.ok) throw new Error(`Kick history request failed (${response.status})`);
+  return normalizeKickHistory(await response.json());
+}
+
 async function resolveRealtimeCredentials(channelId: string): Promise<KickRealtimeCredentials> {
   const clientId = crypto.randomUUID();
   const connectionRequest = {
@@ -241,6 +298,14 @@ export class KickSourceWorker implements ChatSourceWorker {
     const channel = await resolveKickChannel(this.slug);
     this.channelId = channel.channelId;
     this.chatroomId = channel.chatroomId;
+    try {
+      const messages = await fetchKickHistory(this.channelId);
+      if (messages.length > 0) {
+        listener({ type: "history", platform: "kick", messages });
+      }
+    } catch (error) {
+      console.warn("[chat-sources] Failed to load Kick history", error);
+    }
     await this.open(true);
   }
 
@@ -315,9 +380,9 @@ export class KickSourceWorker implements ChatSourceWorker {
         continue;
       }
 
-      const message = normalizeKickRealtimeMessage(frame);
-      if (message) {
-        this.listener?.(message);
+      const sourceEvent = normalizeKickRealtimeEvent(frame);
+      if (sourceEvent) {
+        this.listener?.(sourceEvent);
         continue;
       }
 

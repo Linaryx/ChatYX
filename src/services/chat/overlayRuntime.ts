@@ -224,6 +224,23 @@ export class OverlayRuntime {
         const preparedMessage = await this.prepareMessageForDisplay(message);
         if (preparedMessage) this.appendMessage(preparedMessage);
       },
+      onExternalHistory: async (messages) => {
+        if (!this.activeConfig?.recentMessages) return;
+        const restoredMessages = (
+          await Promise.all(
+            messages
+              .slice(-this.recentMessageLimit)
+              .map((message) => this.prepareMessageForDisplay(message)),
+          )
+        ).filter((message): message is TwitchMessage => Boolean(message))
+          .map((message) => ({ ...message, restored: true }));
+        if (restoredMessages.length === 0) return;
+        this.hooks.onMessagesChange((current) => {
+          const next = [...current, ...restoredMessages];
+          return next.length > 100 ? next.slice(-100) : next;
+        });
+        this.scrollToLatestAfterRender(true);
+      },
       onExternalUserBan: (userId) => this.banExternalUser(userId),
     });
   }
@@ -711,9 +728,13 @@ export class OverlayRuntime {
       ).filter((message): message is TwitchMessage => Boolean(message));
 
       if (preparedMessages.length === 0) return 0;
+      const restoredMessages = preparedMessages.map((message) => ({
+        ...message,
+        restored: true,
+      }));
 
       this.hooks.onMessagesChange((messages) => {
-        const nextMessages = [...messages, ...preparedMessages];
+        const nextMessages = [...messages, ...restoredMessages];
         return nextMessages.length > 100
           ? nextMessages.slice(-100)
           : nextMessages;

@@ -44,6 +44,7 @@ export interface ChatMessage {
   isSubscriber: boolean;
   timestamp: Date;
   platform: ChatPlatform;
+  restored?: boolean;
   userId?: string;
   reply?: ReplyThread;
   msgId?: string;

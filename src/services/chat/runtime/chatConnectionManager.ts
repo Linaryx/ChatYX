@@ -14,6 +14,7 @@ type ChatConnectionManagerOptions = {
     connected: boolean,
   ) => void;
   onExternalMessage: (message: TwitchMessage) => void | Promise<void>;
+  onExternalHistory: (messages: TwitchMessage[]) => void | Promise<void>;
   onExternalUserBan: (userId: string) => void;
 };
 
@@ -59,6 +60,7 @@ export class ChatConnectionManager {
     log.info(LOG_CATEGORIES.CHAT, `Connecting to ${platform} channel: ${channel}`);
     service.connect(platform, channel, webSocketUrl, {
       onMessage: (message) => this.options.onExternalMessage(message),
+      onHistory: (messages) => this.options.onExternalHistory(messages),
       onDelete: this.options.onMessageDelete,
       onBan: this.options.onExternalUserBan,
       onConnectionChange: (connected) => {

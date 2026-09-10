@@ -19,16 +19,23 @@ type ExternalRun =
   | { text?: string }
   | { emoji?: { image?: Array<{ url?: string; width?: number; height?: number }> } };
 
+type ExternalChatMessage = {
+  type: "message";
+  platform: Exclude<ChatPlatform, "twitch">;
+  id?: string;
+  message?: string;
+  runs?: ExternalRun[];
+  author?: ExternalAuthor;
+  reply?: ExternalReply;
+  unix?: number;
+};
+
 export type ExternalChatEvent =
+  | ExternalChatMessage
   | {
-      type: "message";
+      type: "history";
       platform: Exclude<ChatPlatform, "twitch">;
-      id?: string;
-      message?: string;
-      runs?: ExternalRun[];
-      author?: ExternalAuthor;
-      reply?: ExternalReply;
-      unix?: number;
+      messages: ExternalChatMessage[];
     }
   | {
       type: "delete";
@@ -50,6 +57,7 @@ export type ExternalChatEvent =
 
 type ExternalChatCallbacks = {
   onMessage: (message: ChatMessage) => void;
+  onHistory: (messages: ChatMessage[]) => void;
   onDelete: (messageId: string) => void;
   onBan: (userId: string) => void;
   onConnectionChange: (connected: boolean) => void;
@@ -116,7 +124,7 @@ function buildMessageFromRuns(id: string, fallbackMessage: string, runs?: Extern
 }
 
 export function externalEventToMessage(
-  event: Extract<ExternalChatEvent, { type: "message" }>,
+  event: ExternalChatMessage,
 ): ChatMessage {
   const author = event.author;
   const username = getAuthorLogin(author);
@@ -209,6 +217,9 @@ export class ExternalChatService {
       }
       if (payload.platform !== platform) return;
       if (payload.type === "message") callbacks.onMessage(externalEventToMessage(payload));
+      if (payload.type === "history") {
+        callbacks.onHistory(payload.messages.map(externalEventToMessage));
+      }
       if (payload.type === "delete" && payload.messageId) {
         callbacks.onDelete(`${platform}-${sanitizeIdentifier(payload.messageId)}`);
       }

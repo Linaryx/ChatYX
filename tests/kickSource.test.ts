@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   normalizeKickMessage,
+  normalizeKickHistory,
   normalizeKickRealtimeMessage,
+  normalizeKickRealtimeEvent,
 } from "../services/youtube-websocket/src/sources/kick";
 
 describe("Kick source normalization", () => {
@@ -84,5 +86,41 @@ describe("Kick source normalization", () => {
       author: { name: "viewer", id: "1" },
     });
     expect(normalizeKickRealtimeMessage({ push: { pub: { data: { event: "other" } } } })).toBeNull();
+  });
+
+  test("normalizes supported message deletion events", () => {
+    const deleted = normalizeKickRealtimeEvent({
+      push: {
+        pub: {
+          data: {
+            event: "App\\Events\\ChatMessageDeletedEvent",
+            data: JSON.stringify({ message: { id: "deleted-1" } }),
+          },
+        },
+      },
+    });
+    expect(deleted).toEqual({ type: "delete", platform: "kick", messageId: "deleted-1" });
+
+    expect(normalizeKickRealtimeEvent({
+      push: {
+        pub: {
+          data: {
+            event: "App\\Events\\MessageDeletedEvent",
+            data: JSON.stringify({ message_id: "deleted-2" }),
+          },
+        },
+      },
+    })).toEqual({ type: "delete", platform: "kick", messageId: "deleted-2" });
+  });
+
+  test("sorts recent history from oldest to newest", () => {
+    expect(normalizeKickHistory({
+      data: {
+        messages: [
+          { id: "newer", content: "Newer", created_at: "2026-09-10T12:01:00.000Z", sender: { username: "viewer" } },
+          { id: "older", content: "Older", created_at: "2026-09-10T12:00:00.000Z", sender: { username: "viewer" } },
+        ],
+      },
+    }).map((message) => message.id)).toEqual(["older", "newer"]);
   });
 });

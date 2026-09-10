@@ -12,6 +12,11 @@ describe("SourceRegistry", () => {
       start(listener) {
         starts += 1;
         emit = listener;
+        listener({
+          type: "history",
+          platform: "kick",
+          messages: [{ type: "message", platform: "kick", id: "history-1", message: "Earlier", author: { name: "Viewer" }, unix: 1 }],
+        });
         listener({ type: "status", platform: "kick", state: "connected" });
         return Promise.resolve();
       },
@@ -27,8 +32,8 @@ describe("SourceRegistry", () => {
     emit?.({ type: "message", platform: "kick", id: "message-1", message: "Hello", author: { name: "Viewer" }, unix: Date.now() });
 
     expect(starts).toBe(1);
-    expect(first).toEqual(["status", "message"]);
-    expect(second).toEqual(["message"]);
+    expect(first).toEqual(["history", "status", "message"]);
+    expect(second).toEqual(["history", "message"]);
     unsubscribeFirst();
     expect(stops).toBe(0);
     unsubscribeSecond();

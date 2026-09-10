@@ -337,6 +337,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
 
     if (
       props.animateEntry !== false &&
+      props.message.restored !== true &&
       hasMessageEntryAnimation(props.config.animation)
     ) {
       rootRef.classList.add("message-enter");
