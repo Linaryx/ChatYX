@@ -226,10 +226,12 @@ export class OverlayRuntime {
       },
       onExternalHistory: async (messages) => {
         if (!this.activeConfig?.recentMessages) return;
+        const ignoredCount = 1;
+        const sliceLimit = this.recentMessageLimit * (1 + ignoredCount);
         const restoredMessages = (
           await Promise.all(
             messages
-              .slice(-this.recentMessageLimit)
+              .slice(-sliceLimit)
               .map((message) => this.prepareMessageForDisplay(message)),
           )
         ).filter((message): message is TwitchMessage => Boolean(message))
@@ -712,9 +714,11 @@ export class OverlayRuntime {
     if (!this.activeConfig || !this.chatService) return 0;
 
     try {
+      const ignoredCount = 1;
+      const fetchLimit = this.recentMessageLimit * (1 + ignoredCount);
       const rawMessages = await fetchRecentMessages(
         this.channel,
-        this.recentMessageLimit,
+        fetchLimit,
       );
       if (rawMessages.length === 0) return 0;
 
