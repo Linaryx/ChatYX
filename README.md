@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/img/Peepo.png" alt="Peepo — маскот ChatYX" width="120" />
+<img src="public/img/emote-1x.webp" alt="Маскот ChatYX" width="70" />
 
 # ChatYX
 
@@ -16,28 +16,42 @@
 
 [Возможности](#-возможности) •
 [Отличия](#-отличия) •
+[Быстрый старт](#-быстрый-старт) •
 [Атрибуты](#-атрибуты-сообщений) •
-[Запуск в OBS](#-запуск-в-obs) •
-[Разработка](#-локальная-разработка) •
+[Разработка](#-разработка) •
 [Команды](#-команды-в-чате)
 
 </div>
 
-ChatYX превращает Twitch, YouTube и Kick чат в настраиваемый Browser Source для OBS.
-Он показывает эмоуты, бейджи, 7TV-пейнты, cheers и ответы, не ломая строку при
-zero-width эмоутах и динамических обновлениях косметики.
+## Что это
+
+ChatYX — открытый оверлей чата для стрима. Один Browser Source показывает
+Twitch, YouTube и Kick одновременно: эмоуты, бейджи, 7TV-пейнты, cheers,
+ответы и события канала. Строка не ломается на zero-width эмоутах, косметика
+обновляется без перезагрузки, настройки живут прямо в ссылке.
 
 ## ✨ Возможности
 
-- Twitch IRC в реальном времени, без стороннего чат-сервера.
-- YouTube Live Chat через hosted Innertube bridge с возможностью self-hosting.
-- Kick через public realtime bridge без OAuth, client secret или пользовательских токенов.
-- 7TV, BTTV и FFZ эмоуты, включая персональные и zero-width эмоуты.
-- Twitch, 7TV, BTTV, FFZ:AP, Chatterino и ChatIS бейджи.
-- 7TV-пейнты, косметика и обновления эмоутов без перезагрузки оверлея.
-- Ответы, гигантские эмоуты, cheers, автомодерация и удаление сообщений.
-- Живое превью прямо на странице настройки.
-- Встроенная debug-панель с FPS, frame time, памятью и long tasks.
+**Платформы**
+
+- Twitch IRC в реальном времени, напрямую из браузера.
+- YouTube Live Chat через hosted bridge с возможностью self-hosting.
+- Kick через public realtime bridge — без OAuth и токенов.
+
+**Эмоуты и косметика**
+
+- 7TV, BTTV и FFZ, включая персональные и zero-width эмоуты.
+- Бейджи Twitch, 7TV, BTTV, FFZ:AP, Chatterino и ChatIS.
+- 7TV-пейнты ников и живые обновления через EventAPI.
+- Гигантские эмоуты, cheers, Twitch GIF.
+
+**Оверлей**
+
+- Ответы, события канала, автомодерация и удаление сообщений.
+- Плавная flow-анимация без наложений строк.
+- Живое превью на странице настройки.
+- Debug-панель: FPS, frame time, память, long tasks.
+- Управление командами прямо из чата.
 
 ## 🆚 Отличия
 
@@ -54,6 +68,15 @@ zero-width эмоутах и динамических обновлениях к�
 
 ¹ StreamElements, Streamlabs и подобные. ² Chatterino и подобные.
 ➖ — нет из коробки или устроено иначе.
+
+## 🚀 Быстрый старт
+
+1. Откройте [chat.ruina.team](https://chat.ruina.team/).
+2. Укажите канал и настройте внешний вид.
+3. Скопируйте готовую ссылку.
+4. Добавьте её в OBS как **Browser Source** размером под сцену, например `1920x1080`.
+
+Прозрачный фон уже настроен.
 
 ## 🧩 Атрибуты сообщений
 
@@ -75,44 +98,7 @@ zero-width эмоутах и динамических обновлениях к�
 | `.reply_line` | строка | Превью ответа |
 | `.mention`, `.chat-link` | `.message` | Упоминания и ссылки |
 
-## 📡 Статус сервисов
-
-| Сервис | Статус | Использование |
-|---|---|---|
-| ChatYX frontend | [![Frontend status](https://img.shields.io/website?url=https%3A%2F%2Fchat.ruina.team%2F&style=flat-square&label=status&up_message=online&down_message=offline)](https://chat.ruina.team/) | Настройка и Browser Source |
-| Chat sources bridge | [![Chat sources status](https://img.shields.io/website?url=https%3A%2F%2Fytwss.ruina.team%2Fhealth&style=flat-square&label=status&up_message=online&down_message=offline)](https://ytwss.ruina.team/health) | YouTube Innertube и Kick realtime → WebSocket |
-| Twitch IRC | ![Twitch IRC](https://img.shields.io/badge/connection-direct-9146FF?style=flat-square&logo=twitch&logoColor=white) | Сообщения и moderation events |
-| 7TV API | [![7TV API status](https://img.shields.io/website?url=https%3A%2F%2F7tv.io%2Fv3%2Femote-sets%2Fglobal&style=flat-square&logo=7tv&label=status&up_message=online&down_message=offline)](https://7tv.io/) | Эмоуты, пейнты и EventAPI |
-| BetterTTV API | [![BetterTTV API status](https://img.shields.io/website?url=https%3A%2F%2Fapi.betterttv.net%2F3%2Fcached%2Femotes%2Fglobal&style=flat-square&label=status&up_message=online&down_message=offline)](https://betterttv.com/) | Глобальные и канальные эмоуты |
-| FrankerFaceZ | [![FrankerFaceZ status](https://img.shields.io/website?url=https%3A%2F%2Fwww.frankerfacez.com%2F&style=flat-square&label=status&up_message=online&down_message=offline)](https://www.frankerfacez.com/) | API эмоутов и бейджей |
-| IVR API | [![IVR API status](https://img.shields.io/website?url=https%3A%2F%2Fapi.ivr.fi%2Fv2%2Ftwitch%2Fuser%3Flogin%3Dtwitch&style=flat-square&label=status&up_message=online&down_message=offline)](https://api.ivr.fi/) | Twitch metadata и fallback-бейджи |
-
-Статусные бейджи проверяют доступность HTTP endpoints при загрузке README. Twitch
-IRC подключается из Browser Source напрямую и не зависит от backend ChatYX.
-
-## ⚙️ Как это работает
-
-```text
-Twitch IRC / GQL ───────────────┐
-7TV / BTTV / FFZ / IVR APIs ────┼──> ChatYX frontend ──> OBS Browser Source
-YouTube / Kick ──> chat sources bridge ───┘
-```
-
-Frontend остаётся статическим и публикуется на GitHub Pages. YouTube и Kick чат
-проходят через отдельный WebSocket bridge: запросы к Innertube из браузера
-ограничены CORS, а Kick realtime connection не требует передавать секреты в OBS.
-
-## 🚀 Запуск в OBS
-
-1. Откройте [chat.ruina.team](https://chat.ruina.team/).
-2. Укажите Twitch-канал и настройте внешний вид.
-3. Скопируйте готовую ссылку.
-4. Добавьте ее в OBS как **Browser Source**.
-
-Прозрачный фон уже настроен. Размер Browser Source лучше выбирать под сцену,
-например `1920x1080`.
-
-## 🛠 Локальная разработка
+## 🛠 Разработка
 
 Понадобится [Bun](https://bun.sh) версии `1.3.14` или новее.
 
@@ -125,44 +111,31 @@ bun run dev
 
 Страница настройки откроется на `http://localhost:5173/`.
 
-Основные команды:
-
 | Команда | Что делает |
 |---|---|
-| `bun run dev` | Запускает Vite dev server |
-| `bun run sources:dev` | Запускает YouTube/Kick bridge с hot reload |
-| `bun run youtube:dev` | Legacy alias для `sources:dev` |
-| `bun run build` | Собирает production frontend в `dist/` |
-| `bun run start` | Открывает локальный preview сборки |
-| `bun run check` | Запускает lint, typecheck, тесты и build |
+| `bun run dev` | Vite dev server |
+| `bun run sources:dev` | YouTube/Kick bridge с hot reload (`youtube:dev` — alias) |
+| `bun run build` | Production-сборка frontend в `dist/` |
+| `bun run start` | Локальный preview сборки |
+| `bun run check` | Lint, typecheck, тесты и build |
 
-## 🌐 Внешние источники чата
+### Chat sources bridge
 
-YouTube.js работает на JavaScript, но перенести весь чат в GitHub Pages нельзя.
-Браузер блокирует запросы к Innertube endpoints по CORS. Kick worker использует
-public channel metadata и анонимную realtime subscription, поэтому не хранит и не
-запрашивает OAuth credentials. Frontend остается статическим, а внешние чаты
-выполняет bridge из
-`services/youtube-websocket`.
-
-Для локальной разработки запустите его во втором терминале:
+Браузер блокирует запросы к Innertube по CORS, поэтому YouTube и Kick идут
+через отдельный WebSocket bridge из `services/youtube-websocket`. Kick
+использует public metadata и анонимную realtime-подписку: никаких OAuth
+секретов ни в OBS, ни в репозитории.
 
 ```bash
 bun run sources:dev
 ```
 
-По умолчанию локальный bridge слушает `http://localhost:9905`, а production
-overlay подключается к `wss://ytwss.ruina.team`. Для локальной разработки адрес
-можно переопределить на странице настройки или параметрами
-`ytws=ws://localhost:9905` и `kickws=ws://localhost:9905`.
+Локальный bridge слушает `http://localhost:9905` (production —
+`wss://ytwss.ruina.team`). Переопределить адрес можно на странице настройки
+или параметрами `ytws=ws://localhost:9905` и `kickws=ws://localhost:9905`.
 
-Kick public realtime использует временную guest session и Centrifugo subscription,
-а не пользовательский OAuth. Если Kick изменит этот контракт, service должен быть
-обновлён; OAuth fallback намеренно не используется.
-
-### Docker
-
-Контейнер собирается из корня репозитория:
+<details>
+<summary>Docker</summary>
 
 ```bash
 docker build \
@@ -176,21 +149,21 @@ docker run -d \
   chatyx-youtube-websocket
 ```
 
-Если YouTube должен ходить через proxy, передайте `YOUTUBE_PROXY_URL`:
+Proxy для YouTube задаётся через `YOUTUBE_PROXY_URL`:
 
 ```bash
 docker run -e YOUTUBE_PROXY_URL=http://proxy.example:1080 chatyx-youtube-websocket
 ```
 
-Для production поставьте перед сервисом Caddy, Nginx или другой reverse proxy с
-поддержкой WebSocket и TLS.
+В production перед сервисом нужен reverse proxy с WebSocket и TLS
+(Caddy, Nginx и подобные).
 
-## 🔧 Конфигурация
+</details>
 
-Настройки оверлея хранятся прямо в query-параметрах ссылки. Их не нужно писать
-вручную: setup-страница собирает URL сама.
+### Конфигурация
 
-Переменные окружения frontend:
+Настройки живут в query-параметрах ссылки — писать их вручную не нужно,
+setup-страница собирает URL сама.
 
 ```env
 # Необязательный backend для cheermotes
@@ -200,17 +173,21 @@ VITE_API_URL=https://api.example.com
 VITE_TWITCH_GQL_CLIENT_ID=your-client-id
 ```
 
-В production backend используется только при заданном `VITE_API_URL`. Локальный
-API на `localhost:3002` проверяется только при запуске frontend через Vite в
-режиме разработки. Остальной Twitch-оверлей работает напрямую.
+Backend используется только при заданном `VITE_API_URL`. Параметр `debug=true`
+открывает performance monitor.
 
-Чтобы открыть performance monitor, добавьте к URL параметр `debug=true`.
+### Деплой
+
+Каждый push в `main` проходит lint, typecheck, тесты, build frontend и проверку
+Docker-образа (`.github/workflows/deploy-pages.yml`), затем публикуется на
+GitHub Pages. По умолчанию frontend ходит за YouTube/Kick на hosted
+`wss://ytwss.ruina.team`; свой bridge поднимается инструкцией выше.
 
 ## 💬 Команды в чате
 
-Управлять оверлеем могут владелец канала, `lead_moderator` и `moderator`.
-Команды выполняются даже когда их отображение выключено в настройках: этот
-переключатель скрывает командные сообщения, но не отключает управление.
+Доступны владельцу канала, `lead_moderator` и `moderator`. Выполняются, даже
+если их отображение выключено: переключатель скрывает сообщения, но не
+отключает управление.
 
 | Команда | Действие |
 |---|---|
@@ -221,12 +198,12 @@ API на `localhost:3002` проверяется только при запус�
 | `!chat ping` | Проверяет, что оверлей принимает команды |
 | `!chat test [1-50]` | Добавляет тестовые сообщения |
 
-Префиксы `!chat`, `!chatis` и `!chatyx` равноправны. Также поддерживаются
-старые алиасы `!refreshoverlay` и `!reloadchat`.
-Медиа-команды и `tts` пока намеренно не реализованы.
+Префиксы `!chat`, `!chatis` и `!chatyx` равноправны, также работают старые
+алиасы `!refreshoverlay` и `!reloadchat`. Медиа-команды и `tts` намеренно
+не реализованы.
 
-Оверлей также слушает developer chat `#linaryx`. Оттуда команды принимает только
-от Twitch-пользователя `linaryx` с ID `684505240`, причем адрес канала обязателен:
+Команды из developer chat `#linaryx` принимает только Twitch-пользователь
+`linaryx` (`684505240`), адрес канала обязателен:
 
 ```text
 !chatyx refresh -c channel
@@ -234,15 +211,33 @@ API на `localhost:3002` проверяется только при запус�
 !chatyx ping -c all
 ```
 
-## 📦 Деплой
+## ⚙️ Как это работает
 
-Frontend автоматически проверяется и публикуется на GitHub Pages workflow-файлом
-`.github/workflows/deploy-pages.yml`. Каждый push в `main` проходит через lint,
-typecheck, тесты, frontend build и проверку Docker-образа chat sources bridge.
+```text
+Twitch IRC / GQL ───────────────┐
+7TV / BTTV / FFZ / IVR APIs ────┼──> ChatYX frontend ──> OBS Browser Source
+YouTube / Kick ──> chat sources bridge ───┘
+```
 
-GitHub Pages размещает только frontend. По умолчанию он подключается к hosted
-chat sources bridge на `wss://ytwss.ruina.team`; Docker-инструкция выше позволяет
-запустить собственный экземпляр.
+Frontend статический. Twitch IRC подключается из Browser Source напрямую,
+поэтому чат не зависит от backend ChatYX.
+
+<details>
+<summary>Статус сервисов</summary>
+
+| Сервис | Статус | Использование |
+|---|---|---|
+| Frontend | [![Frontend status](https://img.shields.io/website?url=https%3A%2F%2Fchat.ruina.team%2F&style=flat-square&label=status&up_message=online&down_message=offline)](https://chat.ruina.team/) | Настройка и Browser Source |
+| Chat sources bridge | [![Chat sources status](https://img.shields.io/website?url=https%3A%2F%2Fytwss.ruina.team%2Fhealth&style=flat-square&label=status&up_message=online&down_message=offline)](https://ytwss.ruina.team/health) | YouTube Innertube и Kick realtime → WebSocket |
+| Twitch IRC | ![Twitch IRC](https://img.shields.io/badge/connection-direct-9146FF?style=flat-square&logo=twitch&logoColor=white) | Сообщения и moderation events |
+| 7TV API | [![7TV API status](https://img.shields.io/website?url=https%3A%2F%2F7tv.io%2Fv3%2Femote-sets%2Fglobal&style=flat-square&logo=7tv&label=status&up_message=online&down_message=offline)](https://7tv.io/) | Эмоуты, пейнты и EventAPI |
+| BetterTTV API | [![BetterTTV API status](https://img.shields.io/website?url=https%3A%2F%2Fapi.betterttv.net%2F3%2Fcached%2Femotes%2Fglobal&style=flat-square&label=status&up_message=online&down_message=offline)](https://betterttv.com/) | Глобальные и канальные эмоуты |
+| FrankerFaceZ | [![FrankerFaceZ status](https://img.shields.io/website?url=https%3A%2F%2Fwww.frankerfacez.com%2F&style=flat-square&label=status&up_message=online&down_message=offline)](https://www.frankerfacez.com/) | API эмоутов и бейджей |
+| IVR API | [![IVR API status](https://img.shields.io/website?url=https%3A%2F%2Fapi.ivr.fi%2Fv2%2Ftwitch%2Fuser%3Flogin%3Dtwitch&style=flat-square&label=status&up_message=online&down_message=offline)](https://api.ivr.fi/) | Twitch metadata и fallback-бейджи |
+
+Бейджи проверяют HTTP endpoints при загрузке страницы.
+
+</details>
 
 ## 🧱 Стек
 
@@ -268,14 +263,8 @@ chat sources bridge на `wss://ytwss.ruina.team`; Docker-инструкция �
 
 ## 📄 Лицензия
 
-ChatYX, включая frontend и chat sources bridge, распространяется под
+ChatYX распространяется под
 [GNU GPL версии 3, без «или более поздней версии»](LICENSE) (`GPL-3.0-only`).
-Можно использовать, изменять и распространять оверлей при соблюдении GPL,
-включая предоставление соответствующих исходников при распространении сборок.
-Программа предоставляется без каких-либо гарантий.
-
-Исходное уведомление `Copyright (c) 2025 Linaryx` и полный текст MIT сохранены
-в [LICENSE-MIT](LICENSE-MIT) для ранее опубликованного MIT-кода. Переход не
-отменяет ранее выданные MIT-права и не меняет лицензии сторонних компонентов.
-Область действия, сохранение уведомлений и обязанности распространителей:
+Исходное уведомление `Copyright (c) 2025 Linaryx` и текст MIT для ранее
+опубликованного кода — в [LICENSE-MIT](LICENSE-MIT). Подробности:
 [Licensing](documents/LICENSING.md).
