@@ -1,17 +1,25 @@
 <div align="center">
 
+<img src="public/img/Peepo.png" alt="Peepo — маскот ChatYX" width="120" />
+
 # ChatYX
 
-**Чат, который не стыдно поставить на стрим.**
-
-Twitch, YouTube Live Chat и Kick в одном аккуратном OBS-оверлее.
+**OBS-оверлей чата: Twitch, YouTube и Kick в одном Browser Source.**
 
 [![Build](https://img.shields.io/github/actions/workflow/status/Linaryx/ChatYX/deploy-pages.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=build)](https://github.com/Linaryx/ChatYX/actions/workflows/deploy-pages.yml)
+[![Version](https://img.shields.io/github/package-json/v/Linaryx/ChatYX?style=for-the-badge&label=version)](https://github.com/Linaryx/ChatYX/blob/main/package.json)
 [![Frontend](https://img.shields.io/website?url=https%3A%2F%2Fchat.ruina.team%2F&style=for-the-badge&label=frontend&up_message=online&down_message=offline)](https://chat.ruina.team/)
 [![Chat sources](https://img.shields.io/website?url=https%3A%2F%2Fytwss.ruina.team%2Fhealth&style=for-the-badge&label=Chat%20sources&up_message=online&down_message=offline)](https://ytwss.ruina.team/health)
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue?style=for-the-badge)](LICENSE)
 
 ### [Открыть настройку оверлея](https://chat.ruina.team/)
+
+[Возможности](#-возможности) •
+[Отличия](#-отличия) •
+[Атрибуты](#-атрибуты-сообщений) •
+[Запуск в OBS](#-запуск-в-obs) •
+[Разработка](#-локальная-разработка) •
+[Команды](#-команды-в-чате)
 
 </div>
 
@@ -19,7 +27,7 @@ ChatYX превращает Twitch, YouTube и Kick чат в настраива
 Он показывает эмоуты, бейджи, 7TV-пейнты, cheers и ответы, не ломая строку при
 zero-width эмоутах и динамических обновлениях косметики.
 
-## Что внутри
+## ✨ Возможности
 
 - Twitch IRC в реальном времени, без стороннего чат-сервера.
 - YouTube Live Chat через hosted Innertube bridge с возможностью self-hosting.
@@ -31,7 +39,43 @@ zero-width эмоутах и динамических обновлениях к�
 - Живое превью прямо на странице настройки.
 - Встроенная debug-панель с FPS, frame time, памятью и long tasks.
 
-## Статус сервисов
+## 🆚 Отличия
+
+| | ChatYX | Облачные виджеты ¹ | Десктоп-клиенты ² |
+|---|---|---|---|
+| Twitch, YouTube и Kick в одном оверлее | ✅ | ➖ | ❌ |
+| Работа без аккаунта | ✅ | ❌ | ✅ |
+| Открытый исходный код | ✅ GPL-3.0 | ❌ | ✅ |
+| Self-hosting | ✅ | ❌ | ➖ |
+| Прямой Twitch IRC без посредников | ✅ | ➖ | ✅ |
+| 7TV-пейнты ников | ✅ | ➖ | ➖ |
+| Zero-width эмоуты | ✅ | ➖ | ➖ |
+| Живое превью при настройке | ✅ | ✅ | ➖ |
+
+¹ StreamElements, Streamlabs и подобные. ² Chatterino и подобные.
+➖ — нет из коробки или устроено иначе.
+
+## 🧩 Атрибуты сообщений
+
+Каждая строка чата — `.chat_line` со стабильными хуками. Удобно для своих
+скриптов, тем и отладки:
+
+| Хук | Где | Содержимое |
+|---|---|---|
+| `data-platform` | `.chat_line` | `twitch`, `youtube` или `kick` |
+| `data-nick` | `.chat_line` | Логин автора |
+| `data-user-id` | `.chat_line` | ID автора |
+| `data-time` | `.chat_line` | Unix-время сообщения в мс |
+| `data-id` | `.chat_line` | ID сообщения |
+| `data-event` | `.chat_line` | Тип Twitch-события, если есть |
+| `.badge` | строка | Бейджи автора по порядку |
+| `.user_info`, `.nick`, `.colon` | строка | Ник и разделитель |
+| `.message` | строка | Текст и эмоуты сообщения |
+| `.emote-container` | `.message` | Обёртка эмоута |
+| `.reply_line` | строка | Превью ответа |
+| `.mention`, `.chat-link` | `.message` | Упоминания и ссылки |
+
+## 📡 Статус сервисов
 
 | Сервис | Статус | Использование |
 |---|---|---|
@@ -46,7 +90,7 @@ zero-width эмоутах и динамических обновлениях к�
 Статусные бейджи проверяют доступность HTTP endpoints при загрузке README. Twitch
 IRC подключается из Browser Source напрямую и не зависит от backend ChatYX.
 
-## Как это работает
+## ⚙️ Как это работает
 
 ```text
 Twitch IRC / GQL ───────────────┐
@@ -58,7 +102,7 @@ Frontend остаётся статическим и публикуется на 
 проходят через отдельный WebSocket bridge: запросы к Innertube из браузера
 ограничены CORS, а Kick realtime connection не требует передавать секреты в OBS.
 
-## Запуск в OBS
+## 🚀 Запуск в OBS
 
 1. Откройте [chat.ruina.team](https://chat.ruina.team/).
 2. Укажите Twitch-канал и настройте внешний вид.
@@ -68,7 +112,7 @@ Frontend остаётся статическим и публикуется на 
 Прозрачный фон уже настроен. Размер Browser Source лучше выбирать под сцену,
 например `1920x1080`.
 
-## Локальная разработка
+## 🛠 Локальная разработка
 
 Понадобится [Bun](https://bun.sh) версии `1.3.14` или новее.
 
@@ -92,7 +136,7 @@ bun run dev
 | `bun run start` | Открывает локальный preview сборки |
 | `bun run check` | Запускает lint, typecheck, тесты и build |
 
-## Внешние источники чата
+## 🌐 Внешние источники чата
 
 YouTube.js работает на JavaScript, но перенести весь чат в GitHub Pages нельзя.
 Браузер блокирует запросы к Innertube endpoints по CORS. Kick worker использует
@@ -141,7 +185,7 @@ docker run -e YOUTUBE_PROXY_URL=http://proxy.example:1080 chatyx-youtube-websock
 Для production поставьте перед сервисом Caddy, Nginx или другой reverse proxy с
 поддержкой WebSocket и TLS.
 
-## Конфигурация
+## 🔧 Конфигурация
 
 Настройки оверлея хранятся прямо в query-параметрах ссылки. Их не нужно писать
 вручную: setup-страница собирает URL сама.
@@ -162,7 +206,7 @@ API на `localhost:3002` проверяется только при запус�
 
 Чтобы открыть performance monitor, добавьте к URL параметр `debug=true`.
 
-## Команды в чате
+## 💬 Команды в чате
 
 Управлять оверлеем могут владелец канала, `lead_moderator` и `moderator`.
 Команды выполняются даже когда их отображение выключено в настройках: этот
@@ -190,7 +234,7 @@ API на `localhost:3002` проверяется только при запус�
 !chatyx ping -c all
 ```
 
-## Деплой
+## 📦 Деплой
 
 Frontend автоматически проверяется и публикуется на GitHub Pages workflow-файлом
 `.github/workflows/deploy-pages.yml`. Каждый push в `main` проходит через lint,
@@ -200,7 +244,7 @@ GitHub Pages размещает только frontend. По умолчанию �
 chat sources bridge на `wss://ytwss.ruina.team`; Docker-инструкция выше позволяет
 запустить собственный экземпляр.
 
-## Стек
+## 🧱 Стек
 
 <p align="center">
   <a href="https://www.solidjs.com/"><img alt="SolidJS" src="https://img.shields.io/badge/SolidJS-2C4F7C?style=for-the-badge&logo=solid&logoColor=white"></a>
@@ -222,7 +266,7 @@ chat sources bridge на `wss://ytwss.ruina.team`; Docker-инструкция �
 | Качество | Oxlint, TypeScript, Bun Test, GitHub Actions |
 | Деплой | GitHub Pages, Docker, Northflank |
 
-## Лицензия
+## 📄 Лицензия
 
 ChatYX, включая frontend и chat sources bridge, распространяется под
 [GNU GPL версии 3, без «или более поздней версии»](LICENSE) (`GPL-3.0-only`).
