@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/img/emote-1x.webp" alt="Маскот ChatYX" width="70" />
+<img src="public/img/emote-3x.webp" alt="Маскот ChatYX" width="70" />
 
 # ChatYX
 
