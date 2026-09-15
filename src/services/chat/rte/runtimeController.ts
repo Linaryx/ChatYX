@@ -1,15 +1,15 @@
 import type { ChatConfig } from "~/config/chatUrlParams";
-import { parseRteTtsCommand } from "./rteTtsCommand";
-import { getRteChatSpeechRequest } from "./rteTtsMessagePolicy";
-import { resolveRussianTtsVoice } from "./rteTtsVoices";
+import { parseRteTtsCommand } from "./command";
+import { getRteChatSpeechRequest } from "./messagePolicy";
+import { resolveRussianTtsVoice } from "./voices";
 import type {
   RteTtsConfig,
   RteTtsEnqueueResult,
   RteTtsProvider,
   RteTtsRequest,
   RteTtsUser,
-} from "./rteTtsTypes";
-import type { TwitchMessage } from "./twitchService";
+} from "./types";
+import type { TwitchMessage } from "../twitch/twitchService";
 
 export interface RteTtsRuntime {
   updateConfig(config: RteTtsConfig): void;

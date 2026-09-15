@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { SevenTVPaintService, type Paint } from "../src/services/chat/sevenTVPaintService";
+import { SevenTVPaintService, type Paint } from "../src/services/chat/seven-tv/paintService";
 
 function createPaint(): Paint {
   return {

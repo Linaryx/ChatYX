@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { SevenTVCosmeticsService } from "../src/services/chat/sevenTVCosmeticsService";
-import { SevenTVEventApiService } from "../src/services/chat/sevenTVEventApi";
+import { SevenTVCosmeticsService } from "../src/services/chat/seven-tv/cosmeticsService";
+import { SevenTVEventApiService } from "../src/services/chat/seven-tv/eventApi";
 
 const originalFetch = globalThis.fetch;
 

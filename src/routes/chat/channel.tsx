@@ -1,5 +1,4 @@
 import {
-  createEffect,
   createMemo,
   createSignal,
   onCleanup,
@@ -10,76 +9,26 @@ import { PerfMonitor } from "~/components/debug/PerfMonitor";
 import { Title } from "@solidjs/meta";
 import { LoadingScreen } from "~/components/LoadingScreen";
 import { ChatMessageList } from "~/components/chat/ChatMessageList";
-import {
-  createPreviewPredictionEvent,
-  PredictionProgressOverlay,
-} from "~/components/predictions/PredictionProgressOverlay";
+import { PredictionProgressOverlay } from "~/components/predictions/PredictionProgressOverlay";
 import { parseChatConfigFromSearchParams } from "~/config/chatUrlParams";
 import {
-  createChatPresentationConfig,
-  OverlayRuntime,
-  ChatPresentationService,
-  type ChatCommandStatus,
-  emoteService,
-  mentionStyleService,
-  sevenTVCosmeticsService,
+  type ChatPresentationService,
   type TwitchMessage,
 } from "~/services/chat";
-import { setRteProxyEnabled } from "~/services/network/networkClient";
-import { badgeService } from "~/services/badges";
-import {
-  createTwitchPredictionsClient,
-  type TwitchPredictionEvent,
-} from "~/services/predictions/twitchPredictions";
+import type { TwitchPredictionEvent } from "~/services/predictions/twitchPredictions";
 import "~/styles/chat.css";
 import type { ChatConfig } from "~/utils/chat";
+import type { PreviewDemoKind } from "~/services/chat/preview";
+import { DEFAULT_ANIMATION_OPTIONS } from "~/utils/ui/animationUtils";
 import {
-  fetchChannelUsers,
-  resolveChannelId,
-  nextPreviewMessage,
-  createPreviewMessages,
-  injectPreviewStyles,
-  cleanupPreviewStyles,
-  isChatPreviewConfigMessage,
-  type PreviewDemoKind,
-} from "~/services/chat/preview";
-import {
-  DEFAULT_ANIMATION_OPTIONS,
-  getAnimationScrollBehavior,
-  hasMessageEntryAnimation,
-  messageSpeedToIntervalMs,
-} from "~/utils/ui/animationUtils";
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function hexToRgb(hex: string): string {
-  const normalized = hex.trim().replace(/^#/, "");
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return "0, 0, 0";
-  const r = Number.parseInt(normalized.slice(0, 2), 16);
-  const g = Number.parseInt(normalized.slice(2, 4), 16);
-  const b = Number.parseInt(normalized.slice(4, 6), 16);
-  return `${r}, ${g}, ${b}`;
-}
-
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  fallback: T,
-): Promise<T> {
-  return new Promise((resolve) => {
-    const timeout = window.setTimeout(() => resolve(fallback), timeoutMs);
-    promise
-      .then(resolve)
-      .catch(() => resolve(fallback))
-      .finally(() => window.clearTimeout(timeout));
-  });
-}
-
-function isTwitchUserId(value: string): boolean {
-  return /^\d+$/.test(value) && value !== "0";
-}
+  createChatOverlayApplication,
+  type ChatCommandStatus,
+  createChromeStyle,
+  createContainerStyle,
+  createLoadingBackground,
+  createOverlayRootStyle,
+  createSurfaceStyle,
+} from "~/features/chat-overlay";
 
 function parsePreviewDemoKind(raw: string | null): PreviewDemoKind {
   return raw === "emote" ? "emote" : "pasta";
@@ -94,6 +43,9 @@ export default function ChatOverlay() {
   const isDebug = urlParams.get("debug") === "true";
   const initialConfig = parseChatConfigFromSearchParams(urlParams);
   const channel = initialConfig.channel || (isPreview ? "chatyxpreview" : "");
+  const runtimeConfig = isPreview
+    ? parseChatConfigFromSearchParams(urlParams, { channel })
+    : initialConfig;
   const hasChannel = Boolean(
     channel || initialConfig.youtubeChannel || initialConfig.kickChannel,
   );
@@ -114,34 +66,34 @@ export default function ChatOverlay() {
     null,
   );
   const [predictionNow, setPredictionNow] = createSignal(Date.now());
-  let previewService: ChatPresentationService | null = null;
-  let previewInterval: number | undefined;
-  let previewChannelId = "0";
-  let previewReady = false;
-  let previewDestroyed = false;
-  let activePreviewConfig = initialConfig;
-  let activePredictionsChannel = "";
-  let predictionsClient: ReturnType<typeof createTwitchPredictionsClient> | null =
-    null;
-  let predictionClock: number | undefined;
   const previewDemoKind = parsePreviewDemoKind(urlParams.get("demo"));
 
-  const runtime =
-    hasChannel && !isPreview
-      ? new OverlayRuntime(channel, {
+  const application = hasChannel
+    ? createChatOverlayApplication(
+        {
+          channel,
+          initialConfig: runtimeConfig,
+          mode: isPreview ? "preview" : "live",
+          previewDemoKind,
+        },
+        {
           onConfigResolved: setConfig,
           onServiceReady: setChatService,
-           onLoadingChange: ({ status, progress }) => {
-             setLoadingStatus(status);
-             setLoadingProgress(progress);
-           },
-           onCommandStatusChange: setCommandStatus,
+          onLoadingChange: ({ status, progress }) => {
+            setLoadingStatus(status);
+            setLoadingProgress(progress);
+          },
+          onCommandStatusChange: setCommandStatus,
           onConnectionChange: setIsConnected,
           onMessagesChange: (updater) => setMessages(updater),
           onAnimationDurationChange: setAnimationDurationMs,
           onChannelResolved: ({ displayName }) => setChannelDisplayName(displayName),
-        })
-      : null;
+          onPredictionChange: setPrediction,
+          onPredictionTimeChange: setPredictionNow,
+          onLoadingComplete: () => setIsLoading(false),
+        },
+      )
+    : null;
 
   const pageTitle = createMemo(() => {
     if (!hasChannel) return "ChatYX";
@@ -151,7 +103,7 @@ export default function ChatOverlay() {
   const chatVisible = createMemo(() => !isLoading() || loadingProgress() >= 100);
 
   const showPredictionsBar = createMemo(
-    () => Boolean((config() ?? initialConfig).showPredictions) && Boolean(channel),
+    () => Boolean((config() ?? runtimeConfig).showPredictions) && Boolean(channel),
   );
   const hasPredictionBar = createMemo(
     () => showPredictionsBar() && Boolean(prediction()),
@@ -162,383 +114,34 @@ export default function ChatOverlay() {
     );
   };
 
-  const stopPredictionsClient = () => {
-    predictionsClient?.stop();
-    predictionsClient = null;
-    activePredictionsChannel = "";
-  };
-
-  const clearPredictionClock = () => {
-    if (predictionClock === undefined) return;
-    window.clearInterval(predictionClock);
-    predictionClock = undefined;
-  };
-
-  createEffect(() => {
-    const cfg = config();
-    if (!cfg) return;
-
-    const channelLogin = cfg.channel.trim().toLowerCase();
-    const enabled = Boolean(cfg.showPredictions && channelLogin);
-
-    if (!enabled) {
-      stopPredictionsClient();
-      setPrediction(null);
-      clearPredictionClock();
-      return;
-    }
-
-    if (predictionClock === undefined) {
-      predictionClock = window.setInterval(
-        () => setPredictionNow(Date.now()),
-        1000,
-      );
-    }
-
-    if (isPreview) {
-      stopPredictionsClient();
-      setPrediction(createPreviewPredictionEvent());
-      return;
-    }
-
-    if (predictionsClient && activePredictionsChannel === channelLogin) {
-      return;
-    }
-
-    stopPredictionsClient();
-    const client = createTwitchPredictionsClient({
-      channelLogin,
-      onPrediction: setPrediction,
-      onError: (error) => {
-        console.warn("[Predictions]", error.message);
-      },
-    });
-    predictionsClient = client;
-    activePredictionsChannel = channelLogin;
-    client.start();
-  });
-
-  const clearPreviewInterval = () => {
-    if (previewInterval === undefined) return;
-    window.clearInterval(previewInterval);
-    previewInterval = undefined;
-  };
-
-  const appendPreviewMessage = () => {
-    if (!previewService || previewDestroyed) return;
-
-    const nextMsg = nextPreviewMessage(
-      channel,
-      previewService,
-      previewChannelId,
-      previewDemoKind,
-      activePreviewConfig.showGifs,
-    );
-    mentionStyleService.registerMessageAuthor(nextMsg);
-    setMessages((current) => {
-      const next = [...current, nextMsg];
-      return next.length > 30 ? next.slice(-30) : next;
-    });
-    previewService.scrollToLatest(
-      getAnimationScrollBehavior(activePreviewConfig.animation),
-    );
-  };
-
-  const restartPreviewInterval = () => {
-    clearPreviewInterval();
-    if (!previewReady) return;
-
-    const intervalMs = messageSpeedToIntervalMs(
-      activePreviewConfig.messageSpeed,
-    );
-    if (intervalMs !== null) {
-      previewInterval = window.setInterval(appendPreviewMessage, intervalMs);
-    }
-  };
-
-  const hasSameDataSource = (nextConfig: ChatConfig) =>
-    nextConfig.channel === activePreviewConfig.channel &&
-    nextConfig.youtubeChannel === activePreviewConfig.youtubeChannel &&
-    nextConfig.youtubeWebSocketUrl === activePreviewConfig.youtubeWebSocketUrl &&
-    nextConfig.kickChannel === activePreviewConfig.kickChannel &&
-    nextConfig.kickWebSocketUrl === activePreviewConfig.kickWebSocketUrl &&
-    nextConfig.show7tvUnlisted === activePreviewConfig.show7tvUnlisted;
-
-  const handlePreviewConfigMessage = (event: MessageEvent<unknown>) => {
-    if (
-      window.parent === window ||
-      event.source !== window.parent ||
-      event.origin !== window.location.origin ||
-      !isChatPreviewConfigMessage(event.data) ||
-      !hasSameDataSource(event.data.config)
-    ) {
-      return;
-    }
-
-    const nextConfig = event.data.config;
-    if (!isPreview) {
-      runtime?.updateConfig(nextConfig);
-      setConfig(nextConfig);
-      return;
-    }
-
-    setRteProxyEnabled(nextConfig.rteProxy);
-    const speedChanged =
-      activePreviewConfig.messageSpeed !== nextConfig.messageSpeed;
-    activePreviewConfig = nextConfig;
-    setConfig(nextConfig);
-    injectPreviewStyles(nextConfig);
-
-    if (previewService) {
-      const presentationConfig = createChatPresentationConfig(nextConfig);
-      presentationConfig.userId = previewChannelId;
-      previewService.updateConfig(presentationConfig);
-      setAnimationDurationMs(
-        hasMessageEntryAnimation(nextConfig.animation)
-          ? presentationConfig.animation.duration
-          : 0,
-      );
-      previewService.scrollToLatest(
-        getAnimationScrollBehavior(nextConfig.animation),
-      );
-    }
-
-    if (speedChanged) restartPreviewInterval();
-  };
-
-  const overlayRootStyle = createMemo(() => {
-    return {
-      position: "absolute",
-      inset: "0",
-      width: "100%",
-      height: "100%",
-      "max-height": "100vh",
-      display: "flex",
-      "flex-direction": "column",
-      "align-items": "stretch",
-      "box-sizing": "border-box",
-      "z-index": "10000",
-      "pointer-events": "none",
-      opacity: chatVisible() ? "1" : "0",
-      overflow: "hidden",
-      transition: [
-        "opacity 0.5s ease-in",
-      ].join(", "),
-    } as const;
-  });
+  const overlayRootStyle = createMemo(() =>
+    createOverlayRootStyle(chatVisible()),
+  );
 
   const surfaceStyle = createMemo(() => {
-    const cfg = config() ?? initialConfig;
-    const bgOpacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
-    const borderOpacity = clamp(cfg.overlayBorderOpacity, 0, 100) / 100;
-    const borderRadius = clamp(cfg.overlayBackgroundRadius, 0, 128);
-    const padding = borderRadius > 0 ? clamp(cfg.overlayPadding, 0, 128) : 0;
+    const cfg = config() ?? runtimeConfig;
     const fadeDurationMs = chatService()?.getConfig().fade.fadeOutDuration ?? 1000;
-
-    return {
-      position: "relative",
-      width: "100%",
-      height: "100%",
-      display: "flex",
-      "flex-direction": "column",
-      "align-items": "stretch",
-      "justify-content":
-        cfg.reverseLineOrder && !cfg.horizontal ? "flex-start" : "flex-end",
-      padding: `${padding}px`,
-      "box-sizing": "border-box",
-      "pointer-events": "none",
-      overflow: "hidden",
-      "background-color": `rgba(${hexToRgb(cfg.overlayBackgroundColor)}, ${bgOpacity})`,
-      border: borderOpacity > 0
-        ? `1px solid rgba(255, 255, 255, ${borderOpacity})`
-        : "1px solid transparent",
-      "border-radius": `${borderRadius}px`,
-      "--chat-surface-padding": `${padding}px`,
-      transition: [
-        `background-color ${fadeDurationMs}ms ease-out`,
-        `border-color ${fadeDurationMs}ms ease-out`,
-      ].join(", "),
-    } as const;
+    return createSurfaceStyle(cfg, fadeDurationMs);
   });
 
-  const chromeStyle = createMemo(() => {
-    return {
-      position: "relative",
-      width: "100%",
-      "max-width": "100%",
-      "max-height": "100%",
-      display: "block",
-      "flex-shrink": "1",
-      padding: "0",
-      "box-sizing": "border-box",
-      "pointer-events": "none",
-      overflow: "hidden",
-    } as const;
-  });
+  const chromeStyle = createChromeStyle();
 
-  const loadingBackground = createMemo(() => {
-    const cfg = config() ?? initialConfig;
-    const opacity = clamp(cfg.overlayBackgroundOpacity, 0, 100) / 100;
-    return `rgba(${hexToRgb(cfg.overlayBackgroundColor)}, ${opacity})`;
-  });
+  const loadingBackground = createMemo(() =>
+    createLoadingBackground(config() ?? runtimeConfig),
+  );
 
-  const containerStyle = createMemo(() => ({
-    position: "relative",
-    width: "100%",
-    "max-width": "100%",
-    "max-height": "100%",
-    padding: "0",
-    "box-sizing": "border-box",
-    "pointer-events": "none",
-    overflow: "hidden",
-    "z-index": "1",
-  }) as const);
-
-  createEffect(() => {
-    document.title = pageTitle();
-  });
+  const containerStyle = createContainerStyle();
 
   onMount(() => {
-    window.addEventListener("message", handlePreviewConfigMessage);
-
-    if (isPreview) {
-      const previewConfig = parseChatConfigFromSearchParams(urlParams, { channel });
-      activePreviewConfig = previewConfig;
-      setRteProxyEnabled(previewConfig.rteProxy);
-      previewService = new ChatPresentationService(
-        createChatPresentationConfig(previewConfig),
-      );
-
-      mentionStyleService.reset();
-      previewService.updateConfig({ userId: "0" });
-
-      setConfig(previewConfig);
-      const previewAnimationDuration = hasMessageEntryAnimation(
-        previewConfig.animation,
-      )
-        ? previewService.getConfig().animation.duration
-        : 0;
-      const previewIntervalMs = messageSpeedToIntervalMs(
-        previewConfig.messageSpeed,
-      );
-
-      setChatService(previewService);
-      setAnimationDurationMs(previewAnimationDuration);
-      setChannelDisplayName(channel);
-      setIsConnected(true);
-      const previewContainer = document.getElementById("chat_container");
-      if (previewContainer) {
-        previewService.initializeLayout(previewContainer);
-      }
-      injectPreviewStyles(previewConfig);
-
-      void (async () => {
-        const isRealChannel = Boolean(channel && channel !== "chatyxpreview");
-        setLoadingStatus("Подготавливаем предпросмотр...");
-        setLoadingProgress(25);
-
-        previewChannelId = isRealChannel
-          ? await withTimeout(resolveChannelId(channel), 8000, "0")
-          : "0";
-
-        setLoadingStatus("Загружаем данные предпросмотра...");
-        setLoadingProgress(55);
-
-        const hasResolvedChannelId = isTwitchUserId(previewChannelId);
-        const bgLoading = Promise.allSettled([
-          withTimeout(
-            emoteService.loadEmotes(previewChannelId, channel, {
-              show7tvUnlisted: previewConfig.show7tvUnlisted,
-            }),
-            12000,
-            undefined,
-          ),
-          ...(isRealChannel && hasResolvedChannelId
-            ? [
-                withTimeout(
-                  badgeService.loadBadges(channel, previewChannelId),
-                  10000,
-                  undefined,
-                ),
-                withTimeout(
-                  sevenTVCosmeticsService.loadCosmetics(previewChannelId),
-                  10000,
-                  undefined,
-                ),
-              ]
-            : []),
-        ]);
-
-        if (isRealChannel) {
-          await withTimeout(
-            fetchChannelUsers(channel, hasResolvedChannelId ? previewChannelId : "0"),
-            10000,
-            undefined,
-          );
-        }
-        await bgLoading;
-
-        setLoadingStatus("Отрисовываем предпросмотр...");
-        setLoadingProgress(85);
-
-        window.setTimeout(() => {
-          if (previewDestroyed) return;
-          const service = previewService;
-          if (!service) return;
-
-          const previewMessages = createPreviewMessages(
-            channel,
-            service,
-            previewChannelId,
-            previewDemoKind,
-            6,
-            previewConfig.showGifs,
-          );
-          previewMessages.forEach((msg) => mentionStyleService.registerMessageAuthor(msg));
-
-          setMessages(previewMessages);
-          service.scrollToLatest(
-            getAnimationScrollBehavior(previewConfig.animation),
-          );
-          setLoadingProgress(100);
-          setLoadingStatus("Предпросмотр готов");
-          setIsLoading(false);
-          previewReady = true;
-          if (previewIntervalMs !== null) restartPreviewInterval();
-        }, 700);
-      })().catch((error) => {
-        console.error("[Preview] Initialization failed:", error);
-        setLoadingStatus("Не удалось загрузить предпросмотр");
-        setLoadingProgress(100);
-        setIsLoading(false);
-      });
-
-      onCleanup(() => {
-        previewDestroyed = true;
-        clearPreviewInterval();
-        clearPredictionClock();
-        stopPredictionsClient();
-        cleanupPreviewStyles();
-      });
-
-      return;
-    }
-
-    if (!hasChannel || !runtime) {
+    if (!application) {
       // Channel parameter required — URL will show error state;
       return;
     }
-
-    setConfig(initialConfig);
-    void runtime.initialize();
+    void application.start();
   });
 
   onCleanup(() => {
-    window.removeEventListener("message", handlePreviewConfigMessage);
-    clearPredictionClock();
-    stopPredictionsClient();
-    runtime?.destroy();
-    if (isPreview) chatService()?.cleanup();
+    application?.destroy();
   });
 
   return (
@@ -562,7 +165,7 @@ export default function ChatOverlay() {
               <div
                 id="chat_chrome"
                 classList={{ "has-prediction": hasPredictionBar() }}
-                style={chromeStyle()}
+                style={chromeStyle}
               >
                 <Show when={hasPredictionBar()}>
                   <div class="chat-prediction-slot">
@@ -576,7 +179,7 @@ export default function ChatOverlay() {
                 <div
                   id="chat_container"
                   data-connected={isConnected() ? "true" : "false"}
-                  style={containerStyle()}
+                  style={containerStyle}
                 >
                   <ChatMessageList
                     messages={messages()}

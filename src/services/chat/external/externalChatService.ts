@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatPlatform } from "./message";
+import type { ChatMessage, ChatPlatform } from "../message";
 
 type ExternalAuthor = {
   name?: string;

@@ -1,7 +1,7 @@
 import type { ChatConfig } from "~/config/chatUrlParams";
 import { getAnimationScrollBehavior } from "~/utils/ui/animationUtils";
 import type { ChatPresentationService } from "../chatPresentationService";
-import type { TwitchMessage } from "../twitchService";
+import type { TwitchMessage } from "../twitch/twitchService";
 
 export type MessageUpdater = (messages: TwitchMessage[]) => TwitchMessage[];
 

@@ -1,4 +1,4 @@
-import type { TwitchEventType } from "~/services/chat/twitchService";
+import type { TwitchEventType } from "~/services/chat/twitch/twitchService";
 
 export function isReplyEligibleEvent(
   eventType: TwitchEventType | undefined,

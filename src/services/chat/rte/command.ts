@@ -1,4 +1,4 @@
-import { resolveRussianTtsVoice } from "./rteTtsVoices";
+import { resolveRussianTtsVoice } from "./voices";
 
 export type RteTtsCommand =
   | { readonly kind: "speak"; readonly text: string; readonly voice: string | null }

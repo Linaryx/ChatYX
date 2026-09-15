@@ -1,5 +1,5 @@
 import type { ChatConfig } from "~/config/chatUrlParams";
-import type { TwitchMessage } from "~/services/chat/twitchService";
+import type { TwitchMessage } from "~/services/chat/twitch/twitchService";
 
 const DOMAIN =
   "(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,63}";

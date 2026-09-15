@@ -1,4 +1,4 @@
-import type { RteTtsProvider } from "./rteTtsTypes";
+import type { RteTtsProvider } from "./types";
 
 export const RUSSIAN_TTS_VOICES = [
   { name: "Maxim", provider: "chatis", backendName: "Maxim" },

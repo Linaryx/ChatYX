@@ -1,5 +1,5 @@
 import type { Badge } from "~/services/badges/badgeService";
-import type { Paint } from "./sevenTVPaintService";
+import type { Paint } from "../seven-tv/paintService";
 
 const RTE_API_BASE = "https://ext.rte.net.ru:8443/api";
 

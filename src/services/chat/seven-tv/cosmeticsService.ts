@@ -1,5 +1,5 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
-import { networkClient } from "../network/networkClient";
+import { networkClient } from "../../network/networkClient";
 
 // 7TV cosmetics / paint loader and cache.
 export interface PaintGradient {

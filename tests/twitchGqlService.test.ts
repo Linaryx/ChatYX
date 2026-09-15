@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   parseLeaderboardUsers,
   twitchGqlService,
-} from "../src/services/chat/twitchGqlService";
+} from "../src/services/chat/twitch/twitchGqlService";
 
 const originalFetch = globalThis.fetch;
 const originalWindow = (globalThis as any).window;

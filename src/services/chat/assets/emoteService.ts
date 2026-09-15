@@ -4,7 +4,7 @@ import {
   fetchWithFallback,
   TWITCH_CONFIG,
 } from "~/config/twitch";
-import { networkClient } from "../network/networkClient";
+import { networkClient } from "../../network/networkClient";
 
 // Сервис для загрузки эмодзи из 7TV, FFZ, BTTV
 

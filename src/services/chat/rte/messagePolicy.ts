@@ -1,7 +1,7 @@
 import { parseBotNames, type ChatConfig } from "~/config/chatUrlParams";
 import { BotFilterService } from "~/utils/botFilter";
-import type { RteTtsProvider, RteTtsRequest } from "./rteTtsTypes";
-import type { TwitchMessage } from "./twitchService";
+import type { RteTtsProvider, RteTtsRequest } from "./types";
+import type { TwitchMessage } from "../twitch/twitchService";
 
 export function getRteChatSpeechRequest(
   config: ChatConfig,

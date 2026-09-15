@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { RteCosmeticsService } from "../src/services/chat/rteCosmeticsService";
+import { RteCosmeticsService } from "../src/services/chat/rte/cosmeticsService";
 
 function sequenceFetch(responses: Array<Response | Error>) {
   const urls: string[] = [];

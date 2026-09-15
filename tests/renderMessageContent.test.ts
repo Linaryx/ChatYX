@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderMessageWithEmotes } from "../src/components/chat/renderMessageContent";
 import { DEFAULT_CHAT_CONFIG } from "../src/config/chatUrlParams";
 import type { ChatPresentationService } from "../src/services/chat/chatPresentationService";
-import type { TwitchMessage } from "../src/services/chat/twitchService";
+import type { TwitchMessage } from "../src/services/chat/twitch/twitchService";
 import { createMessageTokenSnapshot } from "../src/utils/chat/emojiUtils";
 import { setRteProxyEnabled } from "../src/services/network/rteProxyTransport";
 

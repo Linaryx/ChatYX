@@ -1,5 +1,5 @@
 import { badgeService } from "~/services/badges";
-import { twitchGqlService, type TwitchGqlBadge } from "~/services/chat/twitchGqlService";
+import { twitchGqlService, type TwitchGqlBadge } from "../twitch/twitchGqlService";
 
 export type PreviewRealUser = {
   username: string;

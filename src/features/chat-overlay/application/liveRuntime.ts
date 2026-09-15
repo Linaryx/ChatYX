@@ -6,13 +6,13 @@ import {
 import {
   ChatPresentationService,
   createChatPresentationConfig,
-  emoteService,
-  mentionStyleService,
-  chatFeatureIntegration,
-  type TwitchMessage,
-} from "~/services/chat";
+} from "~/services/chat/chatPresentationService";
+import { emoteService } from "~/services/chat/assets/emoteService";
+import { mentionStyleService } from "~/services/chat/mentionStyleService";
+import { chatFeatureIntegration } from "~/services/chat/chatFeatureIntegration";
+import type { TwitchMessage } from "~/services/chat/twitch/twitchService";
 import { setRteProxyEnabled } from "~/services/network/networkClient";
-import { fetchRecentMessages } from "~/services/chat/recentMessagesService";
+import { fetchRecentMessages } from "~/services/chat/twitch/recentMessagesService";
 import {
   getAnimationScrollBehavior,
   hasMessageEntryAnimation,
@@ -27,8 +27,8 @@ import {
   parseChatRefreshScope,
   parseTestMessageCount,
 } from "./chatCommandService";
-import { createBrowserRteRuntime } from "./browserRteTts";
-import type { RteRuntime } from "./rteRuntimeController";
+import { createBrowserRteRuntime } from "~/services/chat/rte/browserRuntime";
+import type { RteRuntime } from "~/services/chat/rte/runtimeController";
 import {
   AnnouncementColorResolver,
   ChatAssetLoader,
@@ -37,29 +37,8 @@ import {
   MessagePreparationPipeline,
   MessageQueueManager,
   OverlayStyleManager,
-  type ChannelIdentity,
-  type MessageUpdater,
-} from "./runtime";
-
-type LoadingState = {
-  status: string;
-  progress: number;
-};
-
-export type ChatCommandStatus = {
-  text: string;
-};
-
-type OverlayRuntimeHooks = {
-  onConfigResolved: (config: ChatConfig) => void;
-  onServiceReady: (service: ChatPresentationService) => void;
-  onLoadingChange: (state: LoadingState) => void;
-  onCommandStatusChange: (status: ChatCommandStatus | null) => void;
-  onConnectionChange: (connected: boolean) => void;
-  onMessagesChange: (updater: MessageUpdater) => void;
-  onAnimationDurationChange: (durationMs: number) => void;
-  onChannelResolved: (resolution: ChannelIdentity) => void;
-};
+} from "~/services/chat/runtime";
+import type { ChatCommandStatus, ChatRuntimeHooks } from "./runtimeHooks";
 
 function removeMessageElements(selector: string, tracked: number[]) {
   const remove = () => {
@@ -85,7 +64,7 @@ function setTrackedTimeout(
   return id;
 }
 
-export class OverlayRuntime {
+export class LiveChatRuntime {
   private readonly commandFeedback = new ChatCommandFeedback();
   private readonly styleManager = new OverlayStyleManager();
   private readonly announcementColorResolver: AnnouncementColorResolver;
@@ -107,76 +86,10 @@ export class OverlayRuntime {
   private reloadInProgress = false;
   private initializationGeneration = 0;
   private readonly externalConnectedPlatforms = new Set<"youtube" | "kick">();
-  private readonly eventHandlers = {
-    messageDeleted: (event: Event) => {
-      const customEvent = event as CustomEvent<{ messageId: string }>;
-      const { messageId } = customEvent.detail;
-      this.rteRuntime.cancelMessage(messageId);
-      this.messagePipeline.cancelMessage(messageId);
-      this.messageQueue.discard((message) => message.id === messageId);
-      this.hooks.onMessagesChange((messages) =>
-        messages.filter((message) => message.id !== messageId),
-      );
-    },
-    userTimeout: (event: Event) => {
-      const customEvent = event as CustomEvent<{ username: string }>;
-      const username = customEvent.detail.username.toLowerCase();
-      this.rteRuntime.cancelUser({ username });
-      this.messagePipeline.cancelUser(username);
-      this.messageQueue.discard(
-        (message) => message.username.toLowerCase() === username,
-      );
-      this.hooks.onMessagesChange((messages) =>
-        messages.filter((message) => message.username.toLowerCase() !== username),
-      );
-    },
-    userBanned: (event: Event) => {
-      const customEvent = event as CustomEvent<{ username: string }>;
-      const username = customEvent.detail.username.toLowerCase();
-      this.rteRuntime.cancelUser({ username });
-      this.messagePipeline.cancelUser(username);
-      this.messageQueue.discard(
-        (message) => message.username.toLowerCase() === username,
-      );
-      this.hooks.onMessagesChange((messages) =>
-        messages.filter((message) => message.username.toLowerCase() !== username),
-      );
-    },
-    chatCleared: () => {
-      log.debug(LOG_CATEGORIES.INTEGRATION, "Clearing all chat messages");
-      this.rteRuntime.cancelAll();
-      this.messagePipeline.cancelPending();
-      this.messageQueue.clear();
-      this.messageQueue.clearRefreshes();
-      this.hooks.onMessagesChange(() => []);
-    },
-    sevenTvEvent: (event: Event) => {
-      const customEvent = event as CustomEvent<{ type: string }>;
-      const eventType = customEvent.detail.type;
-      log.debug(
-        LOG_CATEGORIES.INTEGRATION,
-        `7TV Event: ${eventType}`,
-      );
-
-      if (eventType.startsWith("cosmetic.") || eventType.startsWith("entitlement.")) {
-        this.chatService?.clearPaintCache();
-      }
-
-      if (eventType === "user.update") {
-        log.info(
-          LOG_CATEGORIES.INTEGRATION,
-          "Reloading 7TV emotes due to set change",
-        );
-        void emoteService.reload7TVEmotes().catch((error) => {
-          log.error(LOG_CATEGORIES.EMOTES, "Failed to reload 7TV emotes", error);
-        });
-      }
-    },
-  };
 
   constructor(
     private readonly channel: string,
-    private readonly hooks: OverlayRuntimeHooks,
+    private readonly hooks: ChatRuntimeHooks,
     rteRuntime: RteRuntime = createBrowserRteRuntime(),
   ) {
     this.rteRuntime = rteRuntime;
@@ -330,7 +243,9 @@ export class OverlayRuntime {
 
     if (channelId) {
       this.setLoading("Подключение 7TV EventAPI...", 70);
-      await chatFeatureIntegration.initialize(channelId).catch((error) => {
+      await chatFeatureIntegration.initialize(channelId, (event) => {
+        this.handleSevenTvEvent(event.type);
+      }).catch((error) => {
         log.error(LOG_CATEGORIES.INTEGRATION, "Failed to initialize chat feature integration", error);
       });
       if (!this.isInitializationCurrent(initializationGeneration)) return;
@@ -369,8 +284,6 @@ export class OverlayRuntime {
     this.setLoading("Фоновая загрузка данных...", 85);
     void this.assetLoader.loadDeferredAssets(channelId, hasTwitchChannel);
 
-    this.setupEventListeners();
-
     this.setLoading(
       hasTwitchChannel ? "Подключение к Twitch IRC..." : "Подключение источников...",
       95,
@@ -403,7 +316,6 @@ export class OverlayRuntime {
     this.pendingTimers.length = 0;
     this.messageQueue.destroy();
     this.messagePipeline.clear();
-    this.removeEventListeners();
     this.connectionManager.destroy();
     this.externalConnectedPlatforms.clear();
     this.commandFeedback.destroy();
@@ -454,26 +366,22 @@ export class OverlayRuntime {
     this.messageQueue.append(message);
   }
 
-  private setupEventListeners() {
-    window.addEventListener(
-      "chatyx:message-deleted",
-      this.eventHandlers.messageDeleted,
-    );
-    window.addEventListener("chatyx:user-timeout", this.eventHandlers.userTimeout);
-    window.addEventListener("chatyx:user-banned", this.eventHandlers.userBanned);
-    window.addEventListener("chatyx:chat-cleared", this.eventHandlers.chatCleared);
-    window.addEventListener("chatyx:7tv-event", this.eventHandlers.sevenTvEvent);
-  }
+  private handleSevenTvEvent(eventType: string) {
+    log.debug(LOG_CATEGORIES.INTEGRATION, `7TV Event: ${eventType}`);
 
-  private removeEventListeners() {
-    window.removeEventListener(
-      "chatyx:message-deleted",
-      this.eventHandlers.messageDeleted,
-    );
-    window.removeEventListener("chatyx:user-timeout", this.eventHandlers.userTimeout);
-    window.removeEventListener("chatyx:user-banned", this.eventHandlers.userBanned);
-    window.removeEventListener("chatyx:chat-cleared", this.eventHandlers.chatCleared);
-    window.removeEventListener("chatyx:7tv-event", this.eventHandlers.sevenTvEvent);
+    if (eventType.startsWith("cosmetic.") || eventType.startsWith("entitlement.")) {
+      this.chatService?.clearPaintCache();
+    }
+
+    if (eventType === "user.update") {
+      log.info(
+        LOG_CATEGORIES.INTEGRATION,
+        "Reloading 7TV emotes due to set change",
+      );
+      void emoteService.reload7TVEmotes().catch((error) => {
+        log.error(LOG_CATEGORIES.EMOTES, "Failed to reload 7TV emotes", error);
+      });
+    }
   }
 
   private deleteMessage(messageId: string) {

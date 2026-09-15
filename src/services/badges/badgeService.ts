@@ -1,5 +1,5 @@
 import { TWITCH_CONFIG, FALLBACK_APIS, fetchWithFallback } from "~/config/twitch";
-import { twitchGqlService, type TwitchGqlBadge } from "~/services/chat/twitchGqlService";
+import { twitchGqlService, type TwitchGqlBadge } from "~/services/chat/twitch/twitchGqlService";
 import { log, LOG_CATEGORIES } from "~/utils/logger";
 import { networkClient } from "~/services/network/networkClient";
 

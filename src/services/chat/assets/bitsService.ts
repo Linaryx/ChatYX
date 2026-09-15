@@ -8,8 +8,8 @@ import type {
   BitsTier,
   ParsedCheer,
   CheerMatch,
-} from "../../types/bits";
-import { log, LOG_CATEGORIES } from "../../utils/logger";
+} from "~/types/bits";
+import { log, LOG_CATEGORIES } from "~/utils/logger";
 import { fetchWithFallback, FALLBACK_APIS, TWITCH_CONFIG } from "~/config/twitch";
 export class BitsService {
   private cheerEmotes: Map<string, CheerEmote> = new Map();

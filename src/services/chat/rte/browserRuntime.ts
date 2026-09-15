@@ -1,6 +1,6 @@
-import { RteRuntimeController } from "./rteRuntimeController";
-import { RteTtsService } from "./rteTtsService";
-import type { RteTtsAudio } from "./rteTtsTypes";
+import { RteRuntimeController } from "./runtimeController";
+import { RteTtsService } from "./ttsService";
+import type { RteTtsAudio } from "./types";
 
 class BrowserRteTtsAudio implements RteTtsAudio {
   onended: (() => void) | null = null;

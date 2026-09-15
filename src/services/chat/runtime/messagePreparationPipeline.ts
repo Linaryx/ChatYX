@@ -4,7 +4,7 @@ import { createMessageTokenSnapshot } from "~/utils/chat/emojiUtils";
 import { mergeBadgesBySetId } from "~/utils/chat/senderIdentity";
 import type { ChatPresentationService } from "../chatPresentationService";
 import { mentionStyleService } from "../mentionStyleService";
-import type { TwitchMessage } from "../twitchService";
+import type { TwitchMessage } from "../twitch/twitchService";
 import type { AnnouncementColorResolver } from "./announcementColorResolver";
 import type { ChatAssetLoader } from "./chatAssetLoader";
 

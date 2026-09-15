@@ -1,11 +1,11 @@
 // Presentation services shared by the live overlay and preview.
 
-import { emoteService } from "./emoteService";
-import type { Emote } from "./emoteService";
+import { emoteService } from "./assets/emoteService";
+import type { Emote } from "./assets/emoteService";
 import { badgeService, type Badge } from "../badges/badgeService";
-import { SevenTVPaintService, type Paint } from "./sevenTVPaintService";
-import { sevenTVEventApi } from "./sevenTVEventApi";
-import type { SevenTVEventApiService } from "./sevenTVEventApi";
+import { SevenTVPaintService, type Paint } from "./seven-tv/paintService";
+import { sevenTVEventApi } from "./seven-tv/eventApi";
+import type { SevenTVEventApiService } from "./seven-tv/eventApi";
 import { BotFilterService } from "../../utils/botFilter";
 import {
   MessageFadeManager,

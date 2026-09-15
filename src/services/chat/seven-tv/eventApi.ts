@@ -1,6 +1,6 @@
-import { emoteService } from "./emoteService";
-import { networkClient } from "../network/networkClient";
-import { log, LOG_CATEGORIES } from "../../utils/logger";
+import { emoteService } from "../assets/emoteService";
+import { networkClient } from "../../network/networkClient";
+import { log, LOG_CATEGORIES } from "~/utils/logger";
 
 // 7TV EventAPI v3 WebSocket service for real-time updates
 // https://github.com/SevenTV/EventAPI

@@ -1,24 +1,24 @@
 import { badgeService } from "~/services/badges";
 import { LOG_CATEGORIES, log } from "~/utils/logger";
 import type { ChatConfig } from "~/config/chatUrlParams";
-import { channelRolesService } from "../channelRolesService";
-import { emoteService } from "../emoteService";
+import { channelRolesService } from "../assets/channelRolesService";
+import { emoteService } from "../assets/emoteService";
 import {
   sevenTVCosmeticsService,
   type CosmeticRefreshUser,
-} from "../sevenTVCosmeticsService";
-import { sevenTVEventApi } from "../sevenTVEventApi";
+} from "../seven-tv/cosmeticsService";
+import { sevenTVEventApi } from "../seven-tv/eventApi";
 import type { ChatPresentationService } from "../chatPresentationService";
 import {
   rteCosmeticsService,
   type RteCosmeticsLoader,
-} from "../rteCosmeticsService";
-import type { TwitchMessage } from "../twitchService";
+} from "../rte/cosmeticsService";
+import type { TwitchMessage } from "../twitch/twitchService";
 import {
   twitchGqlService,
   type TwitchGqlChannelProfile,
   type TwitchGqlCustomReward,
-} from "../twitchGqlService";
+} from "../twitch/twitchGqlService";
 
 const REWARD_RESOLUTION_TIMEOUT_MS = 350;
 

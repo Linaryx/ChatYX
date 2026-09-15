@@ -1,4 +1,4 @@
-import type { TwitchMessage } from "./twitchService";
+import type { TwitchMessage } from "~/services/chat/twitch/twitchService";
 import { CHAT_COMMAND_DEVELOPER } from "~/config/chatCommands";
 
 export type ChatCommandRole =

@@ -1,6 +1,6 @@
 import type { ChatPresentationService } from "./chatPresentationService";
-import { sevenTVCosmeticsService } from "./sevenTVCosmeticsService";
-import type { TwitchMessage } from "./twitchService";
+import { sevenTVCosmeticsService } from "./seven-tv/cosmeticsService";
+import type { TwitchMessage } from "./twitch/twitchService";
 
 type KnownUserStyle = {
   color: string | null;

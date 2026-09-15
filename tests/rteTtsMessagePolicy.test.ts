@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_CHAT_CONFIG, type ChatConfig } from "../src/config/chatUrlParams";
-import { getRteChatSpeechRequest } from "../src/services/chat/rteTtsMessagePolicy";
-import type { TwitchMessage } from "../src/services/chat/twitchService";
+import { getRteChatSpeechRequest } from "../src/services/chat/rte/messagePolicy";
+import type { TwitchMessage } from "../src/services/chat/twitch/twitchService";
 
 function config(overrides: Partial<ChatConfig> = {}): ChatConfig {
   return {

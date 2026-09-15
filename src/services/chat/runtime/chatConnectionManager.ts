@@ -1,6 +1,6 @@
 import { log, LOG_CATEGORIES } from "~/utils/logger";
-import { TwitchService, type TwitchMessage } from "../twitchService";
-import { ExternalChatService } from "../externalChatService";
+import { TwitchService, type TwitchMessage } from "../twitch/twitchService";
+import { ExternalChatService } from "../external/externalChatService";
 import type { ChatPlatform } from "../message";
 
 type ChatConnectionManagerOptions = {

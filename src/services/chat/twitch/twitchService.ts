@@ -1,14 +1,14 @@
 // Сервис для подключения к Twitch IRC
 
-import { log, LOG_CATEGORIES } from "../../utils/logger";
-import { parseReplyThread } from "../../utils/chat/replyParser";
+import { log, LOG_CATEGORIES } from "~/utils/logger";
+import { parseReplyThread } from "~/utils/chat/replyParser";
 import type {
   ChatGif,
   ChatMessage,
   TwitchEvent,
-} from "./message";
+} from "../message";
 
-export type { ChatPlatform, TwitchEvent, TwitchEventType } from "./message";
+export type { ChatPlatform, TwitchEvent, TwitchEventType } from "../message";
 export type TwitchMessage = ChatMessage;
 export type TwitchGif = ChatGif;
 

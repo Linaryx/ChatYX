@@ -5,7 +5,7 @@ import {
   buildChatIsTtsUrl,
   type RteTtsAudio,
   type RteTtsRequest,
-} from "../src/services/chat/rteTtsService";
+} from "../src/services/chat/rte/ttsService";
 
 function deferred<T>() {
   let resolve = (_value: T): void => {};

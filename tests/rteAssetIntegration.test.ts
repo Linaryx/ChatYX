@@ -6,8 +6,8 @@ import {
   createChatPresentationConfig,
 } from "../src/services/chat/chatPresentationService";
 import { ChatAssetLoader } from "../src/services/chat/runtime/chatAssetLoader";
-import type { Paint } from "../src/services/chat/sevenTVPaintService";
-import type { TwitchMessage } from "../src/services/chat/twitchService";
+import type { Paint } from "../src/services/chat/seven-tv/paintService";
+import type { TwitchMessage } from "../src/services/chat/twitch/twitchService";
 
 function config(overrides: Partial<ChatConfig> = {}): ChatConfig {
   return { ...DEFAULT_CHAT_CONFIG, ...overrides };

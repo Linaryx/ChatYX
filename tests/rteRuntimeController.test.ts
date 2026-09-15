@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_CHAT_CONFIG, type ChatConfig } from "../src/config/chatUrlParams";
-import { RteRuntimeController } from "../src/services/chat/rteRuntimeController";
+import { RteRuntimeController } from "../src/services/chat/rte/runtimeController";
 import type {
   RteTtsConfig,
   RteTtsRequest,
   RteTtsUser,
-} from "../src/services/chat/rteTtsTypes";
-import type { TwitchMessage } from "../src/services/chat/twitchService";
+} from "../src/services/chat/rte/types";
+import type { TwitchMessage } from "../src/services/chat/twitch/twitchService";
 
 class FakeTtsRuntime {
   configs: RteTtsConfig[] = [];

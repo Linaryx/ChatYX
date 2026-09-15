@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { fetchRecentMessages } from "../src/services/chat/recentMessagesService";
+import { fetchRecentMessages } from "../src/services/chat/twitch/recentMessagesService";
 
 const originalFetch = globalThis.fetch;
 

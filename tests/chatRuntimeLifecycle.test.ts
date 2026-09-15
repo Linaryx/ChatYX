@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { ChatConfig } from "../src/config/chatUrlParams";
 import { badgeService } from "../src/services/badges";
-import { OverlayRuntime } from "../src/services/chat/overlayRuntime";
+import { LiveChatRuntime } from "../src/features/chat-overlay/application/liveRuntime";
 import { MessagePreparationPipeline } from "../src/services/chat/runtime/messagePreparationPipeline";
-import type { TwitchMessage } from "../src/services/chat/twitchService";
+import type { TwitchMessage } from "../src/services/chat/twitch/twitchService";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -222,7 +222,7 @@ describe("overlay runtime lifecycle", () => {
     };
 
     const scrollCalls: Array<{ behavior: ScrollBehavior; force: boolean }> = [];
-    const runtime = new OverlayRuntime("channel", {
+    const runtime = new LiveChatRuntime("channel", {
       onConfigResolved: () => {},
       onServiceReady: () => {},
       onLoadingChange: () => {},
@@ -257,7 +257,7 @@ describe("overlay runtime lifecycle", () => {
     };
 
     const scrollCalls: Array<{ behavior: ScrollBehavior; force: boolean }> = [];
-    const runtime = new OverlayRuntime("channel", {
+    const runtime = new LiveChatRuntime("channel", {
       onConfigResolved: () => {},
       onServiceReady: () => {},
       onLoadingChange: () => {},
@@ -307,7 +307,7 @@ describe("overlay runtime lifecycle", () => {
 
     const identity = deferred<{ channelId: string; displayName: string }>();
     let channelResolved = 0;
-    const runtime = new OverlayRuntime("channel", {
+    const runtime = new LiveChatRuntime("channel", {
       onConfigResolved: () => {},
       onServiceReady: () => {},
       onLoadingChange: () => {},
@@ -355,7 +355,7 @@ describe("overlay runtime lifecycle", () => {
 
     const emotes = deferred<void>();
     let twitchConnections = 0;
-    const runtime = new OverlayRuntime("channel", {
+    const runtime = new LiveChatRuntime("channel", {
       onConfigResolved: () => {},
       onServiceReady: () => {},
       onLoadingChange: () => {},

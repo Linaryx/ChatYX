@@ -1,5 +1,5 @@
-import { twitchGqlService } from "../twitchGqlService";
-import type { TwitchMessage } from "../twitchService";
+import { twitchGqlService } from "../twitch/twitchGqlService";
+import type { TwitchMessage } from "../twitch/twitchService";
 
 const RESOLUTION_TIMEOUT_MS = 350;
 

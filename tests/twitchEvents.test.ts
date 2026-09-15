@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TwitchService } from "../src/services/chat/twitchService";
+import { TwitchService } from "../src/services/chat/twitch/twitchService";
 
 const service = new TwitchService();
 

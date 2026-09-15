@@ -1,31 +1,20 @@
 /**
  * Chat Feature Integration Service
- * Orchestrates all overlay chat features (badges, emotes, bits, 7TV, moderation events, etc.)
+ * Loads optional chat assets and owns the 7TV EventAPI lifecycle.
  */
 
 import { log, LOG_CATEGORIES } from "../../utils/logger";
 
 // Services
-import { bitsService } from "./bitsService";
-import { chatModerationService } from "./chatModerationService";
+import { bitsService } from "./assets/bitsService";
 import { ffzapBadgeService } from "../badges/ffzapBadgeService";
 import { bttvBadgeService } from "../badges/bttvBadgeService";
 import { chatterinoBadgeService } from "../badges/chatterinoBadgeService";
 import { chatisBadgeService } from "../badges/chatisBadgeService";
-import { sevenTVEventApi } from "./sevenTVEventApi";
+import { sevenTVEventApi } from "./seven-tv/eventApi";
 
-// Utils
-import {
-  isActionMessage,
-  parseActionMessage,
-} from "../../utils/chat/actionMessages";
-import { parseReplyThread } from "../../utils/chat/replyParser";
-import { parseUserNotice } from "../../utils/chat/userNoticeParser";
-import { sanitizeHtml } from "../../utils/chat/sanitize";
-import { linkifyURLs } from "../../utils/chat/urlParser";
-import { emojifyText } from "../../utils/chat/emojiRenderer";
-import { parseMarkdown } from "../../utils/chat/markdownParser";
 import { layoutManager } from "../../utils/ui/layoutManager";
+import type { SevenTVEventDispatch } from "./seven-tv/eventApi";
 
 const SEVENTV_RETRY_DELAY_MS = 5 * 60 * 1000;
 
@@ -52,14 +41,7 @@ export interface ChatFeatureIntegrationOptions {
   showChatterinoBadges: boolean;
   showChatisBadges: boolean;
 
-  // Feature toggles
   enableBits: boolean;
-  enableReplies: boolean;
-  enableActionMessages: boolean;
-  enableUserNotices: boolean;
-  enableURLLinking: boolean;
-  enableEmojis: boolean;
-  enableMarkdown: boolean;
 
   // Layout options
   reverseLineOrder: boolean;
@@ -69,39 +51,28 @@ export interface ChatFeatureIntegrationOptions {
   enable7TVEventAPI: boolean;
 }
 
-/**
- * Chat feature integration Service
- * Orchestrates all new features
- */
 export class ChatFeatureIntegrationService {
   private options: ChatFeatureIntegrationOptions;
   private initialized: boolean = false;
   private sevenTvRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: Partial<ChatFeatureIntegrationOptions> = {}) {
-    // Default options
     this.options = {
       showFFZAPBadges: true,
       showBTTVBadges: true,
       showChatterinoBadges: true,
       showChatisBadges: true,
       enableBits: true,
-      enableReplies: true,
-      enableActionMessages: true,
-      enableUserNotices: true,
-      enableURLLinking: true,
-      enableEmojis: true,
-      enableMarkdown: false,
       reverseLineOrder: false,
       enable7TVEventAPI: true,
       ...options,
     };
   }
 
-  /**
-   * Initialize all services
-   */
-  async initialize(channelId: string): Promise<void> {
+  async initialize(
+    channelId: string,
+    onSevenTvEvent?: (event: SevenTVEventDispatch) => void,
+  ): Promise<void> {
     if (this.initialized) {
       log.warn(
         LOG_CATEGORIES.INTEGRATION,
@@ -113,7 +84,6 @@ export class ChatFeatureIntegrationService {
     log.info(LOG_CATEGORIES.INTEGRATION, "Initializing Chat feature integration...");
 
     try {
-      // Load badge services
       await Promise.all([
         this.options.showFFZAPBadges
           ? ffzapBadgeService.loadBadges()
@@ -133,7 +103,6 @@ export class ChatFeatureIntegrationService {
           : Promise.resolve(),
       ]);
 
-      // Load bits service
       if (this.options.enableBits) {
         await bitsService
           .loadCheers(channelId)
@@ -142,15 +111,12 @@ export class ChatFeatureIntegrationService {
           );
       }
 
-      // Setup message manager callbacks
-      this.setupMessageManager();
-
-      // Connect 7TV EventAPI
       if (this.options.enable7TVEventAPI) {
-        await this.connect7TVEventAPI(channelId, { scheduleRetry: true });
+        await this.connect7TVEventAPI(channelId, onSevenTvEvent, {
+          scheduleRetry: true,
+        });
       }
 
-      // Apply layout options
       layoutManager.setOptions({
         reverseLineOrder: this.options.reverseLineOrder,
         singleChatter: this.options.singleChatter,
@@ -171,55 +137,11 @@ export class ChatFeatureIntegrationService {
     }
   }
 
-  /**
-   * Setup message manager callbacks
-   */
-  private setupMessageManager(): void {
-    chatModerationService.clearCallbacks();
-
-    // Message deleted callback
-    chatModerationService.onMessageDelete((event) => {
-      log.debug(
-        LOG_CATEGORIES.INTEGRATION,
-        `Message deleted: ${event.messageId}`,
-      );
-      // Emit event for UI to handle
-      window.dispatchEvent(
-        new CustomEvent("chatyx:message-deleted", {
-          detail: { messageId: event.messageId },
-        }),
-      );
-    });
-
-    // User timed out callback
-    chatModerationService.onUserTimeout((event) => {
-      log.debug(
-        LOG_CATEGORIES.INTEGRATION,
-        `User timed out: ${event.username} for ${event.duration}s`,
-      );
-      window.dispatchEvent(
-        new CustomEvent("chatyx:user-timeout", {
-          detail: { username: event.username, duration: event.duration },
-        }),
-      );
-    });
-
-    // Chat cleared callback
-    chatModerationService.onChatClear(() => {
-      log.debug(LOG_CATEGORIES.INTEGRATION, "Chat cleared");
-      window.dispatchEvent(new CustomEvent("chatyx:chat-cleared"));
-    });
-  }
-
-  /**
-   * Connect to 7TV EventAPI
-   * NOTE: 7TV EventAPI requires numeric Twitch channel ID, not username
-   */
   private async connect7TVEventAPI(
     channelId: string,
+    onEvent: ((event: SevenTVEventDispatch) => void) | undefined,
     options: { scheduleRetry: boolean },
   ): Promise<void> {
-    // Проверяем что channelId - это число, а не username
     if (!/^\d+$/.test(channelId)) {
       log.warn(
         LOG_CATEGORIES.INTEGRATION,
@@ -233,13 +155,7 @@ export class ChatFeatureIntegrationService {
       this.clearSevenTvRetryTimer();
       await sevenTVEventApi.connect(channelId, (event) => {
         log.debug(LOG_CATEGORIES.SEVENTV_API, `EventAPI event: ${event.type}`);
-
-        // Emit event for UI to handle
-        window.dispatchEvent(
-          new CustomEvent("chatyx:7tv-event", {
-            detail: event,
-          }),
-        );
+        onEvent?.(event);
       });
 
       log.info(LOG_CATEGORIES.INTEGRATION, "7TV EventAPI connected");
@@ -252,12 +168,15 @@ export class ChatFeatureIntegrationService {
       );
 
       if (options.scheduleRetry && shouldRetrySevenTvError(error)) {
-        this.scheduleSevenTvRetry(channelId);
+        this.scheduleSevenTvRetry(channelId, onEvent);
       }
     }
   }
 
-  private scheduleSevenTvRetry(channelId: string): void {
+  private scheduleSevenTvRetry(
+    channelId: string,
+    onEvent: ((event: SevenTVEventDispatch) => void) | undefined,
+  ): void {
     if (this.sevenTvRetryTimer || !this.options.enable7TVEventAPI) return;
 
     log.warn(
@@ -267,7 +186,7 @@ export class ChatFeatureIntegrationService {
 
     this.sevenTvRetryTimer = setTimeout(() => {
       this.sevenTvRetryTimer = null;
-      void this.connect7TVEventAPI(channelId, { scheduleRetry: true });
+      void this.connect7TVEventAPI(channelId, onEvent, { scheduleRetry: true });
     }, SEVENTV_RETRY_DELAY_MS);
   }
 
@@ -278,195 +197,22 @@ export class ChatFeatureIntegrationService {
     this.sevenTvRetryTimer = null;
   }
 
-  /**
-   * Process IRC message with all features
-   */
-  processIRCMessage(rawMessage: string, tags: Map<string, string>): any {
-    const result: any = {
-      raw: rawMessage,
-      tags,
-      enhanced: {},
-    };
-
-    try {
-      // Parse reply thread
-      if (this.options.enableReplies) {
-        const reply = parseReplyThread(tags);
-        if (reply) {
-          result.enhanced.reply = reply;
-        }
-      }
-
-      // Detect action message
-      if (this.options.enableActionMessages) {
-        const messageText = tags.get("message") || "";
-        if (isActionMessage(messageText)) {
-          result.enhanced.isAction = true;
-          result.enhanced.actionText = parseActionMessage(messageText);
-        }
-      }
-
-      // Detect bits/cheers
-      if (this.options.enableBits) {
-        const messageText = tags.get("message") || "";
-        const cheers = bitsService.detectCheers(messageText);
-        if (cheers.length > 0) {
-          result.enhanced.cheers = cheers;
-          result.enhanced.totalBits = bitsService.calculateTotalBits(cheers);
-        }
-      }
-
-      // Check message manager
-      const messageId = tags.get("id");
-      if (messageId && chatModerationService.isMessageDeleted(messageId)) {
-        result.enhanced.isDeleted = true;
-      }
-
-      const username = tags.get("login");
-      if (username && chatModerationService.shouldHideUser(username)) {
-        result.enhanced.isHidden = true;
-      }
-    } catch (error) {
-      log.error(
-        LOG_CATEGORIES.INTEGRATION,
-        "Error processing IRC message:",
-        error,
-      );
-    }
-
-    return result;
-  }
-
-  /**
-   * Process USERNOTICE message
-   */
-  processUserNotice(rawMessage: string): any {
-    if (!this.options.enableUserNotices) {
-      return null;
-    }
-
-    try {
-      return parseUserNotice(rawMessage);
-    } catch (error) {
-      log.error(
-        LOG_CATEGORIES.INTEGRATION,
-        "Error processing USERNOTICE:",
-        error,
-      );
-      return null;
-    }
-  }
-
-  /**
-   * Enhance message text with all features
-   */
-  enhanceMessageText(text: string): string {
-    let enhanced = text;
-
-    try {
-      // Sanitize HTML
-      enhanced = sanitizeHtml(enhanced);
-
-      // Parse markdown
-      if (this.options.enableMarkdown) {
-        enhanced = parseMarkdown(enhanced);
-      }
-
-      // Linkify URLs
-      if (this.options.enableURLLinking) {
-        enhanced = linkifyURLs(enhanced);
-      }
-
-      // Emojify
-      if (this.options.enableEmojis) {
-        enhanced = emojifyText(enhanced);
-      }
-    } catch (error) {
-      log.error(
-        LOG_CATEGORIES.INTEGRATION,
-        "Error enhancing message text:",
-        error,
-      );
-      return text;
-    }
-
-    return enhanced;
-  }
-
-  /**
-   * Get all badges for user
-   */
-  getUserBadges(username: string, userId: string): any[] {
-    const badges: any[] = [];
-
-    try {
-      // ChatIS badges
-      if (this.options.showChatisBadges) {
-        const chatisBadges = chatisBadgeService.getUserBadges(username);
-        badges.push(...chatisBadges.map((b) => ({ source: "chatis", ...b })));
-      }
-
-      // FFZ:AP badges
-      if (this.options.showFFZAPBadges) {
-        const ffzBadges = ffzapBadgeService.getUserBadges(userId);
-        badges.push(...ffzBadges.map((b) => ({ source: "ffzap", ...b })));
-      }
-
-      // BTTV badges
-      if (this.options.showBTTVBadges) {
-        const bttvBadges = bttvBadgeService.getUserBadges(userId);
-        badges.push(...bttvBadges.map((b) => ({ source: "bttv", ...b })));
-      }
-
-      // Chatterino badges
-      if (this.options.showChatterinoBadges) {
-        const chatBadges = chatterinoBadgeService.getUserBadges(username);
-        badges.push(...chatBadges.map((b) => ({ source: "chatterino", ...b })));
-      }
-    } catch (error) {
-      log.error(
-        LOG_CATEGORIES.INTEGRATION,
-        "Error getting user badges:",
-        error,
-      );
-    }
-
-    return badges;
-  }
-
-  /**
-   * Update options
-   */
   setOptions(options: Partial<ChatFeatureIntegrationOptions>): void {
     this.options = { ...this.options, ...options };
 
-    // Update layout manager
     layoutManager.setOptions({
       reverseLineOrder: this.options.reverseLineOrder,
       singleChatter: this.options.singleChatter,
     });
   }
 
-  /**
-   * Get 7TV EventAPI instance for accessing cosmetics
-   */
-  get7TVEventAPI() {
-    return sevenTVEventApi;
-  }
-
-  /**
-   * Cleanup
-   */
   destroy(): void {
     this.clearSevenTvRetryTimer();
     sevenTVEventApi.disconnect();
-    chatModerationService.clearCallbacks();
-    chatModerationService.clear();
     this.initialized = false;
 
     log.info(LOG_CATEGORIES.INTEGRATION, "Chat feature integration destroyed");
   }
 }
 
-// Singleton instance
 export const chatFeatureIntegration = new ChatFeatureIntegrationService();

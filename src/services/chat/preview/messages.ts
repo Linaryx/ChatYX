@@ -1,6 +1,7 @@
-import { emoteService } from "~/services/chat";
+import type { ChatPresentationService } from "../chatPresentationService";
+import { emoteService } from "../assets/emoteService";
+import type { TwitchMessage } from "../twitch/twitchService";
 import { PREVIEW_USERNAME_BASES } from "~/config/previewUsernames";
-import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { isReplyEligibleEvent } from "~/utils/chat/replyEligibility";
 import { previewRealUsers, type PreviewRealUser } from "./userPool";
 

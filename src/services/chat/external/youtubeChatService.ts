@@ -1,4 +1,4 @@
-import type { TwitchMessage } from "./twitchService";
+import type { TwitchMessage } from "../twitch/twitchService";
 
 type YouTubeAuthor = {
   name?: string;

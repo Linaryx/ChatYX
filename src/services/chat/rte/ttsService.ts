@@ -3,7 +3,7 @@ const CHATIS_TTS_ENDPOINT = "https://chatis.is2511.com/v2/tts/";
 const RTE_PROXY_BASE = "https://ext.rte.net.ru:8443/";
 const DEFAULT_MAX_QUEUE_SIZE = 20;
 
-import { resolveBackendTtsVoice } from "./rteTtsVoices";
+import { resolveBackendTtsVoice } from "./voices";
 import type {
   RteTtsAudio,
   RteTtsConfig,
@@ -14,7 +14,7 @@ import type {
   RteTtsRequest,
   RteTtsState,
   RteTtsUser,
-} from "./rteTtsTypes";
+} from "./types";
 
 export type {
   RteTtsAudio,
@@ -25,7 +25,7 @@ export type {
   RteTtsRequest,
   RteTtsState,
   RteTtsUser,
-} from "./rteTtsTypes";
+} from "./types";
 
 type ActiveSpeech = {
   readonly request: RteTtsRequest;

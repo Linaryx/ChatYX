@@ -6,12 +6,12 @@ import {
   parseChatRefreshScope,
   parseTestMessageCount,
   resolveChatCommandRole,
-} from "../src/services/chat/chatCommandService";
-import { parseRteTtsCommand } from "../src/services/chat/rteTtsCommand";
+} from "../src/features/chat-overlay/application/chatCommandService";
+import { parseRteTtsCommand } from "../src/services/chat/rte/command";
 import {
   TwitchService,
   type TwitchMessage,
-} from "../src/services/chat/twitchService";
+} from "../src/services/chat/twitch/twitchService";
 
 function message(
   text: string,

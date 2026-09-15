@@ -1,32 +1,30 @@
-export { BitsService, bitsService } from "./bitsService";
-export { channelRolesService } from "./channelRolesService";
+export { BitsService, bitsService } from "./assets/bitsService";
+export { channelRolesService } from "./assets/channelRolesService";
 export {
   ChatPresentationService,
   createChatPresentationConfig,
   DEFAULT_CHAT_PRESENTATION_CONFIG,
 } from "./chatPresentationService";
 export type { ChatPresentationConfig } from "./chatPresentationService";
-export { sevenTVCosmeticsService } from "./sevenTVCosmeticsService";
-export { emoteService } from "./emoteService";
-export type { Emote } from "./emoteService";
+export { sevenTVCosmeticsService } from "./seven-tv/cosmeticsService";
+export { emoteService } from "./assets/emoteService";
+export type { Emote } from "./assets/emoteService";
 export { chatModerationService } from "./chatModerationService";
 export { mentionStyleService } from "./mentionStyleService";
-export { SevenTVPaintService, sevenTVPaintService } from "./sevenTVPaintService";
-export { sevenTVEventApi } from "./sevenTVEventApi";
-export type { SevenTVEventApiService } from "./sevenTVEventApi";
-export { TwitchService } from "./twitchService";
-export type { TwitchEvent, TwitchMessage } from "./twitchService";
+export { SevenTVPaintService, sevenTVPaintService } from "./seven-tv/paintService";
+export { sevenTVEventApi } from "./seven-tv/eventApi";
+export type { SevenTVEventApiService } from "./seven-tv/eventApi";
+export { TwitchService } from "./twitch/twitchService";
+export type { TwitchEvent, TwitchMessage } from "./twitch/twitchService";
 export type { ChatMessage, ChatPlatform } from "./message";
-export { twitchGqlService } from "./twitchGqlService";
+export { twitchGqlService } from "./twitch/twitchGqlService";
 export type {
   TwitchGqlBadge,
   TwitchGqlChannelProfile,
   TwitchGqlCustomReward,
   TwitchGqlSender,
-} from "./twitchGqlService";
+} from "./twitch/twitchGqlService";
 export { chatFeatureIntegration } from "./chatFeatureIntegration";
-export { YouTubeChatService } from "./youtubeChatService";
-export { ExternalChatService } from "./externalChatService";
-export type { ExternalChatEvent } from "./externalChatService";
-export { OverlayRuntime } from "./overlayRuntime";
-export type { ChatCommandStatus } from "./overlayRuntime";
+export { YouTubeChatService } from "./external/youtubeChatService";
+export { ExternalChatService } from "./external/externalChatService";
+export type { ExternalChatEvent } from "./external/externalChatService";
