@@ -1,10 +1,7 @@
 import { networkClient } from "~/services/network/networkClient";
 
 // Production only uses a backend when explicitly configured.
-const API_BASE = (
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? "http://localhost:3002" : "")
-).replace(/\/+$/, "");
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
 export const TWITCH_CONFIG = {
   API_BASE_URL: API_BASE ? `${API_BASE}/api/twitch` : "",
@@ -23,25 +20,6 @@ export const FALLBACK_APIS = {
   cheermotes: null,
 };
 
-// Cache backend availability so we only probe once per session.
-let backendApiAvailable: boolean | null = null;
-
-async function checkBackendApi(): Promise<boolean> {
-  if (backendApiAvailable !== null) return backendApiAvailable;
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
-    const response = await fetch(`${API_BASE}/api/health`, { signal: controller.signal });
-    clearTimeout(timeout);
-    backendApiAvailable = response.ok;
-  } catch {
-    backendApiAvailable = false;
-  }
-
-  return backendApiAvailable;
-}
-
 export async function fetchWithFallback(
   primaryUrl: string,
   fallbackUrl: string | null = null,
@@ -56,19 +34,6 @@ export async function fetchWithFallback(
       status: 503,
       headers: { "Content-Type": "application/json" },
     });
-  }
-
-  const isBackendRequest = Boolean(API_BASE) && primaryUrl.startsWith(API_BASE);
-
-  if (isBackendRequest) {
-    const available = await checkBackendApi();
-    if (!available) {
-      if (fallbackUrl) return requestFallback(fallbackUrl);
-      return new Response(JSON.stringify({ error: "API unavailable" }), {
-        status: 503,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
   }
 
   try {
