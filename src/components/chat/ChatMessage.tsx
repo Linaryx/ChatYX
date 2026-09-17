@@ -169,6 +169,9 @@ export const ChatMessage = (props: ChatMessageProps) => {
   const userColor = createMemo(() =>
     safeCssColor(props.message.color || "#e6eef7"),
   );
+  const usersColor = createMemo(() =>
+    props.config.usersColor ? safeCssColor(props.config.usersColor, "") : "",
+  );
   const visibleTwitchEvent = createMemo(() => {
     const event = props.message.twitchEvent;
     if (!event) return undefined;
@@ -230,6 +233,8 @@ export const ChatMessage = (props: ChatMessageProps) => {
         (paintCSS() as { useGlobalCSS?: boolean }).useGlobalCSS),
   );
   const nickStyle = createMemo(() => {
+    const ucUsers = usersColor();
+    if (ucUsers) return ` color: ${ucUsers};`;
     const css = paintCSS();
     const ip = integrationPaint();
     const uc = userColor();
@@ -237,6 +242,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
     if (ip) return ` ${ip}`;
     return ` color: ${uc};`;
   });
+  const nickColor = createMemo(() => usersColor() || userColor());
   const paintClasses = createMemo(() => {
     const css = paintCSS();
     return css && typeof css === "object" && css.useGlobalCSS
@@ -252,7 +258,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
     }
     return {} as Record<string, string>;
   });
-  const messageTextColor = createMemo(() => (isAction() ? userColor() : "white"));
+  const messageTextColor = createMemo(() => (isAction() ? nickColor() : "white"));
   const replyText = createMemo(() => {
     // Twitch GIF messages are media-only and cannot be replies.
     if (props.message.gifs?.length) return null;
@@ -301,7 +307,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
         fontWeight={nickFontWeight()}
         paintClasses={paintClasses()}
         paintAttributes={paintAttributes()}
-        colonColor={has7tvPaint() ? "#fff" : userColor()}
+        colonColor={usersColor() ? usersColor() : has7tvPaint() ? "#fff" : userColor()}
         isAction={isAction()}
         uppercase={props.config.smallCaps}
         showColon={identityProps.showColon}
@@ -498,7 +504,7 @@ export const ChatMessage = (props: ChatMessageProps) => {
                         <>
                           <span
                             class="chat-watch-streak-user"
-                            style={{ color: userColor() }}
+                            style={{ color: nickColor() }}
                           >
                             {props.message.displayName || event().detail}
                           </span>

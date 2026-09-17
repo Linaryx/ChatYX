@@ -27,6 +27,7 @@ export interface ChatConfig {
   bots: boolean;
   commands: boolean;
   hideSpecialBadges: boolean;
+  hideAllBadges: boolean;
   showHomies: boolean;
   recentMessages: boolean;
   fade: number | false; // seconds; false disables fade
@@ -67,6 +68,7 @@ export interface ChatConfig {
   showPredictions: boolean;
   linkMode: LinkDisplayMode;
   linkColor: string;
+  usersColor: string;
   hideLinkRewards: boolean;
   rteProxy: boolean;
   rteAzureTts: boolean;
@@ -108,6 +110,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   bots: false,
   commands: true,
   hideSpecialBadges: false,
+  hideAllBadges: false,
   emoteScale: 1,
   botNames: DEFAULT_BOT_NAMES.join(","),
   singleChatter: "",
@@ -138,6 +141,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   showPredictions: false,
   linkMode: "normal",
   linkColor: "#53b7ff",
+  usersColor: "",
   hideLinkRewards: true,
   rteProxy: false,
   rteAzureTts: true,
@@ -276,6 +280,11 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     kind: "bool",
     aliases: ["hide_special_badges"],
   },
+  hideAllBadges: {
+    query: "hab",
+    kind: "bool",
+    aliases: ["hide_all_badges", "hideAllBadges"],
+  },
   emoteScale: { query: "es", kind: "float", aliases: ["emoteScale"] },
   botNames: {
     query: "bn",
@@ -401,6 +410,11 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     query: "linkcolor",
     kind: "string",
     aliases: ["link_color"],
+  },
+  usersColor: {
+    query: "userscolor",
+    kind: "string",
+    aliases: ["users_color", "usersColor"],
   },
   hideLinkRewards: {
     query: "hidelinkrewards",

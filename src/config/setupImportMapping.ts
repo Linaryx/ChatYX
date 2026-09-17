@@ -195,6 +195,7 @@ export function mapChatIsParams(params: URLSearchParams): SetupImportMapping {
   const animate = booleanValue(params, "animate");
   const bots = booleanValue(params, "bots");
   const hideSpecialBadges = booleanValue(params, "hide_special_badges");
+  const hideAllBadges = booleanValue(params, "hide_all_badges");
   const showHomies = booleanValue(params, "show_homies");
   const fade = falseOrNonNegative(params, "fade");
   const size = indexedNumber(params, "size", 1, 3);
@@ -217,6 +218,7 @@ export function mapChatIsParams(params: URLSearchParams): SetupImportMapping {
       ...(animate !== undefined && { animation: animate ? "fade" : "none" }),
       ...(bots !== undefined && { bots }),
       ...(hideSpecialBadges !== undefined && { hideSpecialBadges }),
+      ...(hideAllBadges !== undefined && { hideAllBadges }),
       ...(showHomies !== undefined && { showHomies }),
       ...(fade !== undefined && { fade }),
       ...(size !== undefined && { size }),

@@ -608,6 +608,19 @@
   opacity: 0.5;
 }
 
+.setup-switch-row--disabled {
+  cursor: not-allowed;
+}
+
+.setup-switch-row--disabled:hover {
+  background: transparent;
+}
+
+.setup-switch-row--disabled .setup-switch-label,
+.setup-switch-row--disabled .setup-switch-hint {
+  opacity: 0.5;
+}
+
 /* Role merge block */
 .setup-role-merge {
   background: hsl(var(--background) / 0.4);

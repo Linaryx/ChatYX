@@ -22,6 +22,7 @@ export function applySetupImport(
   if (patch.bots !== undefined) setters.bots(patch.bots);
   if (patch.commands !== undefined) setters.commands(patch.commands);
   if (patch.hideSpecialBadges !== undefined) setters.hideSpecialBadges(patch.hideSpecialBadges);
+  if (patch.hideAllBadges !== undefined) setters.hideAllBadges(patch.hideAllBadges);
   if (patch.showHomies !== undefined) setters.showHomies(patch.showHomies);
   if (patch.fade !== undefined) setters.fade(String(patch.fade === false ? 0 : patch.fade));
   if (patch.size !== undefined) setters.size(String(patch.size));
@@ -61,6 +62,7 @@ export function applySetupImport(
   if (patch.showPredictions !== undefined) setters.showPredictions(patch.showPredictions);
   if (patch.linkMode !== undefined) setters.linkMode(patch.linkMode);
   if (patch.linkColor !== undefined) setters.linkColor(patch.linkColor);
+  if (patch.usersColor !== undefined) setters.usersColor(patch.usersColor);
   if (patch.hideLinkRewards !== undefined) setters.hideLinkRewards(patch.hideLinkRewards);
   if (patch.rteProxy !== undefined) setters.rteProxy(patch.rteProxy);
   if (patch.rteAzureTts !== undefined) setters.rteAzureTts(patch.rteAzureTts);

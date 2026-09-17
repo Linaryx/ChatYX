@@ -20,6 +20,7 @@ type ChatBadgesProps = {
 };
 
 export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
+  if (props.config.hideAllBadges) return null;
   const renderedBadges = createMemo(() => {
     const { message, config, service } = props;
     const showPlatformIcon =

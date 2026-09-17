@@ -5,12 +5,20 @@ type SetupSwitchProps = {
   onChange: (checked: boolean) => void;
   label: string;
   hint?: string;
+  disabled?: boolean;
 };
 
 export function SetupSwitch(props: SetupSwitchProps) {
   const hintId = `setup-switch-hint-${createUniqueId()}`;
   return (
-    <label class="setup-switch-row">
+    <label
+      class={
+        props.disabled
+          ? "setup-switch-row setup-switch-row--disabled"
+          : "setup-switch-row"
+      }
+      aria-disabled={props.disabled ? "true" : undefined}
+    >
       <span class="setup-switch-copy">
         <span class="setup-switch-label">{props.label}</span>
         <Show when={props.hint}>
@@ -22,6 +30,7 @@ export function SetupSwitch(props: SetupSwitchProps) {
         role="switch"
         checked={props.checked}
         onChange={(event) => props.onChange(event.currentTarget.checked)}
+        disabled={props.disabled}
         aria-describedby={props.hint ? hintId : undefined}
       />
       <span class="setup-switch-track" aria-hidden="true" />

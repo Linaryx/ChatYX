@@ -346,6 +346,9 @@ export default function ChatSetup() {
   const [hideSpecialBadges, setHideSpecialBadges] = createSignal(
     DEFAULT_CHAT_CONFIG.hideSpecialBadges,
   );
+  const [hideAllBadges, setHideAllBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.hideAllBadges,
+  );
   const [emoteScale, setEmoteScale] = createSignal(
     String(DEFAULT_CHAT_CONFIG.emoteScale),
   );
@@ -428,6 +431,8 @@ export default function ChatSetup() {
     DEFAULT_CHAT_CONFIG.linkMode,
   );
   const [linkColor, setLinkColor] = createSignal(DEFAULT_CHAT_CONFIG.linkColor);
+  const [usersColorEnabled, setUsersColorEnabled] = createSignal(false);
+  const [usersColor, setUsersColor] = createSignal("#ffffff");
   const [hideLinkRewards, setHideLinkRewards] = createSignal(
     DEFAULT_CHAT_CONFIG.hideLinkRewards,
   );
@@ -535,6 +540,7 @@ export default function ChatSetup() {
       bots: setBots,
       commands: setCommands,
       hideSpecialBadges: setHideSpecialBadges,
+      hideAllBadges: setHideAllBadges,
       showHomies: setShowHomies,
       fade: setFade,
       size: setSize,
@@ -574,6 +580,7 @@ export default function ChatSetup() {
       showPredictions: setShowPredictions,
       linkMode: setLinkMode,
       linkColor: setLinkColor,
+      usersColor: setUsersColor,
       hideLinkRewards: setHideLinkRewards,
       rteProxy: setRteProxy,
       rteAzureTts: setRteAzureTts,
@@ -581,6 +588,9 @@ export default function ChatSetup() {
       rteReyohohoBadge: setRteReyohohoBadge,
       rteCustomCosmetics: setRteCustomCosmetics,
     });
+    if (patch.usersColor !== undefined) {
+      setUsersColorEnabled(Boolean(patch.usersColor));
+    }
   };
 
   const scrollToSection = (id: SetupSectionId) => {
@@ -671,6 +681,7 @@ export default function ChatSetup() {
     bots: bots(),
     commands: commands(),
     hideSpecialBadges: hideSpecialBadges(),
+    hideAllBadges: hideAllBadges(),
     emoteScale: toFloat(emoteScale(), DEFAULT_CHAT_CONFIG.emoteScale),
     showGifs: showGifs(),
     gifScale: toFloat(gifScale(), DEFAULT_CHAT_CONFIG.gifScale),
@@ -724,6 +735,9 @@ export default function ChatSetup() {
     showPredictions: showPredictions(),
     linkMode: linkMode(),
     linkColor: normalizeHexColor(linkColor(), DEFAULT_CHAT_CONFIG.linkColor),
+    usersColor: usersColorEnabled()
+      ? normalizeHexColor(usersColor(), "#ffffff")
+      : "",
     hideLinkRewards: hideLinkRewards(),
     rteProxy: rteProxy(),
     rteAzureTts: rteAzureTts(),
@@ -1432,6 +1446,12 @@ export default function ChatSetup() {
       hint: "Полоска Twitch Predictions над сообщениями. Работает только при указанном Twitch-канале.",
     },
     {
+      label: "Скрыть все бейджи",
+      checked: hideAllBadges,
+      onChange: setHideAllBadges,
+      hint: "Прячет все бейджи: Twitch, YouTube, Kick, 7TV, FFZ, BTTV и Homies.",
+    },
+    {
       label: "Показывать сообщения, начинающиеся с !",
       checked: commands,
       onChange: setCommands,
@@ -1446,11 +1466,13 @@ export default function ChatSetup() {
       checked: hideSpecialBadges,
       onChange: setHideSpecialBadges,
       hint: "Бейджи Twitch и YouTube останутся видимыми.",
+      disabled: hideAllBadges,
     },
     {
       label: "Показывать Homies-бейджи",
       checked: showHomies,
       onChange: setShowHomies,
+      disabled: hideAllBadges,
     },
   ];
 
@@ -1708,6 +1730,19 @@ export default function ChatSetup() {
                 <div class="setup-field-group"><h3>Читаемость текста</h3><ControlRows rows={stylingRows.slice(0, 3)} /></div>
                 <div class="setup-field-group"><h3>Подложка сообщений</h3><ControlRows rows={stylingRows.slice(3, 6)} /></div>
                 <div class="setup-field-group"><h3>Цветовые акценты</h3><ControlRows rows={stylingRows.slice(6)} /></div>
+                <div class="setup-field-group"><h3>Цвет никнеймов</h3>
+                  <ToggleRows rows={[{
+                    label: "Единый цвет никнеймов",
+                    hint: "Окрашивает все никнеймы оверлея в один цвет.",
+                    checked: usersColorEnabled,
+                    onChange: setUsersColorEnabled,
+                  }]} />
+                  <Show when={usersColorEnabled()}>
+                    <div class="pt-1">
+                      <ColorPickerField label="Цвет никнеймов" color={usersColor()} opacity={100} showOpacity={false} onChange={({ color }) => setUsersColor(color)} />
+                    </div>
+                  </Show>
+                </div>
               </SectionCard>
 
               <SectionCard

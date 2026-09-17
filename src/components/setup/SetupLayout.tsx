@@ -24,6 +24,7 @@ export type ToggleRow = {
   checked: () => boolean;
   onChange: (value: boolean) => void;
   hint?: string;
+  disabled?: () => boolean;
 };
 
 export const SETUP_NAV: {
@@ -119,6 +120,7 @@ export function ToggleRows(props: { rows: ToggleRow[] }) {
             onChange={row.onChange}
             label={row.label}
             hint={row.hint}
+            disabled={row.disabled ? row.disabled() : undefined}
           />
         )}
       </For>
