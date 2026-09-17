@@ -1585,28 +1585,30 @@ export default function ChatSetup() {
                 type="button"
                 disabled={disabled()}
                 class={cn(
-                  "flex min-h-[74px] flex-col items-center justify-center gap-2 rounded-lg border px-2.5 py-2.5 text-xs font-bold transition-colors",
+                  "flex min-h-[74px] flex-col items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold transition-colors",
                   disabled()
-                    ? "cursor-not-allowed border-white/15 bg-black text-white/35"
+                    ? "cursor-not-allowed text-white/35"
                     : active()
-                      ? "border-white/70 bg-white/5 text-white"
-                      : "border-white/20 bg-black text-white/70 hover:border-white/40",
+                      ? "text-white hover:bg-[#27272a]"
+                      : "text-white/55 hover:bg-[#27272a] hover:text-white/80",
                 )}
                 onClick={() => option.onChange(!active())}
                 aria-pressed={active()}
               >
-                <span class="inline-flex items-center rounded-md border border-white/15 bg-black/70 p-0.5">
-                  <span
-                    class="inline-flex size-[23px] items-center justify-center rounded-[5px] border border-white/20"
-                    style={{ background: option.badgeColor }}
-                  >
-                    <img
-                      src={ffzBotBadgePreviewUrl}
-                      alt=""
-                      class="block size-full object-contain"
-                      loading="lazy"
-                    />
-                  </span>
+                <span
+                  class={cn(
+                    "inline-flex size-[31px] items-center justify-center rounded-lg border p-0.5 transition-[filter,border-color]",
+                    active() && !disabled() ? "border-white/70" : "border-white/25",
+                    (!active() || disabled()) && "saturate-0",
+                  )}
+                  style={{ background: option.badgeColor }}
+                >
+                  <img
+                    src={ffzBotBadgePreviewUrl}
+                    alt=""
+                    class="block size-full object-contain"
+                    loading="lazy"
+                  />
                 </span>
                 <span class="text-center leading-tight">
                   {option.label}
@@ -1618,13 +1620,11 @@ export default function ChatSetup() {
       </div>
     </div>
   );
-  const badgeProviderGroups: Array<{
-    title: string;
+  const badgeProviderRows: Array<{
     toggle: ToggleRow;
     extra?: JSX.Element;
   }> = [
     {
-      title: "Twitch",
       toggle: {
         label: "Показывать бейджи Twitch",
         checked: showTwitchBadges,
@@ -1633,7 +1633,6 @@ export default function ChatSetup() {
       },
     },
     {
-      title: "YouTube",
       toggle: {
         label: "Показывать бейджи YouTube",
         checked: showYouTubeBadges,
@@ -1642,7 +1641,6 @@ export default function ChatSetup() {
       },
     },
     {
-      title: "Kick",
       toggle: {
         label: "Показывать бейджи Kick",
         checked: showKickBadges,
@@ -1651,7 +1649,6 @@ export default function ChatSetup() {
       },
     },
     {
-      title: "Homies",
       toggle: {
         label: "Показывать Homies-бейджи",
         checked: showHomies,
@@ -1660,7 +1657,6 @@ export default function ChatSetup() {
       },
     },
     {
-      title: "7TV",
       toggle: {
         label: "Показывать бейджи 7TV",
         checked: show7tvBadges,
@@ -1669,7 +1665,6 @@ export default function ChatSetup() {
       },
     },
     {
-      title: "FFZ",
       toggle: {
         label: "Показывать бейджи FFZ",
         checked: showFfzBadges,
@@ -1679,7 +1674,6 @@ export default function ChatSetup() {
       extra: ffzBadgeMergeBlock,
     },
     {
-      title: "BTTV",
       toggle: {
         label: "Показывать бейджи BTTV",
         checked: showBttvBadges,
@@ -1688,7 +1682,6 @@ export default function ChatSetup() {
       },
     },
     {
-      title: "Chatterino",
       toggle: {
         label: "Показывать бейджи Chatterino",
         checked: showChatterinoBadges,
@@ -1697,7 +1690,6 @@ export default function ChatSetup() {
       },
     },
     {
-      title: "ChatIS",
       toggle: {
         label: "Показывать бейджи ChatIS",
         checked: showChatisBadges,
@@ -1706,7 +1698,6 @@ export default function ChatSetup() {
       },
     },
     {
-      title: "RTE-Reyohoho",
       toggle: {
         label: "Бейдж Reyohoho",
         checked: rteReyohohoBadge,
@@ -1787,7 +1778,7 @@ export default function ChatSetup() {
           <header class="setup-toolbar">
             <div class="setup-brand">
               <span class="setup-brand-mark" aria-hidden="true"><img src={getPublicAssetUrl("img/emote-2x.webp")} alt="" /></span>
-              <div><h1>Чат-оверлей</h1><p>Настрой оформление и добавь оверлей в OBS.</p></div>
+              <div><h1>Оверлей мульти-чата CHATYX</h1><p>Настрой оформление и добавь оверлей в OBS.</p></div>
             </div>
           </header>
           <div class="setup-view-switch" role="group" aria-label="Рабочая область">
@@ -1960,16 +1951,15 @@ export default function ChatSetup() {
                     onChange: setHideAllBadges,
                     hint: "Прячет все бейджи: Twitch, YouTube, Kick, 7TV, FFZ, BTTV, Homies, Chatterino и ChatIS.",
                   }]} />
+                  <For each={badgeProviderRows}>
+                    {(row) => (
+                      <>
+                        <ToggleRows rows={[row.toggle]} />
+                        {row.extra}
+                      </>
+                    )}
+                  </For>
                 </div>
-                <For each={badgeProviderGroups}>
-                  {(group) => (
-                    <div class="setup-field-group">
-                      <h3>{group.title}</h3>
-                      <ToggleRows rows={[group.toggle]} />
-                      {group.extra}
-                    </div>
-                  )}
-                </For>
               </SectionCard>
 
               <SectionCard
