@@ -23,7 +23,7 @@ const nativeConfig: ChatConfig = {
   size: 3, font: 0, fontCustom: "Comic Sans MS", fontWeight: 650, nickFontWeight: 450,
   shadow: false, stroke: 4, fade: false, animation: "flow", messageSpeed: 72,
   showHomies: false, recentMessages: false, bots: true, commands: false,
-  hideSpecialBadges: true, emoteScale: 1.75, botNames: "nightbot,moobot",
+  show7tvBadges: false, showFfzBadges: false, emoteScale: 1.75, botNames: "nightbot,moobot",
   singleChatter: "alice,bob", show7tvUnlisted: false, smallCaps: true,
   nlAfterName: true, hideNames: true, reverseLineOrder: true, horizontal: true,
   ffzBotMixBroadcaster: true, ffzBotMixModerator: false, ffzBotMixVip: true,
@@ -133,6 +133,12 @@ describe("native setup import", () => {
     }
   });
 
+  test("rejects unknown nobadge tokens on native import", () => {
+    expect(parseSetupImport("c=foo&nobadge=7tv,unknown", "chatyx")).toEqual({
+      kind: "unrecognized",
+    });
+  });
+
   test("clears explicit empty lists and channels rather than keeping old values", () => {
     const result = parseSetupImport("c=&yt=&kick=&bn=&sg=&fc=", "chatyx");
     expect(result.kind === "parsed" && result.patch).toMatchObject({
@@ -178,8 +184,12 @@ describe("setup import parser", () => {
         channel: "foo",
         animation: "none",
         bots: true,
-        hideSpecialBadges: true,
+        show7tvBadges: false,
+        showFfzBadges: false,
+        showBttvBadges: false,
         showHomies: false,
+        showChatterinoBadges: false,
+        showChatisBadges: false,
         fade: 45,
         size: 3,
         font: 0,
@@ -219,7 +229,7 @@ describe("setup import parser", () => {
         animation: "fade",
         bots: false,
         commands: false,
-        hideSpecialBadges: true,
+        hideAllBadges: true,
         fade: false,
         size: 1,
         font: 2,

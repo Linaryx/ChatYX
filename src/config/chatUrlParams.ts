@@ -26,9 +26,16 @@ export interface ChatConfig {
   messageSpeed: number;
   bots: boolean;
   commands: boolean;
-  hideSpecialBadges: boolean;
   hideAllBadges: boolean;
+  showTwitchBadges: boolean;
+  showYouTubeBadges: boolean;
+  showKickBadges: boolean;
+  show7tvBadges: boolean;
+  showFfzBadges: boolean;
+  showBttvBadges: boolean;
   showHomies: boolean;
+  showChatterinoBadges: boolean;
+  showChatisBadges: boolean;
   recentMessages: boolean;
   fade: number | false; // seconds; false disables fade
   size: number;
@@ -106,10 +113,17 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   animation: "fade",
   messageSpeed: DEFAULT_MESSAGE_SPEED,
   showHomies: true,
+  show7tvBadges: true,
+  showFfzBadges: true,
+  showBttvBadges: true,
+  showChatterinoBadges: true,
+  showChatisBadges: true,
+  showTwitchBadges: true,
+  showYouTubeBadges: true,
+  showKickBadges: true,
   recentMessages: true,
   bots: false,
   commands: true,
-  hideSpecialBadges: false,
   hideAllBadges: false,
   emoteScale: 1,
   botNames: DEFAULT_BOT_NAMES.join(","),
@@ -268,6 +282,14 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     aliases: ["message_speed", "messageSpeed"],
   },
   showHomies: { query: "hm", kind: "bool", aliases: ["show_homies"] },
+  showTwitchBadges: { query: "twb", kind: "bool", aliases: ["show_twitch_badges", "showTwitchBadges"] },
+  showYouTubeBadges: { query: "ytb", kind: "bool", aliases: ["show_youtube_badges", "showYouTubeBadges"] },
+  showKickBadges: { query: "kcb", kind: "bool", aliases: ["show_kick_badges", "showKickBadges"] },
+  show7tvBadges: { query: "s7b", kind: "bool", aliases: ["show_7tv_badges", "show7tvBadges"] },
+  showFfzBadges: { query: "ffzb", kind: "bool", aliases: ["show_ffz_badges", "showFfzBadges"] },
+  showBttvBadges: { query: "bttvb", kind: "bool", aliases: ["show_bttv_badges", "showBttvBadges"] },
+  showChatterinoBadges: { query: "chb", kind: "bool", aliases: ["show_chatterino_badges", "showChatterinoBadges"] },
+  showChatisBadges: { query: "cidb", kind: "bool", aliases: ["show_chatis_badges", "showChatisBadges"] },
   recentMessages: {
     query: "rm",
     kind: "bool",
@@ -275,11 +297,6 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
   },
   bots: { query: "b", kind: "bool", aliases: ["bots"] },
   commands: { query: "cmd", kind: "bool", aliases: ["commands"] },
-  hideSpecialBadges: {
-    query: "hsb",
-    kind: "bool",
-    aliases: ["hide_special_badges"],
-  },
   hideAllBadges: {
     query: "hab",
     kind: "bool",
@@ -478,6 +495,78 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
   },
 };
 
+export const BADGE_PROVIDER_SETTINGS = [
+  { field: "show7tvBadges", token: "7tv" },
+  { field: "showFfzBadges", token: "ffz" },
+  { field: "showBttvBadges", token: "bttv" },
+  { field: "showHomies", token: "homies" },
+  { field: "showChatterinoBadges", token: "chatterino" },
+  { field: "showChatisBadges", token: "chatis" },
+  { field: "showTwitchBadges", token: "twitch" },
+  { field: "showYouTubeBadges", token: "youtube" },
+  { field: "showKickBadges", token: "kick" },
+] as const satisfies ReadonlyArray<{
+  field: keyof ChatConfig;
+  token: string;
+}>;
+
+const PLATFORM_BADGE_TOKENS = new Set(["twitch", "youtube", "kick"]);
+export const THIRD_PARTY_BADGE_FIELDS = BADGE_PROVIDER_SETTINGS.filter(
+  (provider) => !PLATFORM_BADGE_TOKENS.has(provider.token),
+).map((provider) => provider.field) as ReadonlyArray<keyof ChatConfig>;
+
+export const BADGES_HIDDEN_PARAM = {
+  query: "nobadge",
+  aliases: ["hidden_badges", "hiddenBadges"],
+} as const;
+
+export function parseHiddenBadgeProviders(
+  searchParams: URLSearchParams,
+): ReadonlyArray<keyof ChatConfig> {
+  const raw = getFirstParam(searchParams, [
+    BADGES_HIDDEN_PARAM.query,
+    ...BADGES_HIDDEN_PARAM.aliases,
+  ]);
+  if (raw === null) return [];
+
+  return raw
+    .split(",")
+    .map((token) => token.trim().toLowerCase())
+    .filter(Boolean)
+    .map((token) =>
+      BADGE_PROVIDER_SETTINGS.find((provider) => provider.token === token),
+    )
+    .filter((provider): provider is (typeof BADGE_PROVIDER_SETTINGS)[number] =>
+      Boolean(provider),
+    )
+    .map((provider) => provider.field);
+}
+
+export function serializeHiddenBadgeProviders(cfg: ChatConfig): string | null {
+  const hidden = BADGE_PROVIDER_SETTINGS.filter(
+    (provider) => cfg[provider.field] === false,
+  ).map((provider) => provider.token);
+  return hidden.length > 0 ? hidden.join(",") : null;
+}
+
+export function hideAllThirdPartyBadgesPatch(): Readonly<Pick<ChatConfig,
+  | "show7tvBadges"
+  | "showFfzBadges"
+  | "showBttvBadges"
+  | "showHomies"
+  | "showChatterinoBadges"
+  | "showChatisBadges"
+>> {
+  return {
+    show7tvBadges: false,
+    showFfzBadges: false,
+    showBttvBadges: false,
+    showHomies: false,
+    showChatterinoBadges: false,
+    showChatisBadges: false,
+  };
+}
+
 function parseBool(raw: string): boolean | null {
   const v = raw.trim().toLowerCase();
   if (v === "true" || v === "1" || v === "yes" || v === "on") return true;
@@ -487,6 +576,8 @@ function parseBool(raw: string): boolean | null {
 
 export const CHAT_CONFIG_QUERY_KEYS: readonly string[] = [
   ...Object.values(PARAMS).flatMap((def) => [def.query, ...(def.aliases ?? [])]),
+  BADGES_HIDDEN_PARAM.query,
+  ...BADGES_HIDDEN_PARAM.aliases,
   "a", "animate",
 ];
 
@@ -508,6 +599,15 @@ export function isValidChatConfigImport(params: URLSearchParams): boolean {
         if (key === "linkMode" && !["normal", "hide", "highlight"].includes(raw)) return false;
         if (key === "platformMarker" && !["none", "stripe", "icon"].includes(raw)) return false;
         if (key.endsWith("Color") && !/^#?[0-9a-f]{6}$/i.test(raw)) return false;
+      }
+    }
+  }
+  for (const query of [BADGES_HIDDEN_PARAM.query, ...BADGES_HIDDEN_PARAM.aliases]) {
+    for (const raw of params.getAll(query)) {
+      if (!raw.trim()) return false;
+      const tokens = raw.split(",").map((token) => token.trim().toLowerCase());
+      if (tokens.some((token) => !BADGE_PROVIDER_SETTINGS.some((provider) => provider.token === token))) {
+        return false;
       }
     }
   }
@@ -642,6 +742,18 @@ export function parseChatConfigFromSearchParams(
     }
   }
 
+  for (const field of parseHiddenBadgeProviders(searchParams)) {
+    (cfg as any)[field] = false;
+  }
+
+  // Legacy `hsb`/`hide_special_badges` hid every third-party badge provider.
+  const legacyHideSpecial = getFirstParam(searchParams, ["hsb", "hide_special_badges"]);
+  if (legacyHideSpecial !== null && parseBool(legacyHideSpecial) === true) {
+    for (const field of THIRD_PARTY_BADGE_FIELDS) {
+      (cfg as any)[field] = false;
+    }
+  }
+
   cfg.messageSpeed = clampMessageSpeed(cfg.messageSpeed);
   cfg.fontWeight = normalizeFontWeight(cfg.fontWeight);
   cfg.nickFontWeight = normalizeFontWeight(cfg.nickFontWeight);
@@ -692,6 +804,11 @@ export function chatConfigToSearchParams(cfg: ChatConfig): URLSearchParams {
         params.set(def.query, value === false ? "0" : String(value));
         break;
     }
+  }
+
+  const hiddenProviders = serializeHiddenBadgeProviders(cfg);
+  if (hiddenProviders !== null) {
+    params.set(BADGES_HIDDEN_PARAM.query, hiddenProviders);
   }
 
   return params;

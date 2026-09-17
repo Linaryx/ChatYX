@@ -37,9 +37,11 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
       />
     ) : null;
     if (message.platform !== "twitch") {
-      const badges = platformIcon ? [platformIcon] : [] as JSX.Element[];
+      const platformEnabled =
+        message.platform === "youtube" ? config.showYouTubeBadges : config.showKickBadges;
+      const badges = platformEnabled && platformIcon ? [platformIcon] : [] as JSX.Element[];
       message.platformBadges
-        ?.filter((badge) => badge.url)
+        ?.filter((badge) => badge.url && platformEnabled)
         .forEach((badge) => {
           const title = badge.title || "Platform badge";
           badges.push(
@@ -50,7 +52,7 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
     }
 
     const badges: JSX.Element[] = [];
-    if (platformIcon) badges.push(platformIcon);
+    if (platformIcon && config.showTwitchBadges) badges.push(platformIcon);
     const roleBadgeMap = new Map<string, JSX.Element>();
     const vanityBadgeElements: JSX.Element[] = [];
     const subBadgeMap = new Map<string, JSX.Element>();
@@ -80,16 +82,30 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
       return label.includes("bot");
     };
 
-    const thirdPartyBadges = config.hideSpecialBadges
-      ? []
-      : service.getBadges(message.username);
-    const ffzBotBadge = thirdPartyBadges.find((badge) => isFfzBotBadge(badge));
-    const enhancedBadges = thirdPartyBadges.filter(
+    const thirdPartyBadges = service.getBadges(message.username);
+    const badgeSourceEnabled: Record<string, boolean> = {
+      "7tv": config.show7tvBadges,
+      ffz: config.showFfzBadges,
+      ffzap: config.showFfzBadges,
+      bttv: config.showBttvBadges,
+      homies: config.showHomies,
+      chatterino: config.showChatterinoBadges,
+      chatis: config.showChatisBadges,
+      "rte-reyohoho": config.rteReyohohoBadge,
+    };
+    const filteredThirdPartyBadges = thirdPartyBadges.filter(
+      (badge) => badgeSourceEnabled[badge.source] ?? true,
+    );
+    const ffzBotBadge = filteredThirdPartyBadges.find((badge) =>
+      isFfzBotBadge(badge),
+    );
+    const enhancedBadges = filteredThirdPartyBadges.filter(
       (badge) => !isFfzBotBadge(badge),
     );
     let mixedBotRendered = false;
 
-    const nativeBadges = message.badges ?? [];
+    const nativeBadges =
+      config.showTwitchBadges ? (message.badges ?? []) : [];
     const hasVipBadge = nativeBadges.some((badge) =>
       badge.startsWith("vip/"),
     );
@@ -172,7 +188,7 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
       }
     });
 
-    if (nativeBadges.length === 0) {
+    if (config.showTwitchBadges && nativeBadges.length === 0) {
       const fallbackBadge = message.isModerator
         ? { name: "moderator", url: badgeService.getTwitchBadge("moderator", "1") }
         : message.isSubscriber
@@ -254,8 +270,10 @@ export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
       );
     }
 
+    const sharedPlatformEnabled =
+      config.showYouTubeBadges || config.showKickBadges;
     message.platformBadges
-      ?.filter((badge) => badge.url)
+      ?.filter((badge) => badge.url && sharedPlatformEnabled)
       .forEach((badge) => {
         const title = badge.title || "YouTube badge";
         badges.push(

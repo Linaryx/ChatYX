@@ -6,6 +6,7 @@ import {
   onCleanup,
   onMount,
   Show,
+  type JSX,
 } from "solid-js";
 import { Title } from "@solidjs/meta";
 import { ColorPickerField } from "~/components/ColorPickerField";
@@ -51,9 +52,6 @@ import {
   getChatPreviewSessionKey,
 } from "~/services/chat/preview";
 import { cn } from "~/lib/utils";
-import Check from "lucide-solid/icons/check";
-import Copy from "lucide-solid/icons/copy";
-import ExternalLink from "lucide-solid/icons/external-link";
 import Monitor from "lucide-solid/icons/monitor";
 import Pause from "lucide-solid/icons/pause";
 import Play from "lucide-solid/icons/play";
@@ -332,6 +330,7 @@ export default function ChatSetup() {
   const [reducedMotion, setReducedMotion] = createSignal(false);
   const [mobileView, setMobileView] = createSignal<"settings" | "preview">("settings");
   const [copyStatus, setCopyStatus] = createSignal<"idle" | "copying" | "success" | "error">("idle");
+  const [resetPending, setResetPending] = createSignal(false);
   const [previewDemoKind, setPreviewDemoKind] = createSignal<
     "pasta" | "emote"
   >("pasta");
@@ -343,8 +342,29 @@ export default function ChatSetup() {
   );
   const [bots, setBots] = createSignal(DEFAULT_CHAT_CONFIG.bots);
   const [commands, setCommands] = createSignal(DEFAULT_CHAT_CONFIG.commands);
-  const [hideSpecialBadges, setHideSpecialBadges] = createSignal(
-    DEFAULT_CHAT_CONFIG.hideSpecialBadges,
+  const [show7tvBadges, setShow7tvBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.show7tvBadges,
+  );
+  const [showFfzBadges, setShowFfzBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.showFfzBadges,
+  );
+  const [showBttvBadges, setShowBttvBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.showBttvBadges,
+  );
+  const [showChatterinoBadges, setShowChatterinoBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.showChatterinoBadges,
+  );
+  const [showChatisBadges, setShowChatisBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.showChatisBadges,
+  );
+  const [showTwitchBadges, setShowTwitchBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.showTwitchBadges,
+  );
+  const [showYouTubeBadges, setShowYouTubeBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.showYouTubeBadges,
+  );
+  const [showKickBadges, setShowKickBadges] = createSignal(
+    DEFAULT_CHAT_CONFIG.showKickBadges,
   );
   const [hideAllBadges, setHideAllBadges] = createSignal(
     DEFAULT_CHAT_CONFIG.hideAllBadges,
@@ -539,9 +559,16 @@ export default function ChatSetup() {
       animation: setAnimation,
       bots: setBots,
       commands: setCommands,
-      hideSpecialBadges: setHideSpecialBadges,
       hideAllBadges: setHideAllBadges,
       showHomies: setShowHomies,
+      show7tvBadges: setShow7tvBadges,
+      showFfzBadges: setShowFfzBadges,
+      showBttvBadges: setShowBttvBadges,
+      showChatterinoBadges: setShowChatterinoBadges,
+      showChatisBadges: setShowChatisBadges,
+      showTwitchBadges: setShowTwitchBadges,
+      showYouTubeBadges: setShowYouTubeBadges,
+      showKickBadges: setShowKickBadges,
       fade: setFade,
       size: setSize,
       font: setFont,
@@ -677,10 +704,17 @@ export default function ChatSetup() {
       MAX_MESSAGE_SPEED,
     ),
     showHomies: showHomies(),
+    show7tvBadges: show7tvBadges(),
+    showFfzBadges: showFfzBadges(),
+    showBttvBadges: showBttvBadges(),
+    showChatterinoBadges: showChatterinoBadges(),
+    showChatisBadges: showChatisBadges(),
+    showTwitchBadges: showTwitchBadges(),
+    showYouTubeBadges: showYouTubeBadges(),
+    showKickBadges: showKickBadges(),
     recentMessages: recentMessages(),
     bots: bots(),
     commands: commands(),
-    hideSpecialBadges: hideSpecialBadges(),
     hideAllBadges: hideAllBadges(),
     emoteScale: toFloat(emoteScale(), DEFAULT_CHAT_CONFIG.emoteScale),
     showGifs: showGifs(),
@@ -980,6 +1014,27 @@ export default function ChatSetup() {
       console.error("Ошибка копирования:", err);
       if (url === generatedUrl()) setCopyStatus("error");
     }
+  };
+
+  const resetSettings = () => {
+    if (!resetPending()) {
+      setResetPending(true);
+      return;
+    }
+
+    importSettings({
+      ...DEFAULT_CHAT_CONFIG,
+      botNames: [...DEFAULT_BOT_NAMES],
+      singleChatter: [],
+    });
+    setUsersColorEnabled(false);
+    setBotInput("");
+    setBotProfiles({});
+    setAllowedChatterInput("");
+    setStageBackdrop("dark");
+    setStageColor("#241b33");
+    setCopyStatus("idle");
+    setResetPending(false);
   };
 
   createEffect(() => {
@@ -1446,12 +1501,6 @@ export default function ChatSetup() {
       hint: "Полоска Twitch Predictions над сообщениями. Работает только при указанном Twitch-канале.",
     },
     {
-      label: "Скрыть все бейджи",
-      checked: hideAllBadges,
-      onChange: setHideAllBadges,
-      hint: "Прячет все бейджи: Twitch, YouTube, Kick, 7TV, FFZ, BTTV и Homies.",
-    },
-    {
       label: "Показывать сообщения, начинающиеся с !",
       checked: commands,
       onChange: setCommands,
@@ -1461,20 +1510,8 @@ export default function ChatSetup() {
       checked: show7tvUnlisted,
       onChange: setShow7tvUnlisted,
     },
-    {
-      label: "Скрыть сторонние бейджи (7TV, FFZ, BTTV)",
-      checked: hideSpecialBadges,
-      onChange: setHideSpecialBadges,
-      hint: "Бейджи Twitch и YouTube останутся видимыми.",
-      disabled: hideAllBadges,
-    },
-    {
-      label: "Показывать Homies-бейджи",
-      checked: showHomies,
-      onChange: setShowHomies,
-      disabled: hideAllBadges,
-    },
   ];
+
 
   const ttsToggles: ToggleRow[] = [
     {
@@ -1497,12 +1534,6 @@ export default function ChatSetup() {
       checked: rteProxy,
       onChange: setRteProxy,
       hint: "Направляет только публичные API и CDN 7TV, BTTV и FFZ через RTE. Twitch и авторизация не проксируются.",
-    },
-    {
-      label: "Бейдж Reyohoho",
-      checked: rteReyohohoBadge,
-      onChange: setRteReyohohoBadge,
-      hint: "Показывает пользовательский бейдж из публичного RTE API, если он есть.",
     },
     {
       label: "Пользовательские пейнты RTE",
@@ -1530,6 +1561,159 @@ export default function ChatSetup() {
       badgeColor: "#e005b9",
       checked: ffzBotMixVip,
       onChange: setFfzBotMixVip,
+    },
+  ];
+
+  const ffzBadgeMergeBlock = (
+    <div class="setup-role-merge grid grid-cols-1 gap-3 rounded-lg border border-border bg-black/40 p-3.5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+      <div class="flex min-w-0 flex-col gap-1.5">
+        <div class="text-sm font-bold text-foreground">
+          Бейдж бота рядом с ролью
+        </div>
+        <div class="text-xs leading-snug text-muted-foreground">
+          Выбери роли, у которых FFZ-бот-бейдж будет показываться
+          рядом с Twitch-бейджем роли.
+        </div>
+      </div>
+      <div class="setup-role-pills grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <For each={roleBadgeMergeOptions}>
+          {(option) => {
+            const active = () => option.checked();
+            const disabled = () => !showFfzBadges() || hideAllBadges();
+            return (
+              <button
+                type="button"
+                disabled={disabled()}
+                class={cn(
+                  "flex min-h-[74px] flex-col items-center justify-center gap-2 rounded-lg border px-2.5 py-2.5 text-xs font-bold transition-colors",
+                  disabled()
+                    ? "cursor-not-allowed border-white/15 bg-black text-white/35"
+                    : active()
+                      ? "border-white/70 bg-white/5 text-white"
+                      : "border-white/20 bg-black text-white/70 hover:border-white/40",
+                )}
+                onClick={() => option.onChange(!active())}
+                aria-pressed={active()}
+              >
+                <span class="inline-flex items-center rounded-md border border-white/15 bg-black/70 p-0.5">
+                  <span
+                    class="inline-flex size-[23px] items-center justify-center rounded-[5px] border border-white/20"
+                    style={{ background: option.badgeColor }}
+                  >
+                    <img
+                      src={ffzBotBadgePreviewUrl}
+                      alt=""
+                      class="block size-full object-contain"
+                      loading="lazy"
+                    />
+                  </span>
+                </span>
+                <span class="text-center leading-tight">
+                  {option.label}
+                </span>
+              </button>
+            );
+          }}
+        </For>
+      </div>
+    </div>
+  );
+  const badgeProviderGroups: Array<{
+    title: string;
+    toggle: ToggleRow;
+    extra?: JSX.Element;
+  }> = [
+    {
+      title: "Twitch",
+      toggle: {
+        label: "Показывать бейджи Twitch",
+        checked: showTwitchBadges,
+        onChange: setShowTwitchBadges,
+        disabled: hideAllBadges,
+      },
+    },
+    {
+      title: "YouTube",
+      toggle: {
+        label: "Показывать бейджи YouTube",
+        checked: showYouTubeBadges,
+        onChange: setShowYouTubeBadges,
+        disabled: hideAllBadges,
+      },
+    },
+    {
+      title: "Kick",
+      toggle: {
+        label: "Показывать бейджи Kick",
+        checked: showKickBadges,
+        onChange: setShowKickBadges,
+        disabled: hideAllBadges,
+      },
+    },
+    {
+      title: "Homies",
+      toggle: {
+        label: "Показывать Homies-бейджи",
+        checked: showHomies,
+        onChange: setShowHomies,
+        disabled: hideAllBadges,
+      },
+    },
+    {
+      title: "7TV",
+      toggle: {
+        label: "Показывать бейджи 7TV",
+        checked: show7tvBadges,
+        onChange: setShow7tvBadges,
+        disabled: hideAllBadges,
+      },
+    },
+    {
+      title: "FFZ",
+      toggle: {
+        label: "Показывать бейджи FFZ",
+        checked: showFfzBadges,
+        onChange: setShowFfzBadges,
+        disabled: hideAllBadges,
+      },
+      extra: ffzBadgeMergeBlock,
+    },
+    {
+      title: "BTTV",
+      toggle: {
+        label: "Показывать бейджи BTTV",
+        checked: showBttvBadges,
+        onChange: setShowBttvBadges,
+        disabled: hideAllBadges,
+      },
+    },
+    {
+      title: "Chatterino",
+      toggle: {
+        label: "Показывать бейджи Chatterino",
+        checked: showChatterinoBadges,
+        onChange: setShowChatterinoBadges,
+        disabled: hideAllBadges,
+      },
+    },
+    {
+      title: "ChatIS",
+      toggle: {
+        label: "Показывать бейджи ChatIS",
+        checked: showChatisBadges,
+        onChange: setShowChatisBadges,
+        disabled: hideAllBadges,
+      },
+    },
+    {
+      title: "RTE-Reyohoho",
+      toggle: {
+        label: "Бейдж Reyohoho",
+        checked: rteReyohohoBadge,
+        onChange: setRteReyohohoBadge,
+        hint: "Показывает пользовательский бейдж из публичного RTE API, если он есть.",
+        disabled: hideAllBadges,
+      },
     },
   ];
 
@@ -1659,28 +1843,31 @@ export default function ChatSetup() {
               </div>
             </section>
             <div class="setup-export">
-              <label for="setup-obs-url" class="setup-field-label">Ссылка для OBS</label>
-              <Input id="setup-obs-url" type="text" readonly value={generatedUrl()} placeholder="Укажи канал, чтобы создать ссылку" onFocus={(event) => event.currentTarget.select()} class="setup-url-input" aria-describedby="setup-copy-status" />
-              <Button
-                type="button"
-                onClick={copyToClipboard}
-                disabled={!generatedUrl() || copyStatus() === "copying"}
-                class={cn(
-                  "setup-url-copy-button",
-                  copyStatus() === "success" && "setup-url-copy-button--success",
-                )}
-              >
-                <Show when={copyStatus() === "success"} fallback={<Copy size={16} aria-hidden="true" />}><Check size={16} aria-hidden="true" /></Show>
-                {copyStatus() === "success" ? "Скопировано" : "Скопировать"}
-              </Button>
-              <Show when={generatedUrl()}><a class="setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label="Открыть оверлей в новой вкладке"><ExternalLink size={15} aria-hidden="true" /><span>Открыть</span></a></Show>
-              <p id="setup-copy-status" role="status" aria-live="polite" class={cn("setup-copy-status", copyStatus() === "success" && "setup-copy-status--success", copyStatus() === "error" && "setup-copy-status--error")}>
-                {copyStatus() === "success" ? "Ссылка скопирована. Добавь в OBS источник «Браузер» и вставь её."
-                  : copyStatus() === "error" ? "Не удалось скопировать. Выдели ссылку выше и скопируй её вручную."
-                  : copyStatus() === "copying" ? "Копирование ссылки…"
-                  : generatedUrl() ? "Добавь в OBS источник «Браузер» и вставь эту ссылку."
-                  : "Для демо канал не нужен. Для OBS укажи хотя бы один канал."}
-              </p>
+              <div class="setup-export-link">
+                <h2 class="setup-export-title">Ссылка для OBS</h2>
+                <Input id="setup-obs-url" type="text" readonly value={generatedUrl()} placeholder="Укажи канал, чтобы создать ссылку" onFocus={(event) => event.currentTarget.select()} class="setup-url-input" aria-label="Ссылка для OBS" />
+              </div>
+              <div class="setup-export-actions">
+                <div class="setup-export-primary-actions">
+                  <Button
+                    type="button"
+                    onClick={copyToClipboard}
+                    disabled={!generatedUrl() || copyStatus() === "copying"}
+                    class={cn(
+                      "setup-export-action setup-url-copy-button",
+                      copyStatus() === "success" && "setup-url-copy-button--success",
+                    )}
+                  >
+                    <span class="hgi-stroke hgi-copy-01 setup-export-icon" aria-hidden="true" />
+                    {copyStatus() === "success" ? "Скопировано" : "Скопировать"}
+                  </Button>
+                  <Show when={generatedUrl()}><a class="setup-export-action setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label="Открыть оверлей в новой вкладке"><span class="hgi-stroke hgi-link-square-01 setup-export-icon" aria-hidden="true" /><span>Открыть</span></a></Show>
+                </div>
+                <Button type="button" variant="outline" class="setup-export-action setup-reset-button" onClick={resetSettings}>
+                  <span class="hgi-stroke hgi-trash setup-export-icon" aria-hidden="true" />
+                  {resetPending() ? "Подтвердить?" : "Сбросить"}
+                </Button>
+              </div>
             </div>
             </div>
           <div class="setup-workspace">
@@ -1764,57 +1951,25 @@ export default function ChatSetup() {
                 icon="hgi-dashboard-square-03"
                 hidden={activeSection() !== "content"}
               >
-                <div class="setup-field-group"><h3>Сообщения и события</h3><ToggleRows rows={contentToggles.slice(0, 6)} /></div>
-                <div class="setup-field-group"><h3>Эмоуты и бейджи</h3><ToggleRows rows={contentToggles.slice(6)} /></div>
-
-                <div class="setup-role-merge grid grid-cols-1 gap-3 rounded-lg border border-border bg-black/40 p-3.5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
-                  <div class="flex min-w-0 flex-col gap-1.5">
-                    <div class="text-sm font-bold text-foreground">
-                      Бейдж бота рядом с ролью
-                    </div>
-                    <div class="text-xs leading-snug text-muted-foreground">
-                      Выбери роли, у которых FFZ-бот-бейдж будет показываться
-                      рядом с Twitch-бейджем роли.
-                    </div>
-                  </div>
-                  <div class="setup-role-pills grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <For each={roleBadgeMergeOptions}>
-                      {(option) => {
-                        const active = () => option.checked();
-                        return (
-                          <button
-                            type="button"
-                            class={cn(
-                              "flex min-h-[74px] flex-col items-center justify-center gap-2 rounded-lg border px-2.5 py-2.5 text-xs font-bold transition-colors",
-                              active()
-                                ? "border-white/70 bg-white/5 text-white"
-                                : "border-white/20 bg-black text-white/70 hover:border-white/40",
-                            )}
-                            onClick={() => option.onChange(!active())}
-                            aria-pressed={active()}
-                          >
-                            <span class="inline-flex items-center rounded-md border border-white/15 bg-black/70 p-0.5">
-                              <span
-                                class="inline-flex size-[23px] items-center justify-center rounded-[5px] border border-white/20"
-                                style={{ background: option.badgeColor }}
-                              >
-                                <img
-                                  src={ffzBotBadgePreviewUrl}
-                                  alt=""
-                                  class="block size-full object-contain"
-                                  loading="lazy"
-                                />
-                              </span>
-                            </span>
-                            <span class="text-center leading-tight">
-                              {option.label}
-                            </span>
-                          </button>
-                        );
-                      }}
-                    </For>
-                  </div>
+                <div class="setup-field-group"><h3>Сообщения и события</h3><ToggleRows rows={contentToggles} /></div>
+                <div class="setup-field-group">
+                  <h3>Бейджи</h3>
+                  <ToggleRows rows={[{
+                    label: "Скрыть все бейджи",
+                    checked: hideAllBadges,
+                    onChange: setHideAllBadges,
+                    hint: "Прячет все бейджи: Twitch, YouTube, Kick, 7TV, FFZ, BTTV, Homies, Chatterino и ChatIS.",
+                  }]} />
                 </div>
+                <For each={badgeProviderGroups}>
+                  {(group) => (
+                    <div class="setup-field-group">
+                      <h3>{group.title}</h3>
+                      <ToggleRows rows={[group.toggle]} />
+                      {group.extra}
+                    </div>
+                  )}
+                </For>
               </SectionCard>
 
               <SectionCard

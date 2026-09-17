@@ -124,6 +124,59 @@ describe("chat URL params", () => {
     expect(parseChatConfigFromSearchParams(params)).toEqual(cfg);
   });
 
+  test("serializes hidden badge providers as a nobadge list and round-trips", () => {
+    const cfg: ChatConfig = {
+      ...DEFAULT_CHAT_CONFIG,
+      channel: "forsen",
+      show7tvBadges: false,
+      showFfzBadges: false,
+      showTwitchBadges: false,
+    };
+
+    const params = chatConfigToSearchParams(cfg);
+
+    expect(params.get("nobadge")).toBe("7tv,ffz,twitch");
+    const parsed = parseChatConfigFromSearchParams(params);
+    expect(parsed.show7tvBadges).toBe(false);
+    expect(parsed.showFfzBadges).toBe(false);
+    expect(parsed.showTwitchBadges).toBe(false);
+    expect(parsed).toEqual(cfg);
+  });
+
+  test("parses individual badge-provider params and accepts nobadge tokens case-insensitively", () => {
+    const parsed = parseChatConfigFromSearchParams(
+      new URLSearchParams("nobadge=7TV,%20FFZ&twb=false&ytb=false&kcb=false&hm=false&bttvb=false&chb=false&cidb=false"),
+    );
+
+    expect(parsed.show7tvBadges).toBe(false);
+    expect(parsed.showFfzBadges).toBe(false);
+    expect(parsed.showTwitchBadges).toBe(false);
+    expect(parsed.showYouTubeBadges).toBe(false);
+    expect(parsed.showKickBadges).toBe(false);
+    expect(parsed.showHomies).toBe(false);
+    expect(parsed.showBttvBadges).toBe(false);
+    expect(parsed.showChatterinoBadges).toBe(false);
+    expect(parsed.showChatisBadges).toBe(false);
+
+    const allShown = chatConfigToSearchParams(DEFAULT_CHAT_CONFIG);
+    expect(allShown.get("nobadge")).toBeNull();
+  });
+
+  test("maps legacy hide_special_badges to third-party providers", () => {
+    const parsed = parseChatConfigFromSearchParams(
+      new URLSearchParams("hsb=true"),
+    );
+
+    expect(parsed.show7tvBadges).toBe(false);
+    expect(parsed.showFfzBadges).toBe(false);
+    expect(parsed.showBttvBadges).toBe(false);
+    expect(parsed.showHomies).toBe(false);
+    expect(parsed.showChatterinoBadges).toBe(false);
+    expect(parsed.showChatisBadges).toBe(false);
+    expect(parsed.showTwitchBadges).toBe(true);
+    expect(parsed.showYouTubeBadges).toBe(true);
+  });
+
   test("treats botNames without explicit bots flag as a hide-list", () => {
     const cfg = parseChatConfigFromSearchParams(
       new URLSearchParams("bn=moobot,twirapp,nightbot"),

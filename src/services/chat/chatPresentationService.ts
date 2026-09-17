@@ -657,7 +657,14 @@ export function createChatPresentationConfig(
     },
     features: {
       sevenTVEventAPI: true,
-      badges: !params.hideSpecialBadges,
+      badges:
+        params.show7tvBadges ||
+        params.showFfzBadges ||
+        params.showBttvBadges ||
+        params.showHomies ||
+        params.showChatterinoBadges ||
+        params.showChatisBadges ||
+        params.rteReyohohoBadge,
       paints: true,
       personalEmotes: true,
       rteBadges: params.rteReyohohoBadge,
