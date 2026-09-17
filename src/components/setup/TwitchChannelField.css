@@ -5,16 +5,17 @@
   align-items: center;
   gap: 8px;
   padding: 4px 6px 4px 12px;
-  border: 1px solid hsl(var(--input));
+  border: 1px solid transparent;
   border-radius: 0.5rem;
-  background: hsl(var(--background));
+  background:
+    linear-gradient(hsl(var(--background)), hsl(var(--background))) padding-box,
+    linear-gradient(to right, #8d45f8, #27272a) border-box;
   box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .twitch-channel-field:focus-within {
-  border-color: hsl(264 100% 64%);
-  box-shadow: 0 0 0 3px hsl(264 100% 64% / 0.16);
+  box-shadow: 0 0 0 2px hsl(var(--ring));
 }
 
 .twitch-channel-chip {
@@ -93,20 +94,20 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
 }
 
 .twitch-channel-metric {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 20px;
-  padding: 0 7px;
+  gap: 4px;
+  height: 18px;
+  padding: 0 5px;
   border: 1px solid hsl(var(--border));
   border-radius: 999px;
   background: hsl(var(--muted) / 0.6);
   color: hsl(var(--muted-foreground));
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.01em;
@@ -114,8 +115,8 @@
 
 .twitch-channel-metric svg,
 .twitch-channel-metric-image {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   flex: 0 0 auto;
 }
 
@@ -170,7 +171,7 @@
   color: hsl(var(--muted-foreground));
 }
 
-.twitch-channel-input:focus {
+.setup-root .twitch-channel-field .twitch-channel-input:focus-visible {
   outline: none;
 }
 

@@ -1,5 +1,6 @@
 import {
   DEFAULT_CHAT_CONFIG,
+  hideAllThirdPartyBadgesPatch,
   parseBotNames,
   parseChatConfigFromSearchParams,
   type ChatConfig,
@@ -195,6 +196,7 @@ export function mapChatIsParams(params: URLSearchParams): SetupImportMapping {
   const animate = booleanValue(params, "animate");
   const bots = booleanValue(params, "bots");
   const hideSpecialBadges = booleanValue(params, "hide_special_badges");
+  const hideAllBadges = booleanValue(params, "hide_all_badges");
   const showHomies = booleanValue(params, "show_homies");
   const fade = falseOrNonNegative(params, "fade");
   const size = indexedNumber(params, "size", 1, 3);
@@ -216,7 +218,8 @@ export function mapChatIsParams(params: URLSearchParams): SetupImportMapping {
       ...(channel !== undefined && { channel }),
       ...(animate !== undefined && { animation: animate ? "fade" : "none" }),
       ...(bots !== undefined && { bots }),
-      ...(hideSpecialBadges !== undefined && { hideSpecialBadges }),
+      ...(hideSpecialBadges === true && hideAllThirdPartyBadgesPatch()),
+      ...(hideAllBadges !== undefined && { hideAllBadges }),
       ...(showHomies !== undefined && { showHomies }),
       ...(fade !== undefined && { fade }),
       ...(size !== undefined && { size }),
@@ -264,7 +267,7 @@ export function mapSharedParams(params: URLSearchParams): SetupImportMapping {
       ...(animate !== undefined && { animation: animate ? "fade" : "none" }),
       ...(bots !== undefined && { bots }),
       ...(hideCommands !== undefined && { commands: !hideCommands }),
-      ...(hideBadges !== undefined && { hideSpecialBadges: hideBadges }),
+      ...(hideBadges !== undefined && { hideAllBadges: hideBadges }),
       ...(fade !== undefined && { fade }),
       ...(size !== undefined && { size: Math.max(1, size) }),
       ...cyanFont(params),

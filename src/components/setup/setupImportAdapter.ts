@@ -21,8 +21,16 @@ export function applySetupImport(
   if (patch.animation !== undefined) setters.animation(patch.animation);
   if (patch.bots !== undefined) setters.bots(patch.bots);
   if (patch.commands !== undefined) setters.commands(patch.commands);
-  if (patch.hideSpecialBadges !== undefined) setters.hideSpecialBadges(patch.hideSpecialBadges);
+  if (patch.hideAllBadges !== undefined) setters.hideAllBadges(patch.hideAllBadges);
   if (patch.showHomies !== undefined) setters.showHomies(patch.showHomies);
+  if (patch.show7tvBadges !== undefined) setters.show7tvBadges(patch.show7tvBadges);
+  if (patch.showFfzBadges !== undefined) setters.showFfzBadges(patch.showFfzBadges);
+  if (patch.showBttvBadges !== undefined) setters.showBttvBadges(patch.showBttvBadges);
+  if (patch.showChatterinoBadges !== undefined) setters.showChatterinoBadges(patch.showChatterinoBadges);
+  if (patch.showChatisBadges !== undefined) setters.showChatisBadges(patch.showChatisBadges);
+  if (patch.showTwitchBadges !== undefined) setters.showTwitchBadges(patch.showTwitchBadges);
+  if (patch.showYouTubeBadges !== undefined) setters.showYouTubeBadges(patch.showYouTubeBadges);
+  if (patch.showKickBadges !== undefined) setters.showKickBadges(patch.showKickBadges);
   if (patch.fade !== undefined) setters.fade(String(patch.fade === false ? 0 : patch.fade));
   if (patch.size !== undefined) setters.size(String(patch.size));
   if (patch.font !== undefined) setters.font(String(patch.font));
@@ -61,6 +69,7 @@ export function applySetupImport(
   if (patch.showPredictions !== undefined) setters.showPredictions(patch.showPredictions);
   if (patch.linkMode !== undefined) setters.linkMode(patch.linkMode);
   if (patch.linkColor !== undefined) setters.linkColor(patch.linkColor);
+  if (patch.usersColor !== undefined) setters.usersColor(patch.usersColor);
   if (patch.hideLinkRewards !== undefined) setters.hideLinkRewards(patch.hideLinkRewards);
   if (patch.rteProxy !== undefined) setters.rteProxy(patch.rteProxy);
   if (patch.rteAzureTts !== undefined) setters.rteAzureTts(patch.rteAzureTts);
