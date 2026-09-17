@@ -197,6 +197,22 @@
   gap: 0.4rem;
 }
 
+.setup-channel-input--youtube {
+  --channel-brand: #db022d;
+}
+
+.setup-channel-input--kick {
+  --channel-brand: #53fc18;
+}
+
+.setup-channel-input--youtube,
+.setup-channel-input--kick {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(hsl(var(--background)), hsl(var(--background))) padding-box,
+    linear-gradient(to right, var(--channel-brand), #27272a) border-box;
+}
+
 .setup-field-label {
   display: block;
   font-size: 0.75rem;
@@ -312,11 +328,11 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0.5rem 0.5rem 0.5rem 0;
+  padding: 0 0.5rem 0 0;
 }
 
 .setup-sidebar-caption {
-  padding: 0.25rem 0.5rem 0.7rem;
+  padding: 0 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
   color: hsl(var(--muted-foreground));
@@ -331,8 +347,9 @@
 .setup-nav-item {
   position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
   width: 100%;
   padding: 0.75rem;
   border: 1px solid transparent;
@@ -345,12 +362,22 @@
     border-color 0.15s ease;
 }
 
-.setup-nav-item:hover {
+.setup-nav-icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: hsl(var(--muted-foreground));
+  transition: color 0.15s ease;
+}
+
+.setup-nav-item:hover,
+.setup-nav-item:hover .setup-nav-icon {
   background: hsl(var(--muted) / 0.6);
   color: hsl(var(--foreground));
 }
 
-.setup-nav-item[aria-current="location"] {
+.setup-nav-item[aria-current="location"],
+.setup-nav-item[aria-current="location"] .setup-nav-icon {
   background: hsl(var(--accent));
   border-color: hsl(var(--border));
   color: hsl(var(--foreground));
@@ -411,7 +438,19 @@
 }
 
 .setup-section-heading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
   padding: 1.25rem 1.25rem 0;
+}
+
+.setup-section-heading-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  font-size: 2rem;
+  line-height: 1;
+  color: hsl(var(--foreground));
 }
 
 .setup-section-heading h2 {

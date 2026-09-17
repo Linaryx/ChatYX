@@ -30,46 +30,55 @@ export const SETUP_NAV: {
   id: SetupSectionId;
   label: string;
   description: string;
+  icon: string;
 }[] = [
   {
     id: "import",
     label: "Импорт настроек",
     description: "ChatYX, ChatIS, Cyan и Davii",
+    icon: "hgi-database-import",
   },
   {
     id: "appearance",
     label: "Текст и размер",
     description: "Шрифт, вес и эмоуты",
+    icon: "hgi-text",
   },
   {
     id: "styling",
     label: "Внешний вид",
     description: "Фон, тень и цвет",
+    icon: "hgi-colors",
   },
   {
     id: "behavior",
     label: "Поведение",
     description: "Анимация и порядок",
+    icon: "hgi-arrow-up-right-stack",
   },
   {
     id: "content",
     label: "Контент и бейджи",
     description: "Сообщения и бейджи",
+    icon: "hgi-dashboard-square-03",
   },
   {
     id: "bots",
     label: "Боты и фильтры",
     description: "Списки и скрытие",
+    icon: "hgi-bot-message-square",
   },
   {
     id: "tts",
     label: "Озвучка сообщений",
     description: "TTS через ChatIS и Azure",
+    icon: "hgi-voice-comment",
   },
   {
     id: "rte",
     label: "RTE",
     description: "Прокси и косметика",
+    icon: "hgi-blockchain-05",
   },
 ];
 
@@ -120,6 +129,7 @@ export function ToggleRows(props: { rows: ToggleRow[] }) {
 export function SectionCard(props: {
   title: string;
   description?: string;
+  icon?: string;
   children: JSX.Element;
   class?: string;
   id?: string;
@@ -135,8 +145,18 @@ export function SectionCard(props: {
       class={cn("setup-section", props.compact && "setup-section--compact", props.class)}
     >
       <header class="setup-section-heading">
-        <h2 id={titleId}>{props.title}</h2>
-        <Show when={props.description}><p>{props.description}</p></Show>
+        <Show when={props.icon}>
+          {(icon) => (
+            <span
+              class={cn("hgi-stroke", "setup-section-heading-icon", icon())}
+              aria-hidden="true"
+            />
+          )}
+        </Show>
+        <div class="min-w-0">
+          <h2 id={titleId}>{props.title}</h2>
+          <Show when={props.description}><p>{props.description}</p></Show>
+        </div>
       </header>
       <div class="setup-section-content">{props.children}</div>
     </section>
@@ -160,11 +180,14 @@ export function SetupNav(props: {
               aria-controls={`setup-section-${item.id}`}
               aria-current={active() ? "location" : undefined}
             >
-              <span class="block text-xs font-medium leading-tight xl:text-sm">
-                {item.label}
-              </span>
-              <span class="mt-1 block text-xs font-normal leading-normal text-muted-foreground">
-                {item.description}
+              <span class="hgi-stroke setup-nav-icon" classList={{ [item.icon]: true }} aria-hidden="true" />
+              <span class="min-w-0 flex-1">
+                <span class="block text-xs font-medium leading-tight xl:text-sm">
+                  {item.label}
+                </span>
+                <span class="mt-1 block text-xs font-normal leading-normal text-muted-foreground">
+                  {item.description}
+                </span>
               </span>
             </button>
           );

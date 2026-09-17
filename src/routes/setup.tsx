@@ -1616,7 +1616,7 @@ export default function ChatSetup() {
                   value={youtubeChannel()}
                   onInput={(e) => setYoutubeChannel(e.currentTarget.value)}
                   placeholder="@канал или ID канала"
-                  class="h-10"
+                  class="h-10 setup-channel-input--youtube"
                 />
               </div>
               <div class="setup-channel-field">
@@ -1632,7 +1632,7 @@ export default function ChatSetup() {
                   value={kickChannel()}
                   onInput={(event) => setKickChannel(event.currentTarget.value)}
                   placeholder="название канала"
-                  class="h-10"
+                  class="h-10 setup-channel-input--kick"
                 />
               </div>
             </section>
@@ -1691,6 +1691,7 @@ export default function ChatSetup() {
                 id="setup-section-appearance"
                 title="Текст и размер"
                 description="Настрой, насколько крупно и каким шрифтом будет выглядеть чат."
+                icon="hgi-text"
                 hidden={activeSection() !== "appearance"}
               >
                 <div class="setup-field-group"><h3>Шрифт сообщений</h3><ControlRows rows={appearanceRows.slice(0, 3)} /></div>
@@ -1701,6 +1702,7 @@ export default function ChatSetup() {
                 id="setup-section-styling"
                 title="Внешний вид"
                 description="Фон сообщений, тень, обводка и время жизни строк на экране."
+                icon="hgi-colors"
                 hidden={activeSection() !== "styling"}
               >
                 <div class="setup-field-group"><h3>Читаемость текста</h3><ControlRows rows={stylingRows.slice(0, 3)} /></div>
@@ -1712,6 +1714,7 @@ export default function ChatSetup() {
                 id="setup-section-behavior"
                 title="Поведение сообщений"
                 description="Управляет анимацией, переносами, порядком и форматом сообщений."
+                icon="hgi-arrow-up-right-stack"
                 hidden={activeSection() !== "behavior"}
               >
                 <div class="setup-field-group"><h3>Анимация и ссылки</h3><ControlRows rows={behaviorRows} /></div>
@@ -1723,6 +1726,7 @@ export default function ChatSetup() {
                 id="setup-section-content"
                 title="Контент и бейджи"
                 description="Выбери, какие сообщения, эмоуты и бейджи попадут в оверлей."
+                icon="hgi-dashboard-square-03"
                 hidden={activeSection() !== "content"}
               >
                 <div class="setup-field-group"><h3>Сообщения и события</h3><ToggleRows rows={contentToggles.slice(0, 6)} /></div>
@@ -1782,6 +1786,7 @@ export default function ChatSetup() {
                 id="setup-section-bots"
                 title="Боты и фильтры"
                 description="Спрячь ботов, команды или оставь сообщения только выбранных пользователей."
+                icon="hgi-bot-message-square"
                 hidden={activeSection() !== "bots"}
               >
                 <div class="setup-bot-row grid grid-cols-1 items-start gap-2 min-[1100px]:grid-cols-[132px_minmax(0,1fr)] xl:grid-cols-[168px_minmax(0,1fr)] md:max-[1099px]:grid-cols-[180px_minmax(0,1fr)]">
@@ -1867,6 +1872,7 @@ export default function ChatSetup() {
                 id="setup-section-tts"
                 title="Озвучка сообщений"
                 description="Включи один или оба сервиса синтеза речи для единой команды модератора."
+                icon="hgi-voice-comment"
                 hidden={activeSection() !== "tts"}
               >
                 <ToggleRows rows={ttsToggles} />
@@ -1877,6 +1883,7 @@ export default function ChatSetup() {
                 id="setup-section-rte"
                 title="RTE-интеграции"
                 description="Необязательный прокси для публичных ресурсов и пользовательской косметики."
+                icon="hgi-blockchain-05"
                 hidden={activeSection() !== "rte"}
               >
                 <ToggleRows rows={rteToggles} />

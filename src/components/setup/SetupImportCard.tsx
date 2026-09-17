@@ -68,6 +68,7 @@ export function SetupImportCard(props: SetupImportCardProps) {
       id="setup-section-import"
       title="Импорт настроек"
       description="Восстанови настройки ChatYX или перенеси совместимые параметры ChatIS, Cyan Chat и Davii Chat."
+      icon="hgi-database-import"
       hidden={props.hidden}
     >
       <div class="flex flex-col gap-5">
