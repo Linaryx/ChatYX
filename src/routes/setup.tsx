@@ -1778,7 +1778,7 @@ export default function ChatSetup() {
           <header class="setup-toolbar">
             <div class="setup-brand">
               <span class="setup-brand-mark" aria-hidden="true"><img src={getPublicAssetUrl("img/emote-2x.webp")} alt="" /></span>
-              <div><h1>Оверлей мульти-чата CHATYX</h1><p>Настрой оформление и добавь оверлей в OBS.</p></div>
+              <div><h1>ChatYX • Оверлей мульти-чата</h1><p>Настрой оформление и добавь оверлей в OBS.</p></div>
             </div>
           </header>
           <div class="setup-view-switch" role="group" aria-label="Рабочая область">
@@ -2184,7 +2184,6 @@ export default function ChatSetup() {
                               <span class="setup-stage-swatch" style={`background-color: ${stageColor()}`} aria-hidden="true" />
                             </button>
                           </div>
-                          <p class="setup-preview-hint">Только для проверки. Не меняет фон в OBS.</p>
                           <Show when={stageBackdrop() === "custom"}>
                             <div class="setup-stage-color">
                               <ColorPickerField
@@ -2197,11 +2196,6 @@ export default function ChatSetup() {
                             </div>
                           </Show>
                           </div>
-                      </div>
-                      <div class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
-                        {isExternalOnly()
-                          ? "Для внешних источников доступен только чат канала."
-                          : "Чат канала показывает сообщения в реальном времени. Демо выводит тестовые сообщения."}
                       </div>
                     </div>
 
