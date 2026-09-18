@@ -1969,12 +1969,12 @@ export default function ChatSetup() {
                 icon="hgi-bot-message-square"
                 hidden={activeSection() !== "bots"}
               >
-                <div class="setup-bot-row grid grid-cols-1 items-start gap-2 min-[1100px]:grid-cols-[132px_minmax(0,1fr)] xl:grid-cols-[168px_minmax(0,1fr)] md:max-[1099px]:grid-cols-[180px_minmax(0,1fr)]">
-                  <div class="flex min-w-0 flex-col gap-1.5">
+                <div class="setup-bot-row flex flex-col gap-2">
+                  <div class="flex min-w-0 items-center justify-between gap-3">
                     <div class="text-xs font-medium text-foreground sm:text-sm">
                       Ники ботов
                     </div>
-                    <div class="inline-flex items-center gap-2 text-[11px] text-muted-foreground sm:text-xs">
+                    <div class="shrink-0">
                       <SetupSwitch
                         checked={!bots()}
                         onChange={(hideBots) => setBots(!hideBots)}
