@@ -537,8 +537,11 @@
   gap: 0.25rem;
 }
 
-/* Switch row */
+/* Switch row — relative so the visually-hidden input is anchored to its own row.
+   Otherwise the absolutely-positioned input escapes to a distant containing
+   block and focusing it on click scrolls a hidden scroll-container. */
 .setup-switch-row {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -577,8 +580,12 @@
 
 .setup-switch-row input {
   position: absolute;
+  inset-inline-end: 0.75rem;
+  top: 50%;
+  translate: 0 -50%;
   width: 1px;
   height: 1px;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }
