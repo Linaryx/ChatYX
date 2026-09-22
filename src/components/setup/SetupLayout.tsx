@@ -1,5 +1,13 @@
 import type { JSX } from "solid-js";
-import { createUniqueId, For, Show } from "solid-js";
+import {
+  createEffect,
+  createSignal,
+  createUniqueId,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 import { cn } from "~/lib/utils";
 import { SetupSwitch } from "./SetupSwitch";
 
@@ -169,8 +177,46 @@ export function SetupNav(props: {
   active: SetupSectionId;
   onSelect: (id: SetupSectionId) => void;
 }) {
+  const [thumbStyle, setThumbStyle] = createSignal<JSX.CSSProperties>({
+    opacity: "0",
+  });
+  const itemRefs = new Map<SetupSectionId, HTMLButtonElement>();
+  let navRef: HTMLElement | undefined;
+
+  const updateThumb = () => {
+    const activeItem = itemRefs.get(props.active);
+    if (!navRef || !activeItem) {
+      setThumbStyle({ opacity: "0" });
+      return;
+    }
+
+    const navRect = navRef.getBoundingClientRect();
+    const itemRect = activeItem.getBoundingClientRect();
+    setThumbStyle({
+      height: `${itemRect.height}px`,
+      opacity: "1",
+      transform: `translateY(${itemRect.top - navRect.top}px)`,
+    });
+  };
+
+  createEffect(updateThumb);
+  onMount(() => {
+    const observer = new ResizeObserver(updateThumb);
+    if (navRef) observer.observe(navRef);
+    onCleanup(() => observer.disconnect());
+  });
+
   return (
-    <nav class="setup-nav" aria-label="Разделы настроек">
+    <nav
+      class="setup-nav"
+      ref={(element) => (navRef = element)}
+      aria-label="Разделы настроек"
+    >
+      <div
+        class="setup-selection-thumb"
+        aria-hidden="true"
+        style={thumbStyle()}
+      />
       <For each={SETUP_NAV}>
         {(item) => {
           const active = () => props.active === item.id;
@@ -178,6 +224,7 @@ export function SetupNav(props: {
             <button
               type="button"
               onClick={() => props.onSelect(item.id)}
+              ref={(element) => itemRefs.set(item.id, element)}
               class="setup-nav-item"
               aria-controls={`setup-section-${item.id}`}
               aria-current={active() ? "location" : undefined}

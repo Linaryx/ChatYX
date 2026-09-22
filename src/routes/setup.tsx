@@ -56,6 +56,7 @@ import Monitor from "lucide-solid/icons/monitor";
 import Pause from "lucide-solid/icons/pause";
 import Play from "lucide-solid/icons/play";
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
+import X from "lucide-solid/icons/x";
 import "~/components/setup/SetupWorkspace.css";
 
 type BotProfile = {
@@ -310,8 +311,13 @@ export default function ChatSetup() {
       | "checker"
       | "custom") || "dark",
   );
+  const storedStageColor = readStoredSetupValue(
+    SETUP_STORAGE_KEYS.previewStageColor,
+  );
   const [stageColor, setStageColor] = createSignal(
-    readStoredSetupValue(SETUP_STORAGE_KEYS.previewStageColor) || "#241b33",
+    storedStageColor?.toUpperCase() === "#241B33"
+      ? "#FF8400"
+      : storedStageColor || "#FF8400",
   );
 
   const previewStageStyle = createMemo(() => {
@@ -334,6 +340,17 @@ export default function ChatSetup() {
   const [previewDemoKind, setPreviewDemoKind] = createSignal<
     "pasta" | "emote"
   >("pasta");
+  const [previewModeThumbStyle, setPreviewModeThumbStyle] =
+    createSignal<JSX.CSSProperties>({ opacity: "0" });
+  const [previewDemoThumbStyle, setPreviewDemoThumbStyle] =
+    createSignal<JSX.CSSProperties>({ opacity: "0" });
+  let previewControlsRef: HTMLDivElement | undefined;
+  let previewModeSelectorRef: HTMLDivElement | undefined;
+  let previewLiveOptionRef: HTMLButtonElement | undefined;
+  let previewDemoOptionRef: HTMLButtonElement | undefined;
+  let previewDemoSelectorRef: HTMLDivElement | undefined;
+  let previewPastaOptionRef: HTMLButtonElement | undefined;
+  let previewEmoteOptionRef: HTMLButtonElement | undefined;
   const [showHomies, setShowHomies] = createSignal(
     DEFAULT_CHAT_CONFIG.showHomies,
   );
@@ -668,6 +685,16 @@ export default function ChatSetup() {
     return Math.min(Math.max(value, min), max);
   };
 
+  const previewFrameStyle = createMemo(() => {
+    const radius = toClampedInt(
+      overlayBackgroundRadius(),
+      DEFAULT_CHAT_CONFIG.overlayBackgroundRadius,
+      0,
+      128,
+    );
+    return `${previewStageStyle()} border-radius: ${radius}px;`;
+  });
+
   const toFloat = (raw: string, fallback: number): number => {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) ? n : fallback;
@@ -822,6 +849,47 @@ export default function ChatSetup() {
   const isExternalOnly = createMemo(
     () => (hasYouTubeChannel() || hasKickChannel()) && !hasTwitchChannel(),
   );
+  const hasPreviewChannel = createMemo(
+    () => hasTwitchChannel() || hasYouTubeChannel() || hasKickChannel(),
+  );
+  const getPreviewSelectorThumbStyle = (
+    selector: HTMLDivElement | undefined,
+    option: HTMLButtonElement | undefined,
+  ): JSX.CSSProperties => {
+    if (!selector || !option) return { opacity: "0" };
+
+    const selectorRect = selector.getBoundingClientRect();
+    const optionRect = option.getBoundingClientRect();
+    return {
+      height: `${optionRect.height}px`,
+      opacity: "1",
+      transform: `translateY(${optionRect.top - selectorRect.top}px)`,
+    };
+  };
+  const updatePreviewSelectorThumbs = () => {
+    setPreviewModeThumbStyle(
+      getPreviewSelectorThumbStyle(
+        previewModeSelectorRef,
+        previewMode() === "live" ? previewLiveOptionRef : previewDemoOptionRef,
+      ),
+    );
+    setPreviewDemoThumbStyle(
+      isExternalOnly()
+        ? { opacity: "0" }
+        : getPreviewSelectorThumbStyle(
+            previewDemoSelectorRef,
+            previewDemoKind() === "pasta"
+              ? previewPastaOptionRef
+              : previewEmoteOptionRef,
+          ),
+    );
+  };
+  createEffect(updatePreviewSelectorThumbs);
+  onMount(() => {
+    const observer = new ResizeObserver(updatePreviewSelectorThumbs);
+    if (previewControlsRef) observer.observe(previewControlsRef);
+    onCleanup(() => observer.disconnect());
+  });
   const previewChannel = createMemo(() =>
     channel().trim() || (hasYouTubeChannel() || hasKickChannel() ? "" : "chatyxpreview"),
   );
@@ -918,6 +986,12 @@ export default function ChatSetup() {
   createEffect(() => {
     if (isExternalOnly() && previewMode() === "demo") {
       setPreviewMode("live");
+    }
+  });
+
+  createEffect(() => {
+    if (!hasPreviewChannel() && previewMode() === "live") {
+      setPreviewMode("demo");
     }
   });
 
@@ -1032,7 +1106,7 @@ export default function ChatSetup() {
     setBotProfiles({});
     setAllowedChatterInput("");
     setStageBackdrop("dark");
-    setStageColor("#241b33");
+    setStageColor("#FF8400");
     setCopyStatus("idle");
     setResetPending(false);
   };
@@ -1719,7 +1793,7 @@ export default function ChatSetup() {
 
     return (
       <div
-        class="inline-flex max-w-full items-center gap-2 rounded-full border border-white/50 bg-black px-1.5 py-0.5 text-white"
+        class="inline-flex max-w-full items-center gap-2 rounded-[0.5rem] border border-white/50 bg-[#27272a] px-1.5 py-0.5 text-white"
         tabIndex={0}
         onKeyDown={(event) => {
           if (event.key === "Backspace" || event.key === "Delete") {
@@ -1759,7 +1833,7 @@ export default function ChatSetup() {
           onClick={() => remove(login)}
           aria-label={`${ariaLabel}: ${displayName()}`}
         >
-          ×
+          <X size={16} aria-hidden="true" />
         </button>
       </div>
     );
@@ -1779,6 +1853,35 @@ export default function ChatSetup() {
             <div class="setup-brand">
               <span class="setup-brand-mark" aria-hidden="true"><img src={getPublicAssetUrl("img/emote-2x.webp")} alt="" /></span>
               <div><h1>ChatYX • Оверлей мульти-чата</h1><p>Настрой оформление и добавь оверлей в OBS.</p></div>
+            </div>
+            <div class="setup-toolbar-actions">
+              <a
+                class="setup-report-issue"
+                href="https://github.com/Linaryx/ChatYX/issues"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span class="hgi-stroke hgi-alert-02" aria-hidden="true" />
+                Сообщить об ошибке
+              </a>
+              <a
+                class="setup-toolbar-icon-link"
+                href="https://github.com/Linaryx/ChatYX"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Открыть репозиторий ChatYX на GitHub"
+              >
+                <span class="hgi-stroke hgi-github" aria-hidden="true" />
+              </a>
+              <a
+                class="setup-toolbar-icon-link"
+                href="https://ruina.team"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Открыть Ruina.Team"
+              >
+                <img src="https://ruina.team/favicon.svg" alt="" />
+              </a>
             </div>
           </header>
           <div class="setup-view-switch" role="group" aria-label="Рабочая область">
@@ -1805,15 +1908,14 @@ export default function ChatSetup() {
                   </svg>
                   YouTube <span>необязательно</span>
                 </label>
-                <Input
-                  id="setup-youtube"
-                  type="text"
-                  autocomplete="off"
-                  spellcheck={false}
+                <TwitchChannelField
+                  inputId="setup-youtube"
                   value={youtubeChannel()}
-                  onInput={(e) => setYoutubeChannel(e.currentTarget.value)}
+                  onChange={setYoutubeChannel}
                   placeholder="@канал или ID канала"
-                  class="h-10 setup-channel-input--youtube"
+                  platformName="YouTube"
+                  platform="youtube"
+                  loadSummary={false}
                 />
               </div>
               <div class="setup-channel-field">
@@ -1821,15 +1923,14 @@ export default function ChatSetup() {
                   <img class="setup-platform-logo" src={getPublicAssetUrl("img/platform-kick.svg")} alt="" />
                   Kick <span>необязательно</span>
                 </label>
-                <Input
-                  id="setup-kick"
-                  type="text"
-                  autocomplete="off"
-                  spellcheck={false}
+                <TwitchChannelField
+                  inputId="setup-kick"
                   value={kickChannel()}
-                  onInput={(event) => setKickChannel(event.currentTarget.value)}
+                  onChange={setKickChannel}
                   placeholder="название канала"
-                  class="h-10 setup-channel-input--kick"
+                  platformName="Kick"
+                  platform="kick"
+                  loadSummary={false}
                 />
               </div>
             </section>
@@ -1970,17 +2071,15 @@ export default function ChatSetup() {
                 hidden={activeSection() !== "bots"}
               >
                 <div class="setup-bot-row flex flex-col gap-2">
-                  <div class="flex min-w-0 items-center justify-between gap-3">
-                    <div class="text-xs font-medium text-foreground sm:text-sm">
-                      Ники ботов
-                    </div>
-                    <div class="shrink-0">
-                      <SetupSwitch
-                        checked={!bots()}
-                        onChange={(hideBots) => setBots(!hideBots)}
-                        label="Скрывать ботов"
-                      />
-                    </div>
+                  <div>
+                    <SetupSwitch
+                      checked={!bots()}
+                      onChange={(hideBots) => setBots(!hideBots)}
+                      label="Скрывать ботов"
+                    />
+                  </div>
+                  <div class="text-xs font-medium text-foreground sm:text-sm">
+                    Ники ботов
                   </div>
                   <div class={chipFieldClass}>
                     <For each={botNames()}>
@@ -2010,7 +2109,7 @@ export default function ChatSetup() {
                   </div>
                 </div>
 
-                <div class="setup-control-row grid grid-cols-1 items-center gap-2 min-[1100px]:grid-cols-[132px_minmax(0,1fr)] xl:grid-cols-[168px_minmax(0,1fr)] md:max-[1099px]:grid-cols-[180px_minmax(0,1fr)]">
+                <div class="setup-control-row flex flex-col gap-2">
                   <div class="flex min-w-0 flex-col gap-0.5">
                     <div class="text-xs font-medium text-foreground sm:text-sm">
                       Показывать только этих зрителей
@@ -2075,73 +2174,16 @@ export default function ChatSetup() {
                 <SectionCard
                   title="Предпросмотр"
                   compact
-                  class="min-[1100px]:flex min-[1100px]:min-h-0 min-[1100px]:flex-1 min-[1100px]:flex-col"
+                  class="setup-preview-section min-[1100px]:flex min-[1100px]:min-h-0 min-[1100px]:flex-1 min-[1100px]:flex-col"
                 >
                   <div class="setup-preview-content">
                     <div class="setup-preview-options">
                       <div
-                        class={cn(
-                          "setup-preview-controls grid gap-2",
-                          isExternalOnly()
-                            ? "grid-cols-1"
-                            : "grid-cols-1 min-[1100px]:grid-cols-1 xl:grid-cols-2",
-                        )}
+                        class="setup-preview-controls"
+                        ref={(element) => (previewControlsRef = element)}
                       >
-                        <div class="flex min-w-0 flex-col gap-1">
-                          <div class="text-xs font-medium sm:text-sm">
-                            Режим чата
-                          </div>
-                          <SetupSelect
-                            aria-label="Режим чата в предпросмотре"
-                            value={previewMode()}
-                            onChange={(event) =>
-                              setPreviewMode(
-                                isExternalOnly() ||
-                                  event.currentTarget.value === "live"
-                                  ? "live"
-                                  : "demo",
-                              )
-                            }
-                            class="h-9"
-                          >
-                            <option value="live">Чат канала</option>
-                            <Show when={!isExternalOnly()}>
-                              <option value="demo">Демо</option>
-                            </Show>
-                          </SetupSelect>
-                        </div>
-                        <Show when={!isExternalOnly()}>
-                          <div class="flex min-w-0 flex-col gap-1">
-                            <div class="text-xs font-medium sm:text-sm">
-                              Сценарий демо
-                            </div>
-                            <SetupSelect
-                              aria-label="Сценарий демо"
-                              value={previewDemoKind()}
-                              onChange={(event) =>
-                                setPreviewDemoKind(
-                                  event.currentTarget.value === "emote"
-                                    ? "emote"
-                                    : "pasta",
-                                )
-                              }
-                              disabled={previewMode() !== "demo"}
-                              class={cn(
-                                "h-9",
-                                previewMode() !== "demo" && "opacity-50",
-                              )}
-                            >
-                              <option value="pasta">Сообщения</option>
-                              <option value="emote">Эмоуты</option>
-                            </SetupSelect>
-                          </div>
-                        </Show>
-                        <div class="flex min-w-0 flex-col gap-1 xl:col-span-full">
-                          <div
-                            class="text-xs font-medium sm:text-sm"
-                          >
-                            Фон предпросмотра
-                          </div>
+                        <div class="setup-preview-control-panel">
+                          <div class="setup-preview-control-title">Цвет фона (демо)</div>
                           <div
                             class="setup-stage-switcher"
                             role="group"
@@ -2190,12 +2232,102 @@ export default function ChatSetup() {
                                 color={stageColor()}
                                 opacity={100}
                                 showOpacity={false}
+                                showTransparencyGrid={false}
                                 label="Цвет подложки"
                                 onChange={(value) => setStageColor(value.color)}
                               />
                             </div>
                           </Show>
+                        </div>
+                        <div class="setup-preview-control-panel">
+                          <div class="setup-preview-control-title">Настройки</div>
+                          <div class="setup-preview-setting-grid">
+                            <div class="setup-preview-setting">
+                              <div class="setup-preview-setting-title">Режим чата</div>
+                              <div
+                                class="setup-preview-selector"
+                                ref={(element) => (previewModeSelectorRef = element)}
+                                role="radiogroup"
+                                aria-label="Режим чата в предпросмотре"
+                              >
+                                <div
+                                  class="setup-selection-thumb"
+                                  aria-hidden="true"
+                                  style={previewModeThumbStyle()}
+                                />
+                                <button
+                                  type="button"
+                                  role="radio"
+                                  ref={(element) => (previewLiveOptionRef = element)}
+                                  disabled={!hasPreviewChannel()}
+                                  aria-checked={previewMode() === "live"}
+                                  class={cn("setup-preview-selector-option", previewMode() === "live" && "setup-preview-selector-option--selected")}
+                                  onClick={() => setPreviewMode("live")}
+                                >
+                                  <span class="hgi-stroke hgi-live-streaming-02 setup-preview-selector-icon" aria-hidden="true" />
+                                  <span>Чат канала</span>
+                                </button>
+                                <Show when={!isExternalOnly()}>
+                                  <button
+                                    type="button"
+                                    role="radio"
+                                    ref={(element) => (previewDemoOptionRef = element)}
+                                    aria-checked={previewMode() === "demo"}
+                                    class={cn("setup-preview-selector-option", previewMode() === "demo" && "setup-preview-selector-option--selected")}
+                                    onClick={() => setPreviewMode("demo")}
+                                  >
+                                    <span class="hgi-stroke hgi-test-tube-01 setup-preview-selector-icon" aria-hidden="true" />
+                                    <span>Демо</span>
+                                  </button>
+                                </Show>
+                              </div>
+                            </div>
+                            <Show when={!isExternalOnly()}>
+                              <div class="setup-preview-setting">
+                                <div class="setup-preview-setting-title">Сценарий демо</div>
+                                <div
+                                  class={cn(
+                                    "setup-preview-selector",
+                                    previewMode() !== "demo" && "setup-preview-selector--disabled",
+                                  )}
+                                  ref={(element) => (previewDemoSelectorRef = element)}
+                                  role="radiogroup"
+                                  aria-label="Сценарий демо"
+                                >
+                                  <div
+                                    class="setup-selection-thumb"
+                                    aria-hidden="true"
+                                    style={previewDemoThumbStyle()}
+                                  />
+                                  <button
+                                    type="button"
+                                    role="radio"
+                                    ref={(element) => (previewPastaOptionRef = element)}
+                                    disabled={previewMode() !== "demo"}
+                                    aria-checked={previewDemoKind() === "pasta"}
+                                    class={cn("setup-preview-selector-option", previewDemoKind() === "pasta" && "setup-preview-selector-option--selected")}
+                                    onClick={() => setPreviewDemoKind("pasta")}
+                                  >
+                                    <span class="hgi-stroke hgi-message-square-more setup-preview-selector-icon" aria-hidden="true" />
+                                    <span>Сообщения</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    role="radio"
+                                    ref={(element) => (previewEmoteOptionRef = element)}
+                                    disabled={previewMode() !== "demo"}
+                                    aria-checked={previewDemoKind() === "emote"}
+                                    class={cn("setup-preview-selector-option", previewDemoKind() === "emote" && "setup-preview-selector-option--selected")}
+                                    onClick={() => setPreviewDemoKind("emote")}
+                                  >
+                                    <span class="hgi-stroke hgi-rubber-duck setup-preview-selector-icon" aria-hidden="true" />
+                                    <span>Эмоуты</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </Show>
                           </div>
+                        </div>
                       </div>
                     </div>
 
@@ -2240,8 +2372,8 @@ export default function ChatSetup() {
                     </Show>
 
                     <div
-                      class="setup-preview-frame relative isolate h-[clamp(180px,36dvh,320px)] w-full shrink-0 overflow-hidden min-[1100px]:h-auto min-[1100px]:flex-1 min-[1100px]:min-h-[min(180px,36dvh)] min-[1100px]:max-h-[42dvh]"
-                      style={previewStageStyle()}
+                      class="setup-preview-frame relative isolate h-[clamp(180px,36dvh,320px)] w-full shrink-0 overflow-hidden min-[1100px]:h-auto min-[1100px]:flex-1 min-[1100px]:min-h-[min(180px,36dvh)]"
+                      style={previewFrameStyle()}
                     >
                       <iframe
                         ref={iframeRef}

@@ -47,7 +47,7 @@ export default defineConfig({
             // than the framework, so give the UI stack its own cache boundary.
             {
               name: "ui",
-              test: /[\\/]node_modules[\\/](?:@kobalte|@corvu|@floating-ui|@internationalized|@solid-primitives|lucide-solid|lucid-color-picker|solid-presence|solid-prevent-scroll)[\\/]/,
+              test: /[\\/]node_modules[\\/](?:@kobalte|@corvu|@floating-ui|@internationalized|@solid-primitives|lucide-solid|solid-presence|solid-prevent-scroll)[\\/]/,
               priority: 20,
             },
             // Tiny utility packages are shared broadly but are independent of
