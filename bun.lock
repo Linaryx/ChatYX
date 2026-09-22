@@ -10,7 +10,6 @@
         "@solidjs/router": "^1.0.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "lucid-color-picker": "^0.1.0",
         "lucide-solid": "^1.41.0",
         "solid-js": "^1.9.15",
         "tailwind-merge": "^3.6.0",
@@ -364,8 +363,6 @@
     "lightningcss-win32-x64-msvc": ["lightningcss-win32-x64-msvc@1.33.0", "", { "os": "win32", "cpu": "x64" }, "sha512-OlEICDx/Xl0FqSp4bry8zFnCvGpig3Gl4gCquvYwHuqJKEC1+n9NgDniFvqHGmMv1ZkqDJrDqKKSykTDX+ehuA=="],
 
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
-
-    "lucid-color-picker": ["lucid-color-picker@0.1.0", "", {}, "sha512-X0S4yeTZaJob2ldUuelN0C1c4NfZntokgeKOLRXuOB2CFjt5kO6ip+yQYQp8Fo72T2Nb0uXdcONIlaPfaOplVQ=="],
 
     "lucide-solid": ["lucide-solid@1.41.0", "", { "peerDependencies": { "solid-js": "^1.4.7" } }, "sha512-kqAHyabxyoI9badC2nTvvW88d90E4NYyXtBEFdHI5mKQYegw4NW6vXook7UU69tjBzO578bYVwbNqLT1Q5VRLw=="],
 

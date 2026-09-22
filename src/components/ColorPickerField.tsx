@@ -1,7 +1,10 @@
-import type { LucidColorPicker } from "lucid-color-picker";
-import "lucid-color-picker";
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
-import { Portal } from "solid-js/web";
+import { ColorArea } from "@kobalte/core/color-area";
+import { ColorField } from "@kobalte/core/color-field";
+import { ColorSlider } from "@kobalte/core/color-slider";
+import { ColorSwatch } from "@kobalte/core/color-swatch";
+import { parseColor, type Color } from "@kobalte/core/colors";
+import { Popover } from "@kobalte/core/popover";
+import { createEffect, createSignal, Show } from "solid-js";
 
 type ColorPickerFieldProps = {
   color: string;
@@ -12,329 +15,159 @@ type ColorPickerFieldProps = {
   onChange: (value: { color: string; opacity: number }) => void;
 };
 
-declare module "solid-js" {
-  namespace JSX {
-    interface IntrinsicElements {
-      "lucid-color-picker": {
-        ref?: (element: LucidColorPicker) => void;
-        value?: string;
-      };
-    }
-  }
-}
-
 function normalizeHexColor(raw: string, fallback = "#000000") {
   const value = raw.trim();
   const withHash = value.startsWith("#") ? value : `#${value}`;
   return /^#[0-9a-fA-F]{6}$/.test(withHash) ? withHash.toUpperCase() : fallback;
 }
 
-function normalizeOpacity(raw: string | number, fallback = 100) {
-  const value = typeof raw === "number" ? raw : Number.parseInt(raw.trim(), 10);
+function normalizeOpacity(value: number, fallback = 100) {
   if (!Number.isFinite(value)) return fallback;
   return Math.min(Math.max(value, 0), 100);
 }
 
-function splitHexAlpha(raw: string, fallbackColor: string, fallbackOpacity: number) {
-  const value = raw.trim().toUpperCase();
-  if (/^#[0-9A-F]{6}$/.test(value)) {
-    return { color: value, opacity: 100 };
-  }
-  if (/^#[0-9A-F]{8}$/.test(value)) {
-    const alpha = Number.parseInt(value.slice(7, 9), 16);
-    return {
-      color: value.slice(0, 7),
-      opacity: Math.round((alpha / 255) * 100),
-    };
-  }
-  return { color: fallbackColor, opacity: fallbackOpacity };
-}
-
 function joinHexAlpha(color: string, opacity: number) {
-  const safeColor = normalizeHexColor(color);
-  const safeOpacity = Math.min(Math.max(opacity, 0), 100);
-  const alpha = Math.round((safeOpacity / 100) * 255)
+  const alpha = Math.round((normalizeOpacity(opacity) / 100) * 255)
     .toString(16)
-    .padStart(2, "0")
-    .toUpperCase();
-  return `${safeColor}${alpha}`;
-}
-
-function hexToRgba(hex: string, opacity: number) {
-  const safeColor = normalizeHexColor(hex);
-  const red = Number.parseInt(safeColor.slice(1, 3), 16);
-  const green = Number.parseInt(safeColor.slice(3, 5), 16);
-  const blue = Number.parseInt(safeColor.slice(5, 7), 16);
-  const alpha = Math.min(Math.max(opacity, 0), 100) / 100;
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    .padStart(2, "0");
+  return `${normalizeHexColor(color)}${alpha}`;
 }
 
 export function ColorPickerField(props: ColorPickerFieldProps) {
-  const [rootRef, setRootRef] = createSignal<HTMLDivElement>();
-  const [panelRef, setPanelRef] = createSignal<HTMLDivElement>();
-  const [pickerRef, setPickerRef] = createSignal<LucidColorPicker>();
-  const [draft, setDraft] = createSignal(normalizeHexColor(props.color));
-  const [draftOpacity, setDraftOpacity] = createSignal(String(props.opacity));
-  const [open, setOpen] = createSignal(false);
-  const [panelPosition, setPanelPosition] = createSignal({ left: 8, top: 8 });
-
-  const currentValue = () =>
-    joinHexAlpha(props.color, props.showOpacity === false ? 100 : props.opacity);
-
-  const styles = {
-    root: {
-      width: "100%",
-      position: "relative",
-    },
-    control: {
-      display: "flex",
-      "flex-wrap": "wrap",
-      gap: "10px",
-      width: "100%",
-      "align-items": "center",
-    },
-    trigger: {
-      width: "52px",
-      height: "34px",
-      padding: "2px",
-      border: "1px solid #2a2a2a",
-      "border-radius": "10px",
-      background: "#111111",
-      cursor: "pointer",
-      "box-sizing": "border-box",
-      flex: "0 0 auto",
-    },
-    triggerSwatch: {
-      width: "100%",
-      height: "100%",
-      "border-radius": "8px",
-      border: "1px solid rgba(255,255,255,0.08)",
-      background:
-        props.showTransparencyGrid === false
-          ? "#111111"
-          : "linear-gradient(45deg, #2a2a2a 25%, transparent 25%, transparent 75%, #2a2a2a 75%, #2a2a2a), linear-gradient(45deg, #2a2a2a 25%, transparent 25%, transparent 75%, #2a2a2a 75%, #2a2a2a)",
-      "background-size": props.showTransparencyGrid === false ? undefined : "8px 8px",
-      "background-position": props.showTransparencyGrid === false ? undefined : "0 0, 4px 4px",
-      position: "relative",
-      overflow: "hidden",
-    },
-    swatchOverlay: {
-      position: "absolute",
-      inset: "0",
-    },
-    input: {
-      padding: "7px 10px",
-      height: "34px",
-      border: "1px solid #2a2a2a",
-      "border-radius": "10px",
-      "font-size": "14px",
-      background: "#111111",
-      color: "#e5e7eb",
-      "font-family": "inherit",
-      "box-sizing": "border-box",
-      width: "160px",
-      flex: "1 1 160px",
-      "min-width": "0",
-      "text-transform": "uppercase",
-    },
-    opacityInput: {
-      padding: "7px 10px",
-      height: "34px",
-      border: "1px solid #2a2a2a",
-      "border-radius": "10px",
-      "font-size": "14px",
-      background: "#111111",
-      color: "#e5e7eb",
-      "font-family": "inherit",
-      "box-sizing": "border-box",
-      width: "72px",
-      "text-align": "center",
-      flex: "0 0 auto",
-    },
-    panel: {
-      position: "fixed",
-      padding: "12px",
-      background: "#111111",
-      border: "1px solid #2a2a2a",
-      "border-radius": "14px",
-      "box-shadow": "0 16px 40px rgba(0,0,0,0.45)",
-      "z-index": "1000",
-    },
-  } as const;
-
-  const commitDraft = () => {
-    const next = normalizeHexColor(draft(), props.color);
-    setDraft(next);
-    props.onChange({ color: next, opacity: normalizeOpacity(draftOpacity(), props.opacity) });
-  };
-
-  const commitOpacityDraft = () => {
-    const next = normalizeOpacity(draftOpacity(), props.opacity);
-    setDraftOpacity(String(next));
-    props.onChange({ color: normalizeHexColor(draft(), props.color), opacity: next });
-  };
-
-  const updatePanelPosition = () => {
-    const root = rootRef();
-    const panel = panelRef();
-    if (!root || !panel || !open()) return;
-
-    const gap = 8;
-    const viewportPadding = 8;
-    const anchorRect = root.getBoundingClientRect();
-    const panelRect = panel.getBoundingClientRect();
-    const panelWidth = panelRect.width || 306;
-    const panelHeight = panelRect.height || 306;
-    const left = Math.min(
-      Math.max(anchorRect.left, viewportPadding),
-      Math.max(viewportPadding, window.innerWidth - panelWidth - viewportPadding),
+  const pickerValue = () =>
+    parseColor(
+      joinHexAlpha(
+        props.color,
+        props.showOpacity === false ? 100 : normalizeOpacity(props.opacity),
+      ),
     );
-    const opensBelow =
-      anchorRect.bottom + gap + panelHeight <= window.innerHeight - viewportPadding;
-    const top = opensBelow
-      ? anchorRect.bottom + gap
-      : Math.max(viewportPadding, anchorRect.top - panelHeight - gap);
+  const [value, setValue] = createSignal(pickerValue());
+  const [hex, setHex] = createSignal(normalizeHexColor(props.color));
+  const opacity = () => Math.round(value().getChannelValue("alpha") * 100);
+  const transparencyBackground =
+    "linear-gradient(45deg, #2a2a2a 25%, transparent 25%, transparent 75%, #2a2a2a 75%, #2a2a2a), linear-gradient(45deg, #2a2a2a 25%, transparent 25%, transparent 75%, #2a2a2a 75%, #2a2a2a)";
 
-    setPanelPosition({ left, top });
+  createEffect(() => {
+    setValue(pickerValue());
+    setHex(normalizeHexColor(props.color));
+  });
+
+  const updateValue = (next: Color) => {
+    setValue(next);
+    const color = next.toString("hex").toUpperCase();
+    const nextOpacity = props.showOpacity === false ? props.opacity : opacityFromColor(next);
+    setHex(color);
+    props.onChange({ color, opacity: nextOpacity });
   };
 
-  onMount(() => {
-    const picker = pickerRef();
-    if (!picker) return;
-
-    const handleChange = () => {
-      const parsed = splitHexAlpha(picker.value, props.color, props.opacity);
-      const next =
-        props.showOpacity === false
-          ? { color: parsed.color, opacity: props.opacity }
-          : parsed;
-      setDraft(next.color);
-      setDraftOpacity(String(next.opacity));
-      props.onChange(next);
-    };
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const root = rootRef();
-      const panel = panelRef();
-      if (!open() || !root) return;
-      const target = event.target;
-      if (
-        target instanceof Node &&
-        !root.contains(target) &&
-        !panel?.contains(target)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    const handleViewportChange = () => updatePanelPosition();
-
-    picker.addEventListener("change", handleChange);
-    document.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
-
-    onCleanup(() => {
-      picker.removeEventListener("change", handleChange);
-      document.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
-    });
-  });
-
-  createEffect(() => {
-    setDraft(normalizeHexColor(props.color));
-    setDraftOpacity(String(normalizeOpacity(props.opacity, 100)));
-    const picker = pickerRef();
-    const value = currentValue();
-    if (picker && picker.value !== value) {
-      picker.value = value;
-    }
-  });
-
-  createEffect(() => {
-    if (!open()) return;
-    window.requestAnimationFrame(updatePanelPosition);
-  });
+  const updateHex = (next: string) => {
+    setHex(next.toUpperCase());
+    const color = normalizeHexColor(next, "");
+    if (!color) return;
+    updateValue(parseColor(color).withChannelValue("alpha", value().getChannelValue("alpha")));
+  };
 
   return (
-    <div ref={setRootRef} style={styles.root}>
-      <div style={styles.control}>
-        <button
-          type="button"
-          class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          style={styles.trigger}
-          onClick={() => setOpen((value) => !value)}
+    <Popover gutter={8}>
+      <div class="flex w-full items-center gap-2">
+        <Popover.Trigger
+          class="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-background p-1.5 text-left text-sm transition-colors hover:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label={`${props.label ?? "Цвет"}: открыть палитру`}
-          aria-expanded={open()}
-          aria-haspopup="dialog"
         >
-          <div style={styles.triggerSwatch}>
-            <div
-              style={{
-                ...styles.swatchOverlay,
-                background: hexToRgba(
-                  props.color,
-                  props.showOpacity === false ? 100 : props.opacity,
-                ),
-              }}
-            />
-          </div>
-        </button>
-
-        <input
-          class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          value={draft()}
-          onInput={(event) => setDraft(event.currentTarget.value.toUpperCase())}
-          onBlur={commitDraft}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              commitDraft();
+          <span
+            class="relative size-7 shrink-0 overflow-hidden rounded-[5px] border border-white/10"
+            style={
+              props.showTransparencyGrid === false
+                ? undefined
+                : {
+                    background: transparencyBackground,
+                    "background-size": "8px 8px",
+                    "background-position": "0 0, 4px 4px",
+                  }
             }
-          }}
-          placeholder="#000000"
-          aria-label={`${props.label ?? "Цвет"}: HEX`}
-          style={styles.input}
-        />
-
-        <Show when={props.showOpacity !== false}>
-          <input
-            class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            type="number"
-            min="0"
-            max="100"
-            value={draftOpacity()}
-            onInput={(event) => setDraftOpacity(event.currentTarget.value)}
-            onBlur={commitOpacityDraft}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                commitOpacityDraft();
-              }
-            }}
-            placeholder="50"
-            aria-label={`${props.label ?? "Цвет"}: прозрачность в процентах`}
-            style={styles.opacityInput}
-          />
-        </Show>
+          >
+            <ColorSwatch value={value()} class="size-full" />
+          </span>
+          <span class="min-w-0 truncate font-mono text-sm uppercase text-foreground">{hex()}</span>
+        </Popover.Trigger>
       </div>
 
-      <Portal>
-        <div
-          ref={setPanelRef}
-          role="dialog"
-          aria-label={`${props.label ?? "Цвет"}: палитра`}
-          style={{
-            ...styles.panel,
-            display: open() ? "block" : "none",
-            left: `${panelPosition().left}px`,
-            top: `${panelPosition().top}px`,
-          }}
-        >
-          <lucid-color-picker ref={setPickerRef} value={currentValue()} />
-        </div>
-      </Portal>
-    </div>
+      <Popover.Portal>
+        <Popover.Content class="dark z-50 w-[min(19rem,calc(100vw-1rem))] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl outline-none">
+          <ColorArea
+            value={value()}
+            onChange={updateValue}
+            colorSpace="hsb"
+            xChannel="saturation"
+            yChannel="brightness"
+            class="w-full touch-none select-none"
+          >
+            <ColorArea.Label class="sr-only">Выбор цвета</ColorArea.Label>
+            <ColorArea.Background class="relative aspect-[1.45] w-full cursor-crosshair overflow-hidden rounded-lg">
+              <ColorArea.Thumb class="absolute size-4 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <ColorArea.HiddenInputX />
+                <ColorArea.HiddenInputY />
+              </ColorArea.Thumb>
+            </ColorArea.Background>
+          </ColorArea>
+
+          <div class="mt-3 space-y-2.5">
+            <ColorSlider
+              value={value()}
+              onChange={updateValue}
+              channel="hue"
+              colorSpace="hsb"
+              class="w-full touch-none select-none"
+            >
+              <ColorSlider.Label class="sr-only">Оттенок</ColorSlider.Label>
+              <ColorSlider.Track class="relative h-2.5 w-full cursor-pointer rounded-full">
+                <ColorSlider.Thumb class="absolute top-1/2 size-4 -translate-y-1/2 rounded-full border-2 border-white bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <ColorSlider.Input />
+                </ColorSlider.Thumb>
+              </ColorSlider.Track>
+            </ColorSlider>
+
+            <Show when={props.showOpacity !== false}>
+              <ColorSlider
+                value={value()}
+                onChange={updateValue}
+                channel="alpha"
+                colorSpace="hsb"
+                class="w-full touch-none select-none"
+              >
+                <div class="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                  <ColorSlider.Label>Прозрачность</ColorSlider.Label>
+                  <span>{opacity()}%</span>
+                </div>
+                <ColorSlider.Track
+                  class="relative h-2.5 w-full cursor-pointer rounded-full"
+                  style={{
+                    background: transparencyBackground,
+                    "background-size": "8px 8px",
+                    "background-position": "0 0, 4px 4px",
+                  }}
+                >
+                  <ColorSlider.Thumb class="absolute top-1/2 size-4 -translate-y-1/2 rounded-full border-2 border-white bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <ColorSlider.Input />
+                  </ColorSlider.Thumb>
+                </ColorSlider.Track>
+              </ColorSlider>
+            </Show>
+          </div>
+
+          <ColorField value={hex()} onChange={updateHex} class="mt-3">
+            <ColorField.Label class="sr-only">HEX-код цвета</ColorField.Label>
+            <ColorField.Input
+              class="h-9 w-full rounded-md border border-input bg-muted/40 px-3 font-mono text-sm uppercase text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`${props.label ?? "Цвет"}: HEX`}
+            />
+          </ColorField>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover>
   );
+}
+
+function opacityFromColor(color: Color) {
+  return Math.round(color.getChannelValue("alpha") * 100);
 }
