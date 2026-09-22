@@ -54,7 +54,7 @@ export function createSurfaceStyle(config: ChatConfig, fadeDurationMs: number) {
     "background-color": `rgba(${hexToRgb(config.overlayBackgroundColor)}, ${backgroundOpacity})`,
     border: borderOpacity > 0
       ? `1px solid rgba(255, 255, 255, ${borderOpacity})`
-      : "1px solid transparent",
+      : "none",
     "border-radius": `${borderRadius}px`,
     "--chat-surface-padding": `${padding}px`,
     transition: [

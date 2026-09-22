@@ -12,6 +12,11 @@ import "./TwitchChannelField.css";
 type TwitchChannelFieldProps = {
   value: string;
   onChange: (login: string) => void;
+  inputId?: string;
+  placeholder?: string;
+  platformName?: string;
+  platform?: "youtube" | "kick";
+  loadSummary?: boolean;
 };
 
 type TwitchChannelProfile = {
@@ -407,7 +412,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
 
   createEffect(() => {
     const currentLogin = login();
-    if (!currentLogin) {
+    if (!currentLogin || props.loadSummary === false) {
       setSummary(null);
       setLoading(false);
       setFailedLogin("");
@@ -456,12 +461,20 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
   };
 
   const displayName = createMemo(
-    () => summary()?.profile.displayName || props.value || failedLogin(),
+    () =>
+      summary()?.profile.displayName ||
+      (props.loadSummary === false ? login() : props.value || failedLogin()),
   );
   const avatarUrl = createMemo(() => summary()?.profile.avatarUrl || "");
 
   return (
-    <div class="twitch-channel-field">
+    <div
+      class="twitch-channel-field"
+      classList={{
+        "twitch-channel-field--youtube": props.platform === "youtube",
+        "twitch-channel-field--kick": props.platform === "kick",
+      }}
+    >
       {login() ? (
         <div
           class="twitch-channel-chip"
@@ -485,31 +498,36 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
               {fallbackName(login())}
             </span>
           )}
-          <span class="twitch-channel-main">
-            <span class="twitch-channel-title-row">
-              <span class="twitch-channel-name">{displayName()}</span>
-              {loading() && <span class="twitch-channel-loading" />}
-            </span>
-            <span class="twitch-channel-metrics">
-              <For each={metrics()}>
-                {(metric) => (
-                  <span
-                    class="twitch-channel-metric"
-                    data-metric={metric.key}
-                    title={metric.label}
-                  >
-                    {metricIcon(metric.icon)}
-                    {compactNumber(metric.value)}
-                  </span>
-                )}
-              </For>
-            </span>
+            <span
+              class="twitch-channel-main"
+              classList={{ "twitch-channel-main--simple": props.loadSummary === false }}
+            >
+              <span class="twitch-channel-title-row">
+                <span class="twitch-channel-name">{displayName()}</span>
+                {props.loadSummary !== false && loading() && <span class="twitch-channel-loading" />}
+              </span>
+              {props.loadSummary !== false && (
+                <span class="twitch-channel-metrics">
+                  <For each={metrics()}>
+                    {(metric) => (
+                      <span
+                        class="twitch-channel-metric"
+                        data-metric={metric.key}
+                        title={metric.label}
+                      >
+                        {metricIcon(metric.icon)}
+                        {compactNumber(metric.value)}
+                      </span>
+                    )}
+                  </For>
+                </span>
+              )}
           </span>
           <button
             type="button"
             class="twitch-channel-remove"
             onClick={clearChannel}
-            aria-label="Убрать Twitch канал"
+            aria-label={`Убрать ${props.platformName ?? "Twitch"} канал`}
           >
             ×
           </button>
@@ -517,6 +535,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
       ) : (
         <input
           class="twitch-channel-input"
+          id={props.inputId}
           type="text"
           value={input()}
           onInput={(event) => setInput(event.currentTarget.value)}
@@ -527,7 +546,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
               commitInput();
             }
           }}
-          placeholder="Ник Twitch-канала, например linaryx"
+          placeholder={props.placeholder ?? "Ник Twitch-канала, например linaryx"}
         />
       )}
     </div>

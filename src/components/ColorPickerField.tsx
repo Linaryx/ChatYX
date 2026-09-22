@@ -7,6 +7,7 @@ type ColorPickerFieldProps = {
   color: string;
   opacity: number;
   showOpacity?: boolean;
+  showTransparencyGrid?: boolean;
   label?: string;
   onChange: (value: { color: string; opacity: number }) => void;
 };
@@ -109,9 +110,11 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
       "border-radius": "8px",
       border: "1px solid rgba(255,255,255,0.08)",
       background:
-        "linear-gradient(45deg, #2a2a2a 25%, transparent 25%, transparent 75%, #2a2a2a 75%, #2a2a2a), linear-gradient(45deg, #2a2a2a 25%, transparent 25%, transparent 75%, #2a2a2a 75%, #2a2a2a)",
-      "background-size": "8px 8px",
-      "background-position": "0 0, 4px 4px",
+        props.showTransparencyGrid === false
+          ? "#111111"
+          : "linear-gradient(45deg, #2a2a2a 25%, transparent 25%, transparent 75%, #2a2a2a 75%, #2a2a2a), linear-gradient(45deg, #2a2a2a 25%, transparent 25%, transparent 75%, #2a2a2a 75%, #2a2a2a)",
+      "background-size": props.showTransparencyGrid === false ? undefined : "8px 8px",
+      "background-position": props.showTransparencyGrid === false ? undefined : "0 0, 4px 4px",
       position: "relative",
       overflow: "hidden",
     },
