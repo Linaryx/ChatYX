@@ -1,8 +1,8 @@
 export const dictionary = {
   language: {
     label: "Язык интерфейса",
-    russian: "РУ 🇷🇺",
-    english: "EN 🇬🇧",
+    russian: "РУ",
+    english: "EN",
   },
   navigation: {
     import: { label: "Импорт настроек", description: "ChatYX, ChatIS, Cyan и Davii" },

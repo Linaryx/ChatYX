@@ -3,8 +3,8 @@ import type { Dictionary } from "./types";
 export const dictionary: Dictionary = {
   language: {
     label: "Interface language",
-    russian: "РУ 🇷🇺",
-    english: "EN 🇬🇧",
+    russian: "РУ",
+    english: "EN",
   },
   navigation: {
     import: { label: "Import settings", description: "ChatYX, ChatIS, Cyan, and Davii" },

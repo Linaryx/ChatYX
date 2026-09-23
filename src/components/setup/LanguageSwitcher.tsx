@@ -1,6 +1,12 @@
 import { locale, setLocale, t, type Locale } from "~/i18n";
+import { getPublicAssetUrl } from "~/utils/appBase";
 
 const options: Locale[] = ["en", "ru"];
+
+const flags: Record<Locale, string> = {
+  en: getPublicAssetUrl("img/flag-gb.svg"),
+  ru: getPublicAssetUrl("img/flag-ru.svg"),
+};
 
 export function LanguageSwitcher() {
   return (
@@ -18,6 +24,7 @@ export function LanguageSwitcher() {
           class="setup-language-switch-option"
           onClick={() => setLocale(option)}
         >
+          <img class="setup-language-flag" src={flags[option]} alt="" aria-hidden="true" />
           {option === "en" ? t("language.english") : t("language.russian")}
         </button>
       ))}
