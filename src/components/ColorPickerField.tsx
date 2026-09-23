@@ -5,6 +5,7 @@ import { ColorSwatch } from "@kobalte/core/color-swatch";
 import { parseColor, type Color } from "@kobalte/core/colors";
 import { Popover } from "@kobalte/core/popover";
 import { createEffect, createSignal, Show } from "solid-js";
+import { t } from "~/i18n";
 
 type ColorPickerFieldProps = {
   color: string;
@@ -72,7 +73,7 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
       <div class="flex w-full items-center gap-2">
         <Popover.Trigger
           class="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-background p-1.5 text-left text-sm transition-colors hover:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          aria-label={`${props.label ?? "Цвет"}: открыть палитру`}
+          aria-label={`${props.label ?? t("common.color")}: ${t("common.openPalette")}`}
         >
           <span
             class="relative size-7 shrink-0 overflow-hidden rounded-[5px] border border-white/10"
@@ -102,7 +103,7 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
             yChannel="brightness"
             class="w-full touch-none select-none"
           >
-            <ColorArea.Label class="sr-only">Выбор цвета</ColorArea.Label>
+            <ColorArea.Label class="sr-only">{t("common.colorSelection")}</ColorArea.Label>
             <ColorArea.Background class="relative aspect-[1.45] w-full cursor-crosshair overflow-hidden rounded-lg">
               <ColorArea.Thumb class="absolute size-4 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <ColorArea.HiddenInputX />
@@ -119,7 +120,7 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
               colorSpace="hsb"
               class="w-full touch-none select-none"
             >
-              <ColorSlider.Label class="sr-only">Оттенок</ColorSlider.Label>
+              <ColorSlider.Label class="sr-only">{t("common.hue")}</ColorSlider.Label>
               <ColorSlider.Track class="relative h-2.5 w-full cursor-pointer rounded-full">
                 <ColorSlider.Thumb class="absolute top-1/2 size-4 -translate-y-1/2 rounded-full border-2 border-white bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <ColorSlider.Input />
@@ -136,7 +137,7 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
                 class="w-full touch-none select-none"
               >
                 <div class="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                  <ColorSlider.Label>Прозрачность</ColorSlider.Label>
+                  <ColorSlider.Label>{t("common.opacity")}</ColorSlider.Label>
                   <span>{opacity()}%</span>
                 </div>
                 <ColorSlider.Track
@@ -156,10 +157,10 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
           </div>
 
           <ColorField value={hex()} onChange={updateHex} class="mt-3">
-            <ColorField.Label class="sr-only">HEX-код цвета</ColorField.Label>
+            <ColorField.Label class="sr-only">{t("common.hex")}</ColorField.Label>
             <ColorField.Input
               class="h-9 w-full rounded-md border border-input bg-muted/40 px-3 font-mono text-sm uppercase text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${props.label ?? "Цвет"}: HEX`}
+              aria-label={`${props.label ?? t("common.color")}: HEX`}
             />
           </ColorField>
         </Popover.Content>

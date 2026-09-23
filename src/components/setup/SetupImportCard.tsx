@@ -7,6 +7,7 @@ import {
 } from "~/config/setupImport";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
+import { t } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { SectionCard } from "./SetupLayout";
 import { SetupSelect } from "./SetupSelect";
@@ -27,16 +28,16 @@ function selectedSource(value: string): SetupImportSource {
 }
 
 function statusText(result: SetupImportResult | null): string {
-  if (result === null) return "Вставь ссылку или строку параметров, затем запусти импорт.";
+  if (result === null) return t("setup.import.statusInitial");
   switch (result.kind) {
     case "ambiguous":
-      return "Источник строки не определён. Выбери ChatYX, ChatIS, Cyan Chat или Davii Chat.";
+      return t("setup.import.statusAmbiguous");
     case "unrecognized":
-      return "Не удалось распознать настройки. Проверь ссылку или выбери источник вручную.";
+      return t("setup.import.statusUnrecognized");
     case "parsed":
       return result.unsupported.length > 0
-        ? `Настройки ${result.sourceLabel} импортированы частично.`
-        : `Настройки ${result.sourceLabel} импортированы.`;
+        ? t("setup.import.statusPartial", { source: result.sourceLabel })
+        : t("setup.import.statusSuccess", { source: result.sourceLabel });
     default:
       return result satisfies never;
   }
@@ -66,15 +67,15 @@ export function SetupImportCard(props: SetupImportCardProps) {
   return (
     <SectionCard
       id="setup-section-import"
-      title="Импорт настроек"
-      description="Восстанови настройки ChatYX или перенеси совместимые параметры ChatIS, Cyan Chat и Davii Chat."
+      title={t("setup.import.title")}
+      description={t("setup.import.description")}
       icon="hgi-database-import"
       hidden={props.hidden}
     >
       <div class="flex flex-col gap-5">
         <div class="flex min-w-0 flex-col gap-1.5">
           <label for="setup-import-source" class="text-xs font-medium text-foreground sm:text-sm">
-            Источник
+            {t("setup.import.source")}
           </label>
           <SetupSelect
             id="setup-import-source"
@@ -84,7 +85,7 @@ export function SetupImportCard(props: SetupImportCardProps) {
               setResult(null);
             }}
           >
-            <option value="auto">Определить автоматически</option>
+            <option value="auto">{t("setup.import.sourceAuto")}</option>
             <option value="chatyx">ChatYX</option>
             <option value="chatis">ChatIS</option>
             <option value="cyan">Cyan Chat</option>
@@ -93,7 +94,7 @@ export function SetupImportCard(props: SetupImportCardProps) {
         </div>
         <div class="flex min-w-0 flex-col gap-1.5">
           <label for="setup-import-input" class="text-xs font-medium text-foreground sm:text-sm">
-            Ссылка или параметры
+            {t("setup.import.input")}
           </label>
           <Textarea
             id="setup-import-input"
@@ -108,13 +109,13 @@ export function SetupImportCard(props: SetupImportCardProps) {
             class="min-h-[96px] resize-y font-mono text-xs"
           />
           <p id="setup-import-helper" class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
-            Полные ссылки определяются автоматически. Для строки без адреса выбери источник. Импорт ChatYX заменяет настройки формы, включая значения по умолчанию.
+            {t("setup.import.helper")}
           </p>
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" variant="secondary" onClick={importSettings}>
-          Импортировать
+          {t("setup.import.action")}
         </Button>
         <p
           id="setup-import-status"
@@ -127,8 +128,8 @@ export function SetupImportCard(props: SetupImportCardProps) {
       </div>
       <Show when={unsupported().length > 0}>
         <div class="rounded-md border border-border bg-background px-3 py-2.5">
-          <p class="text-xs font-medium text-foreground">Не перенесены в форму</p>
-          <ul class="mt-1.5 flex flex-wrap gap-1.5" aria-label="Неподдерживаемые параметры">
+          <p class="text-xs font-medium text-foreground">{t("setup.import.unsupportedTitle")}</p>
+          <ul class="mt-1.5 flex flex-wrap gap-1.5" aria-label={t("setup.import.unsupportedLabel")}>
             <For each={unsupported()}>
               {(key) => (
                 <li class="rounded border border-border bg-card px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">

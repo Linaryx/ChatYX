@@ -9,6 +9,7 @@ import {
   Show,
 } from "solid-js";
 import { cn } from "~/lib/utils";
+import { t } from "~/i18n";
 import { SetupSwitch } from "./SetupSwitch";
 
 export type SetupSectionId =
@@ -37,56 +38,56 @@ export type ToggleRow = {
 
 export const SETUP_NAV: {
   id: SetupSectionId;
-  label: string;
-  description: string;
+  labelKey: "navigation.import.label" | "navigation.appearance.label" | "navigation.styling.label" | "navigation.behavior.label" | "navigation.content.label" | "navigation.bots.label" | "navigation.tts.label" | "navigation.rte.label";
+  descriptionKey: "navigation.import.description" | "navigation.appearance.description" | "navigation.styling.description" | "navigation.behavior.description" | "navigation.content.description" | "navigation.bots.description" | "navigation.tts.description" | "navigation.rte.description";
   icon: string;
 }[] = [
   {
     id: "import",
-    label: "Импорт настроек",
-    description: "ChatYX, ChatIS, Cyan и Davii",
+    labelKey: "navigation.import.label",
+    descriptionKey: "navigation.import.description",
     icon: "hgi-database-import",
   },
   {
     id: "appearance",
-    label: "Текст и размер",
-    description: "Шрифт, вес и эмоуты",
+    labelKey: "navigation.appearance.label",
+    descriptionKey: "navigation.appearance.description",
     icon: "hgi-text",
   },
   {
     id: "styling",
-    label: "Внешний вид",
-    description: "Фон, тень и цвет",
+    labelKey: "navigation.styling.label",
+    descriptionKey: "navigation.styling.description",
     icon: "hgi-colors",
   },
   {
     id: "behavior",
-    label: "Поведение",
-    description: "Анимация и порядок",
+    labelKey: "navigation.behavior.label",
+    descriptionKey: "navigation.behavior.description",
     icon: "hgi-arrow-up-right-stack",
   },
   {
     id: "content",
-    label: "Контент и бейджи",
-    description: "Сообщения и бейджи",
+    labelKey: "navigation.content.label",
+    descriptionKey: "navigation.content.description",
     icon: "hgi-dashboard-square-03",
   },
   {
     id: "bots",
-    label: "Боты и фильтры",
-    description: "Списки и скрытие",
+    labelKey: "navigation.bots.label",
+    descriptionKey: "navigation.bots.description",
     icon: "hgi-bot-message-square",
   },
   {
     id: "tts",
-    label: "Озвучка сообщений",
-    description: "TTS через ChatIS и Azure",
+    labelKey: "navigation.tts.label",
+    descriptionKey: "navigation.tts.description",
     icon: "hgi-voice-comment",
   },
   {
     id: "rte",
-    label: "RTE",
-    description: "Прокси и косметика",
+    labelKey: "navigation.rte.label",
+    descriptionKey: "navigation.rte.description",
     icon: "hgi-blockchain-05",
   },
 ];
@@ -210,7 +211,7 @@ export function SetupNav(props: {
     <nav
       class="setup-nav"
       ref={(element) => (navRef = element)}
-      aria-label="Разделы настроек"
+      aria-label={t("navigation.label")}
     >
       <div
         class="setup-selection-thumb"
@@ -232,10 +233,10 @@ export function SetupNav(props: {
               <span class="hgi-stroke setup-nav-icon" classList={{ [item.icon]: true }} aria-hidden="true" />
               <span class="min-w-0 flex-1">
                 <span class="block text-xs font-medium leading-tight xl:text-sm">
-                  {item.label}
+                  {t(item.labelKey)}
                 </span>
                 <span class="mt-1 block text-xs font-normal leading-normal text-muted-foreground">
-                  {item.description}
+                  {t(item.descriptionKey)}
                 </span>
               </span>
             </button>

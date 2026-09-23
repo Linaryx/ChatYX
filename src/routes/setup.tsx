@@ -10,6 +10,8 @@ import {
 } from "solid-js";
 import { Title } from "@solidjs/meta";
 import { ColorPickerField } from "~/components/ColorPickerField";
+import { LanguageSwitcher } from "~/components/setup/LanguageSwitcher";
+import { locale, t } from "~/i18n";
 import {
   ControlRows,
   SectionCard,
@@ -544,7 +546,7 @@ export default function ChatSetup() {
     if (supportedBrowser) {
       setLocalFontBrowser(supportedBrowser);
       setLocalFontStatus(
-        `Можно загрузить локальные шрифты через ${supportedBrowser}.`,
+        t("setup.localFontsAvailable", { browser: supportedBrowser }),
       );
     }
 
@@ -911,7 +913,9 @@ export default function ChatSetup() {
     messageSpeedToIntervalMs(messageSpeedValue()),
   );
   const messageSpeedLabel = createMemo(() =>
-    messageIntervalMs() === null ? "стоп" : `${messageIntervalMs()} мс`,
+    messageIntervalMs() === null
+      ? t("setup.speedStopped")
+      : `${messageIntervalMs()} ${t("setup.milliseconds")}`,
   );
   const ffzBotBadgePreviewUrl = getPublicAssetUrl("img/ffz-bot-badge.png");
   const requestedBotProfiles = new Set<string>();
@@ -1120,25 +1124,25 @@ export default function ChatSetup() {
     const queryLocalFonts = (window as LocalFontWindow).queryLocalFonts;
     if (!localFontBrowser() || typeof queryLocalFonts !== "function") {
       setLocalFontStatus(
-        "Этот браузер не даёт сайту список локальных шрифтов.",
+        t("setup.localFontsUnsupported"),
       );
       return;
     }
 
     setIsLoadingLocalFonts(true);
-    setLocalFontStatus("Запрашиваю доступ к локальным шрифтам...");
+    setLocalFontStatus(t("setup.localFontsLoading"));
 
     try {
       const fonts = normalizeLocalFonts(await queryLocalFonts());
       setLocalFonts(fonts);
       setLocalFontStatus(
         fonts.length > 0
-          ? `Найдено локальных шрифтов: ${fonts.length}.`
-          : "Браузер не вернул локальные шрифты.",
+          ? t("setup.localFontsFound", { count: fonts.length })
+          : t("setup.localFontsEmpty"),
       );
     } catch {
       setLocalFontStatus(
-        "Не получилось получить список шрифтов. Проверь разрешение браузера.",
+        t("setup.localFontsError"),
       );
     } finally {
       setIsLoadingLocalFonts(false);
@@ -1147,28 +1151,28 @@ export default function ChatSetup() {
 
   const appearanceRows: ControlRow[] = [
     {
-      label: "Размер сообщений",
+      label: t("setup.messageSize"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
           value={size()}
           onChange={(e) => setSize(e.currentTarget.value)}
         >
-          <option value="1">Маленький</option>
-          <option value="2">Средний</option>
-          <option value="3">Большой</option>
+          <option value="1">{t("setup.small")}</option>
+          <option value="2">{t("setup.medium")}</option>
+          <option value="3">{t("setup.large")}</option>
         </SetupSelect>
       ),
     },
     {
-      label: "Шрифт",
+      label: t("setup.font"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
           value={font()}
           onChange={(e) => setFont(e.currentTarget.value)}
         >
-          <option value="0">Свой шрифт</option>
+          <option value="0">{t("setup.customFont")}</option>
           <option value="1">Baloo Tammudu</option>
           <option value="2">Segoe UI (Chatterino)</option>
           <option value="3">Roboto</option>
@@ -1185,8 +1189,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Название своего шрифта",
-      hint: "Работает, когда выше выбран пункт «Свой шрифт».",
+      label: t("setup.customFontName"),
+      hint: t("setup.customFontHint"),
       control: (labelId) => (
         <div class="flex flex-col gap-2">
           <Input
@@ -1194,7 +1198,7 @@ export default function ChatSetup() {
             type="text"
             value={fontCustom()}
             onInput={(e) => setFontCustom(e.currentTarget.value)}
-            placeholder="Например: Comic Sans MS"
+            placeholder={t("setup.customFontPlaceholder")}
             disabled={font() !== "0"}
             class={cn(font() !== "0" && "opacity-50")}
           />
@@ -1208,10 +1212,10 @@ export default function ChatSetup() {
                 disabled={font() !== "0" || isLoadingLocalFonts()}
                 class="h-10"
               >
-                {isLoadingLocalFonts() ? "Загрузка..." : "Локальные"}
+                {isLoadingLocalFonts() ? t("setup.loading") : t("setup.local")}
               </Button>
               <SetupSelect
-                aria-label="Выбрать локальный шрифт"
+                aria-label={t("setup.selectLocalFont")}
                 value=""
                 onChange={(e) => {
                   const selectedFont = e.currentTarget.value;
@@ -1224,8 +1228,8 @@ export default function ChatSetup() {
               >
                 <option value="">
                   {localFonts().length > 0
-                    ? "Выбрать локальный шрифт"
-                    : "Сначала загрузить список"}
+                     ? t("setup.selectLocalFont")
+                     : t("setup.loadLocalFontsFirst")}
                 </option>
                 <For each={localFonts()}>
                   {(localFont) => (
@@ -1245,11 +1249,11 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Вес текста",
-      hint: "Толщина текста сообщений. 800 — текущий стандарт.",
+      label: t("setup.textWeight"),
+      hint: t("setup.textWeightHint"),
       control: (_labelId) => (
         <SetupNumberField
-          label="Вес текста"
+          label={t("setup.textWeight")}
           value={fontWeight()}
           onChange={setFontWeight}
           min={100}
@@ -1259,11 +1263,11 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Вес ника",
-      hint: "Толщина имени автора и двоеточия. 800 — текущий стандарт.",
+      label: t("setup.nicknameWeight"),
+      hint: t("setup.nicknameWeightHint"),
       control: (_labelId) => (
         <SetupNumberField
-          label="Вес ника"
+          label={t("setup.nicknameWeight")}
           value={nickFontWeight()}
           onChange={setNickFontWeight}
           min={100}
@@ -1273,10 +1277,10 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Размер эмоутов",
+      label: t("setup.emoteSize"),
       control: (_labelId) => (
         <SetupNumberField
-          label="Размер эмоутов"
+          label={t("setup.emoteSize")}
           value={emoteScale()}
           onChange={setEmoteScale}
           min={0}
@@ -1286,11 +1290,11 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Размер GIF",
-      hint: "Масштаб GIF относительно размера эмоутов.",
+      label: t("setup.gifSize"),
+      hint: t("setup.gifSizeHint"),
       control: (_labelId) => (
         <SetupNumberField
-          label="Размер GIF"
+          label={t("setup.gifSize")}
           value={gifScale()}
           onChange={setGifScale}
           min={0.25}
@@ -1303,42 +1307,42 @@ export default function ChatSetup() {
 
   const stylingRows: ControlRow[] = [
     {
-      label: "Тень текста",
+      label: t("setup.textShadow"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
           value={shadow()}
           onChange={(e) => setShadow(e.currentTarget.value)}
         >
-          <option value="0">Выкл</option>
-          <option value="1">Маленькая</option>
-          <option value="2">Средняя</option>
-          <option value="3">Большая</option>
+          <option value="0">{t("setup.off")}</option>
+          <option value="1">{t("setup.small")}</option>
+          <option value="2">{t("setup.medium")}</option>
+          <option value="3">{t("setup.large")}</option>
         </SetupSelect>
       ),
     },
     {
-      label: "Обводка текста",
+      label: t("setup.textStroke"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
           value={stroke()}
           onChange={(e) => setStroke(e.currentTarget.value)}
         >
-          <option value="0">Выкл</option>
-          <option value="1">Тонкая</option>
-          <option value="2">Средняя</option>
-          <option value="3">Толстая</option>
-          <option value="4">Очень толстая</option>
+          <option value="0">{t("setup.off")}</option>
+          <option value="1">{t("setup.thin")}</option>
+          <option value="2">{t("setup.medium")}</option>
+          <option value="3">{t("setup.thick")}</option>
+          <option value="4">{t("setup.veryThick")}</option>
         </SetupSelect>
       ),
     },
     {
-      label: "Скрывать сообщения через",
-      hint: "В секундах. 0 — сообщения остаются на экране.",
+      label: t("setup.hideMessagesAfter"),
+      hint: t("setup.hideMessagesAfterHint"),
       control: (_labelId) => (
         <SetupNumberField
-          label="Скрывать сообщения через"
+          label={t("setup.hideMessagesAfter")}
           value={fade()}
           onChange={setFade}
           min={0}
@@ -1347,10 +1351,10 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Фон сообщений",
+      label: t("setup.messageBackground"),
       control: (_labelId) => (
         <ColorPickerField
-          label="Фон сообщений"
+          label={t("setup.messageBackground")}
           color={overlayBackgroundColor()}
           opacity={toInt(
             overlayBackgroundOpacity(),
@@ -1364,10 +1368,10 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Скругление фона",
+      label: t("setup.backgroundRadius"),
       control: (_labelId) => (
         <SetupNumberField
-          label="Скругление фона"
+          label={t("setup.backgroundRadius")}
           value={overlayBackgroundRadius()}
           onChange={setOverlayBackgroundRadius}
           min={0}
@@ -1377,11 +1381,11 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Внутренний отступ",
-      hint: "Применяется только при скруглении фона. При 0 px чат занимает всю ширину.",
+      label: t("setup.padding"),
+      hint: t("setup.paddingHint"),
       control: (_labelId) => (
         <SetupNumberField
-          label="Внутренний отступ"
+          label={t("setup.padding")}
           value={overlayPadding()}
           onChange={setOverlayPadding}
           min={0}
@@ -1391,10 +1395,10 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Видимость рамки",
+      label: t("setup.borderVisibility"),
       control: (_labelId) => (
         <SetupNumberField
-          label="Видимость рамки"
+          label={t("setup.borderVisibility")}
           value={overlayBorderOpacity()}
           onChange={setOverlayBorderOpacity}
           min={0}
@@ -1404,11 +1408,11 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Подсветка событий Twitch",
-      hint: "Цвет первых сообщений, рейдов, подписок, наград и Twitch Power-ups.",
+      label: t("setup.twitchEventsHighlight"),
+      hint: t("setup.twitchEventsHighlightHint"),
       control: (_labelId) => (
         <ColorPickerField
-          label="Подсветка событий Twitch"
+          label={t("setup.twitchEventsHighlight")}
           color={twitchEventColor()}
           opacity={toInt(
             twitchEventBackgroundOpacity(),
@@ -1422,11 +1426,11 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: "Цвет ссылок",
-      hint: "Используется, когда для ссылок выбран режим выделения.",
+      label: t("setup.linkColor"),
+      hint: t("setup.linkColorHint"),
       control: (_labelId) => (
         <ColorPickerField
-          label="Цвет ссылок"
+          label={t("setup.linkColor")}
           color={linkColor()}
           opacity={100}
           showOpacity={false}
@@ -1438,8 +1442,8 @@ export default function ChatSetup() {
 
   const behaviorRows: ControlRow[] = [
     {
-      label: "Источник сообщений",
-      hint: "Показывается, когда подключены Twitch и YouTube.",
+      label: t("setup.messageSource"),
+      hint: t("setup.messageSourceHint"),
       control: (labelId) => (
         <div class="flex items-center gap-2">
           <img class="size-5 rounded-sm" src={getPublicAssetUrl("img/platform-twitch.svg")} alt="Twitch" />
@@ -1451,16 +1455,16 @@ export default function ChatSetup() {
               setPlatformMarker(event.currentTarget.value as PlatformMarkerMode)
             }
           >
-            <option value="none">Ничего</option>
-            <option value="stripe">Полоска</option>
-            <option value="icon">Иконка</option>
+            <option value="none">{t("setup.none")}</option>
+            <option value="stripe">{t("setup.stripe")}</option>
+            <option value="icon">{t("setup.icon")}</option>
           </SetupSelect>
         </div>
       ),
     },
     {
-      label: "Анимация сообщений",
-      hint: "Плавный поток двигает существующие строки, остальные режимы анимируют только новое сообщение.",
+      label: t("setup.messageAnimation"),
+      hint: t("setup.messageAnimationHint"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
@@ -1469,15 +1473,15 @@ export default function ChatSetup() {
             setAnimation(event.currentTarget.value as ChatAnimationMode)
           }
         >
-          <option value="fade">Появление</option>
-          <option value="flow">Плавный поток</option>
-          <option value="scroll">Плавный скролл</option>
-          <option value="none">Без анимации</option>
+          <option value="fade">{t("setup.fadeIn")}</option>
+          <option value="flow">{t("setup.smoothFlow")}</option>
+          <option value="scroll">{t("setup.smoothScroll")}</option>
+          <option value="none">{t("setup.noAnimation")}</option>
         </SetupSelect>
       ),
     },
     {
-      label: "Ссылки в сообщениях",
+      label: t("setup.messageLinks"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
@@ -1486,9 +1490,9 @@ export default function ChatSetup() {
             setLinkMode(event.currentTarget.value as LinkDisplayMode)
           }
         >
-          <option value="normal">Обычный текст</option>
-          <option value="highlight">Выделять цветом</option>
-          <option value="hide">Скрывать</option>
+          <option value="normal">{t("setup.normalText")}</option>
+          <option value="highlight">{t("setup.highlightWithColor")}</option>
+          <option value="hide">{t("setup.hide")}</option>
         </SetupSelect>
       ),
     },
@@ -1496,45 +1500,45 @@ export default function ChatSetup() {
 
   const behaviorToggles: ToggleRow[] = [
     {
-      label: "Подсвечивать события Twitch",
+      label: t("setup.highlightTwitchEvents"),
       checked: highlightTwitchEvents,
       onChange: setHighlightTwitchEvents,
     },
     {
-      label: "Усилить служебный текст событий",
+      label: t("setup.emphasizeEventText"),
       checked: twitchEventBold,
       onChange: setTwitchEventBold,
-      hint: "Добавляет 100 к выбранному весу текста, не меняя вес ника и сообщения.",
+      hint: t("setup.emphasizeEventTextHint"),
     },
     {
-      label: "Курсив для событий",
+      label: t("setup.italicEvents"),
       checked: twitchEventItalic,
       onChange: setTwitchEventItalic,
     },
     {
-      label: "Загружать последние сообщения",
+      label: t("setup.loadRecentMessages"),
       checked: recentMessages,
       onChange: setRecentMessages,
-      hint: "Показывает recent-messages до подключения к Twitch IRC. Если выключить, чат стартует только с новых сообщений.",
+      hint: t("setup.loadRecentMessagesHint"),
     },
     {
-      label: "Отображать ники заглавными буквами",
+      label: t("setup.uppercaseNicknames"),
       checked: smallCaps,
       onChange: setSmallCaps,
     },
     {
-      label: "Переносить текст после ника",
+      label: t("setup.lineBreakAfterNickname"),
       checked: nlAfterName,
       onChange: setNlAfterName,
     },
-    { label: "Не показывать ники", checked: hideNames, onChange: setHideNames },
+    { label: t("setup.hideNicknames"), checked: hideNames, onChange: setHideNames },
     {
-      label: "Обратный порядок сообщений",
+      label: t("setup.reverseMessageOrder"),
       checked: reverseLineOrder,
       onChange: setReverseLineOrder,
     },
     {
-      label: "Горизонтальная лента сообщений",
+      label: t("setup.horizontalMessageFeed"),
       checked: horizontal,
       onChange: setHorizontal,
     },
@@ -1542,45 +1546,45 @@ export default function ChatSetup() {
 
   const contentToggles: ToggleRow[] = [
     {
-      label: "Показывать выделенные сообщения",
+      label: t("setup.showHighlightedMessages"),
       checked: showHighlightedMessages,
       onChange: setShowHighlightedMessages,
     },
     {
-      label: "Показывать награды за баллы",
+      label: t("setup.showPointRewards"),
       checked: showChannelPointRewards,
       onChange: setShowChannelPointRewards,
     },
     {
-      label: "Скрывать награды со ссылками",
+      label: t("setup.hideLinkRewards"),
       checked: hideLinkRewards,
       onChange: setHideLinkRewards,
-      hint: "Включено по умолчанию. Скрывает всю покупку за баллы, если в сообщении, названии или описании награды есть ссылка.",
+      hint: t("setup.hideLinkRewardsHint"),
     },
     {
-      label: "Показывать гигантские эмоуты",
+      label: t("setup.showGigantifiedEmotes"),
       checked: showGigantifiedEmotes,
       onChange: setShowGigantifiedEmotes,
     },
     {
-      label: "Показывать GIF в сообщениях",
+      label: t("setup.showGifs"),
       checked: showGifs,
       onChange: setShowGifs,
-      hint: "Показывает Twitch GIF в формате WebP. Выключено по умолчанию.",
+      hint: t("setup.showGifsHint"),
     },
     {
-      label: "Показывать прогнозы над чатом",
+      label: t("setup.showPredictions"),
       checked: showPredictions,
       onChange: setShowPredictions,
-      hint: "Полоска Twitch Predictions над сообщениями. Работает только при указанном Twitch-канале.",
+      hint: t("setup.showPredictionsHint"),
     },
     {
-      label: "Показывать сообщения, начинающиеся с !",
+      label: t("setup.showCommands"),
       checked: commands,
       onChange: setCommands,
     },
     {
-      label: "Показывать скрытые 7TV-эмоуты",
+      label: t("setup.showUnlistedEmotes"),
       checked: show7tvUnlisted,
       onChange: setShow7tvUnlisted,
     },
@@ -1589,49 +1593,49 @@ export default function ChatSetup() {
 
   const ttsToggles: ToggleRow[] = [
     {
-      label: "Русский TTS через ChatIS / Streamlabs",
+      label: t("setup.chatIsTts"),
       checked: rteChatIsTts,
       onChange: setRteChatIsTts,
-      hint: "Команда модератора: !chat tts (или короче !tts) [-s Maxim|Tatyana] текст. Синтезированный аудиофайл не сохраняется.",
+      hint: t("setup.chatIsTtsHint"),
     },
     {
-      label: "Русский TTS через JustDavi / Azure",
+      label: t("setup.azureTts"),
       checked: rteAzureTts,
       onChange: setRteAzureTts,
-      hint: "Команда модератора: !chat tts (или короче !tts) [-s Dmitry|Svetlana] текст.",
+      hint: t("setup.azureTtsHint"),
     },
   ];
 
   const rteToggles: ToggleRow[] = [
     {
-      label: "RTE-прокси для эмоутов и бейджей",
+      label: t("setup.rteProxy"),
       checked: rteProxy,
       onChange: setRteProxy,
-      hint: "Направляет только публичные API и CDN 7TV, BTTV и FFZ через RTE. Twitch и авторизация не проксируются.",
+      hint: t("setup.rteProxyHint"),
     },
     {
-      label: "Пользовательские пейнты RTE",
+      label: t("setup.rteCosmetics"),
       checked: rteCustomCosmetics,
       onChange: setRteCustomCosmetics,
-      hint: "Подгружает персональный paint из RTE, если для пользователя нет подходящего локального источника.",
+      hint: t("setup.rteCosmeticsHint"),
     },
   ];
 
   const roleBadgeMergeOptions = [
     {
-      label: "Стример",
+      label: t("setup.streamer"),
       badgeColor: "#e91916",
       checked: ffzBotMixBroadcaster,
       onChange: setFfzBotMixBroadcaster,
     },
     {
-      label: "Модератор",
+      label: t("setup.moderator"),
       badgeColor: "#00ad03",
       checked: ffzBotMixModerator,
       onChange: setFfzBotMixModerator,
     },
     {
-      label: "VIP-зритель",
+      label: t("setup.vipViewer"),
       badgeColor: "#e005b9",
       checked: ffzBotMixVip,
       onChange: setFfzBotMixVip,
@@ -1642,11 +1646,10 @@ export default function ChatSetup() {
     <div class="setup-role-merge grid grid-cols-1 gap-3 rounded-lg border border-border bg-black/40 p-3.5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
       <div class="flex min-w-0 flex-col gap-1.5">
         <div class="text-sm font-bold text-foreground">
-          Бейдж бота рядом с ролью
+          {t("setup.botBadgeNearRole")}
         </div>
         <div class="text-xs leading-snug text-muted-foreground">
-          Выбери роли, у которых FFZ-бот-бейдж будет показываться
-          рядом с Twitch-бейджем роли.
+          {t("setup.botBadgeNearRoleHint")}
         </div>
       </div>
       <div class="setup-role-pills grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -1700,7 +1703,7 @@ export default function ChatSetup() {
   }> = [
     {
       toggle: {
-        label: "Показывать бейджи Twitch",
+        label: t("setup.showTwitchBadges"),
         checked: showTwitchBadges,
         onChange: setShowTwitchBadges,
         disabled: hideAllBadges,
@@ -1708,7 +1711,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Показывать бейджи YouTube",
+        label: t("setup.showYouTubeBadges"),
         checked: showYouTubeBadges,
         onChange: setShowYouTubeBadges,
         disabled: hideAllBadges,
@@ -1716,7 +1719,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Показывать бейджи Kick",
+        label: t("setup.showKickBadges"),
         checked: showKickBadges,
         onChange: setShowKickBadges,
         disabled: hideAllBadges,
@@ -1724,7 +1727,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Показывать Homies-бейджи",
+        label: t("setup.showHomiesBadges"),
         checked: showHomies,
         onChange: setShowHomies,
         disabled: hideAllBadges,
@@ -1732,7 +1735,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Показывать бейджи 7TV",
+        label: t("setup.show7tvBadges"),
         checked: show7tvBadges,
         onChange: setShow7tvBadges,
         disabled: hideAllBadges,
@@ -1740,7 +1743,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Показывать бейджи FFZ",
+        label: t("setup.showFfzBadges"),
         checked: showFfzBadges,
         onChange: setShowFfzBadges,
         disabled: hideAllBadges,
@@ -1749,7 +1752,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Показывать бейджи BTTV",
+        label: t("setup.showBttvBadges"),
         checked: showBttvBadges,
         onChange: setShowBttvBadges,
         disabled: hideAllBadges,
@@ -1757,7 +1760,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Показывать бейджи Chatterino",
+        label: t("setup.showChatterinoBadges"),
         checked: showChatterinoBadges,
         onChange: setShowChatterinoBadges,
         disabled: hideAllBadges,
@@ -1765,7 +1768,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Показывать бейджи ChatIS",
+        label: t("setup.showChatisBadges"),
         checked: showChatisBadges,
         onChange: setShowChatisBadges,
         disabled: hideAllBadges,
@@ -1773,10 +1776,10 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: "Бейдж Reyohoho",
+        label: t("setup.reyohohoBadge"),
         checked: rteReyohohoBadge,
         onChange: setRteReyohohoBadge,
-        hint: "Показывает пользовательский бейдж из публичного RTE API, если он есть.",
+        hint: t("setup.reyohohoBadgeHint"),
         disabled: hideAllBadges,
       },
     },
@@ -1844,17 +1847,18 @@ export default function ChatSetup() {
 
   return (
     <>
-      <Title>ChatYX • настройка</Title>
+      <Title>ChatYX • {t("common.settings")}</Title>
 
-      <div class="setup-root dark" lang="ru" data-mobile-view={mobileView()}>
+      <div class="setup-root dark" lang={locale()} data-mobile-view={mobileView()}>
         <div class="setup-shell">
-          <a class="setup-skip-link" href={mobileView() === "settings" ? "#setup-settings" : "#setup-preview"}>Перейти к рабочей области</a>
+          <a class="setup-skip-link" href={mobileView() === "settings" ? "#setup-settings" : "#setup-preview"}>{t("common.skipToWorkspace")}</a>
           <header class="setup-toolbar">
             <div class="setup-brand">
               <span class="setup-brand-mark" aria-hidden="true"><img src={getPublicAssetUrl("img/emote-2x.webp")} alt="" /></span>
-              <div><h1>ChatYX • Оверлей мульти-чата</h1><p>Настрой оформление и добавь оверлей в OBS.</p></div>
+              <div><h1>{t("toolbar.title")}</h1><p>{t("toolbar.description")}</p></div>
             </div>
             <div class="setup-toolbar-actions">
+              <LanguageSwitcher />
               <a
                 class="setup-report-issue"
                 href="https://github.com/Linaryx/ChatYX/issues"
@@ -1862,14 +1866,14 @@ export default function ChatSetup() {
                 rel="noreferrer"
               >
                 <span class="hgi-stroke hgi-alert-02" aria-hidden="true" />
-                Сообщить об ошибке
+                {t("toolbar.reportIssue")}
               </a>
               <a
                 class="setup-toolbar-icon-link"
                 href="https://github.com/Linaryx/ChatYX"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Открыть репозиторий ChatYX на GitHub"
+                aria-label={t("toolbar.github")}
               >
                 <span class="hgi-stroke hgi-github" aria-hidden="true" />
               </a>
@@ -1878,20 +1882,20 @@ export default function ChatSetup() {
                 href="https://ruina.team"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Открыть Ruina.Team"
+                aria-label={t("toolbar.ruina")}
               >
                 <img src="https://ruina.team/favicon.svg" alt="" />
               </a>
             </div>
           </header>
-          <div class="setup-view-switch" role="group" aria-label="Рабочая область">
-            <button type="button" aria-pressed={mobileView() === "settings"} aria-controls="setup-settings" onClick={() => selectMobileView("settings")}><SlidersHorizontal size={16} aria-hidden="true" />Настройки</button>
-            <button type="button" aria-pressed={mobileView() === "preview"} aria-controls="setup-preview" onClick={() => selectMobileView("preview")}><Monitor size={16} aria-hidden="true" />Предпросмотр</button>
+          <div class="setup-view-switch" role="group" aria-label={t("common.workspace")}>
+            <button type="button" aria-pressed={mobileView() === "settings"} aria-controls="setup-settings" onClick={() => selectMobileView("settings")}><SlidersHorizontal size={16} aria-hidden="true" />{t("common.settings")}</button>
+            <button type="button" aria-pressed={mobileView() === "preview"} aria-controls="setup-preview" onClick={() => selectMobileView("preview")}><Monitor size={16} aria-hidden="true" />{t("common.preview")}</button>
           </div>
           <main class="setup-body setup-pane-scroll" ref={bodyScrollRef}>
             <div class="setup-source-row">
-            <section class="setup-connection" aria-label="Подключение каналов">
-              <div class="setup-connection-intro"><h2>Подключение</h2><p>Укажи Twitch, YouTube, Kick или несколько каналов.</p></div>
+            <section class="setup-connection" aria-label={t("setup.channelsConnection")}>
+              <div class="setup-connection-intro"><h2>{t("setup.connection")}</h2><p>{t("setup.connectionHint")}</p></div>
               <div class="setup-channel-field">
                 <span class="setup-field-label setup-platform-label">
                   <svg class="setup-platform-logo setup-platform-logo--twitch" viewBox="0 0 24 24" aria-hidden="true">
@@ -1906,13 +1910,13 @@ export default function ChatSetup() {
                   <svg class="setup-platform-logo setup-platform-logo--youtube" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M23.5 6.19a3.02 3.02 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.51A3.02 3.02 0 0 0 .5 6.19C0 8.07 0 12 0 12s0 3.93.5 5.81a3.02 3.02 0 0 0 2.123 2.136c1.872.509 9.377.509 9.377.509s7.505 0 9.377-.51a3.02 3.02 0 0 0 2.122-2.135C24 15.93 24 12 24 12s0-3.93-.5-5.81zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                   </svg>
-                  YouTube <span>необязательно</span>
+                  YouTube <span>{t("setup.optional")}</span>
                 </label>
                 <TwitchChannelField
                   inputId="setup-youtube"
                   value={youtubeChannel()}
                   onChange={setYoutubeChannel}
-                  placeholder="@канал или ID канала"
+                  placeholder={t("setup.channelOrIdPlaceholder")}
                   platformName="YouTube"
                   platform="youtube"
                   loadSummary={false}
@@ -1921,13 +1925,13 @@ export default function ChatSetup() {
               <div class="setup-channel-field">
                 <label class="setup-field-label setup-platform-label" for="setup-kick">
                   <img class="setup-platform-logo" src={getPublicAssetUrl("img/platform-kick.svg")} alt="" />
-                  Kick <span>необязательно</span>
+                  Kick <span>{t("setup.optional")}</span>
                 </label>
                 <TwitchChannelField
                   inputId="setup-kick"
                   value={kickChannel()}
                   onChange={setKickChannel}
-                  placeholder="название канала"
+                  placeholder={t("setup.channelNamePlaceholder")}
                   platformName="Kick"
                   platform="kick"
                   loadSummary={false}
@@ -1936,8 +1940,8 @@ export default function ChatSetup() {
             </section>
             <div class="setup-export">
               <div class="setup-export-link">
-                <h2 class="setup-export-title">Ссылка для OBS</h2>
-                <Input id="setup-obs-url" type="text" readonly value={generatedUrl()} placeholder="Укажи канал, чтобы создать ссылку" onFocus={(event) => event.currentTarget.select()} class="setup-url-input" aria-label="Ссылка для OBS" />
+                <h2 class="setup-export-title">{t("setup.obsUrl")}</h2>
+                <Input id="setup-obs-url" type="text" readonly value={generatedUrl()} placeholder={t("setup.obsUrlPlaceholder")} onFocus={(event) => event.currentTarget.select()} class="setup-url-input" aria-label={t("setup.obsUrl")} />
               </div>
               <div class="setup-export-actions">
                 <div class="setup-export-primary-actions">
@@ -1951,20 +1955,20 @@ export default function ChatSetup() {
                     )}
                   >
                     <span class="hgi-stroke hgi-copy-01 setup-export-icon" aria-hidden="true" />
-                    {copyStatus() === "success" ? "Скопировано" : "Скопировать"}
+                    {copyStatus() === "success" ? t("setup.copied") : t("setup.copy")}
                   </Button>
-                  <Show when={generatedUrl()}><a class="setup-export-action setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label="Открыть оверлей в новой вкладке"><span class="hgi-stroke hgi-link-square-01 setup-export-icon" aria-hidden="true" /><span>Открыть</span></a></Show>
+                  <Show when={generatedUrl()}><a class="setup-export-action setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label={t("setup.openOverlayNewTab")}><span class="hgi-stroke hgi-link-square-01 setup-export-icon" aria-hidden="true" /><span>{t("setup.open")}</span></a></Show>
                 </div>
                 <Button type="button" variant="outline" class="setup-export-action setup-reset-button" onClick={resetSettings}>
                   <span class="hgi-stroke hgi-trash setup-export-icon" aria-hidden="true" />
-                  {resetPending() ? "Подтвердить?" : "Сбросить"}
+                  {resetPending() ? t("setup.confirm") : t("setup.reset")}
                 </Button>
               </div>
             </div>
             </div>
           <div class="setup-workspace">
             <aside class="setup-sidebar setup-pane-scroll">
-              <p class="setup-sidebar-caption">Настройки оверлея</p>
+              <p class="setup-sidebar-caption">{t("setup.overlaySettings")}</p>
                 <SetupNav active={activeSection()} onSelect={scrollToSection} />
             </aside>
 
@@ -1977,9 +1981,9 @@ export default function ChatSetup() {
               class="setup-settings setup-pane-scroll"
             >
               <div class="setup-section-select">
-                <label for="setup-section-picker" class="setup-field-label">Раздел настроек</label>
+                <label for="setup-section-picker" class="setup-field-label">{t("setup.settingsSection")}</label>
                 <SetupSelect id="setup-section-picker" value={activeSection()} onChange={(event) => scrollToSection(event.currentTarget.value as SetupSectionId)}>
-                  <For each={SETUP_NAV}>{(item) => <option value={item.id}>{item.label}</option>}</For>
+                  <For each={SETUP_NAV}>{(item) => <option value={item.id}>{t(item.labelKey)}</option>}</For>
                 </SetupSelect>
               </div>
 
@@ -1990,35 +1994,35 @@ export default function ChatSetup() {
 
               <SectionCard
                 id="setup-section-appearance"
-                title="Текст и размер"
-                description="Настрой, насколько крупно и каким шрифтом будет выглядеть чат."
+                title={t("setup.appearanceTitle")}
+                description={t("setup.appearanceDescription")}
                 icon="hgi-text"
                 hidden={activeSection() !== "appearance"}
               >
-                <div class="setup-field-group"><h3>Шрифт сообщений</h3><ControlRows rows={appearanceRows.slice(0, 3)} /></div>
-                <div class="setup-field-group"><h3>Насыщенность и эмоуты</h3><ControlRows rows={appearanceRows.slice(3)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.messageFont")}</h3><ControlRows rows={appearanceRows.slice(0, 3)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.weightAndEmotes")}</h3><ControlRows rows={appearanceRows.slice(3)} /></div>
               </SectionCard>
 
               <SectionCard
                 id="setup-section-styling"
-                title="Внешний вид"
-                description="Фон сообщений, тень, обводка и время жизни строк на экране."
+                title={t("setup.stylingTitle")}
+                description={t("setup.stylingDescription")}
                 icon="hgi-colors"
                 hidden={activeSection() !== "styling"}
               >
-                <div class="setup-field-group"><h3>Читаемость текста</h3><ControlRows rows={stylingRows.slice(0, 3)} /></div>
-                <div class="setup-field-group"><h3>Подложка сообщений</h3><ControlRows rows={stylingRows.slice(3, 6)} /></div>
-                <div class="setup-field-group"><h3>Цветовые акценты</h3><ControlRows rows={stylingRows.slice(6)} /></div>
-                <div class="setup-field-group"><h3>Цвет никнеймов</h3>
+                <div class="setup-field-group"><h3>{t("setup.textReadability")}</h3><ControlRows rows={stylingRows.slice(0, 3)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.messageBacking")}</h3><ControlRows rows={stylingRows.slice(3, 6)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.colorAccents")}</h3><ControlRows rows={stylingRows.slice(6)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.nicknameColor")}</h3>
                   <ToggleRows rows={[{
-                    label: "Единый цвет никнеймов",
-                    hint: "Окрашивает все никнеймы оверлея в один цвет.",
+                    label: t("setup.uniformNicknameColor"),
+                    hint: t("setup.uniformNicknameColorHint"),
                     checked: usersColorEnabled,
                     onChange: setUsersColorEnabled,
                   }]} />
                   <Show when={usersColorEnabled()}>
                     <div class="pt-1">
-                      <ColorPickerField label="Цвет никнеймов" color={usersColor()} opacity={100} showOpacity={false} onChange={({ color }) => setUsersColor(color)} />
+                      <ColorPickerField label={t("setup.nicknameColor")} color={usersColor()} opacity={100} showOpacity={false} onChange={({ color }) => setUsersColor(color)} />
                     </div>
                   </Show>
                 </div>
@@ -2026,31 +2030,31 @@ export default function ChatSetup() {
 
               <SectionCard
                 id="setup-section-behavior"
-                title="Поведение сообщений"
-                description="Управляет анимацией, переносами, порядком и форматом сообщений."
+                title={t("setup.behaviorTitle")}
+                description={t("setup.behaviorDescription")}
                 icon="hgi-arrow-up-right-stack"
                 hidden={activeSection() !== "behavior"}
               >
-                <div class="setup-field-group"><h3>Анимация и ссылки</h3><ControlRows rows={behaviorRows} /></div>
-                <div class="setup-field-group"><h3>Оформление событий</h3><ToggleRows rows={behaviorToggles.slice(0, 3)} /></div>
-                <div class="setup-field-group"><h3>Поток сообщений</h3><ToggleRows rows={behaviorToggles.slice(3)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.animationAndLinks")}</h3><ControlRows rows={behaviorRows} /></div>
+                <div class="setup-field-group"><h3>{t("setup.eventStyling")}</h3><ToggleRows rows={behaviorToggles.slice(0, 3)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.messageFlow")}</h3><ToggleRows rows={behaviorToggles.slice(3)} /></div>
               </SectionCard>
 
               <SectionCard
                 id="setup-section-content"
-                title="Контент и бейджи"
-                description="Выбери, какие сообщения, эмоуты и бейджи попадут в оверлей."
+                title={t("setup.contentTitle")}
+                description={t("setup.contentDescription")}
                 icon="hgi-dashboard-square-03"
                 hidden={activeSection() !== "content"}
               >
-                <div class="setup-field-group"><h3>Сообщения и события</h3><ToggleRows rows={contentToggles} /></div>
+                <div class="setup-field-group"><h3>{t("setup.messagesAndEvents")}</h3><ToggleRows rows={contentToggles} /></div>
                 <div class="setup-field-group">
-                  <h3>Бейджи</h3>
+                  <h3>{t("setup.badges")}</h3>
                   <ToggleRows rows={[{
-                    label: "Скрыть все бейджи",
+                    label: t("setup.hideAllBadges"),
                     checked: hideAllBadges,
                     onChange: setHideAllBadges,
-                    hint: "Прячет все бейджи: Twitch, YouTube, Kick, 7TV, FFZ, BTTV, Homies, Chatterino и ChatIS.",
+                    hint: t("setup.hideAllBadgesHint"),
                   }]} />
                   <For each={badgeProviderRows}>
                     {(row) => (
@@ -2065,8 +2069,8 @@ export default function ChatSetup() {
 
               <SectionCard
                 id="setup-section-bots"
-                title="Боты и фильтры"
-                description="Спрячь ботов, команды или оставь сообщения только выбранных пользователей."
+                title={t("setup.botsTitle")}
+                description={t("setup.botsDescription")}
                 icon="hgi-bot-message-square"
                 hidden={activeSection() !== "bots"}
               >
@@ -2075,11 +2079,11 @@ export default function ChatSetup() {
                     <SetupSwitch
                       checked={!bots()}
                       onChange={(hideBots) => setBots(!hideBots)}
-                      label="Скрывать ботов"
+                       label={t("setup.hideBots")}
                     />
                   </div>
                   <div class="text-xs font-medium text-foreground sm:text-sm">
-                    Ники ботов
+                     {t("setup.botNicknames")}
                   </div>
                   <div class={chipFieldClass}>
                     <For each={botNames()}>
@@ -2087,12 +2091,12 @@ export default function ChatSetup() {
                         renderUserChip(
                           login,
                           removeBotName,
-                          "Убрать из списка ботов",
+                           t("setup.removeBot"),
                         )
                       }
                     </For>
                     <input
-                      aria-label="Добавить ник бота"
+                       aria-label={t("setup.addBot")}
                       type="text"
                       value={botInput()}
                       onInput={(event) =>
@@ -2103,7 +2107,7 @@ export default function ChatSetup() {
                         addBotNames(botInput());
                         setBotInput("");
                       }}
-                      placeholder="Введите никнейм и нажмите Enter"
+                       placeholder={t("setup.nicknamePlaceholder")}
                       class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                     />
                   </div>
@@ -2112,10 +2116,10 @@ export default function ChatSetup() {
                 <div class="setup-control-row flex flex-col gap-2">
                   <div class="flex min-w-0 flex-col gap-0.5">
                     <div class="text-xs font-medium text-foreground sm:text-sm">
-                      Показывать только этих зрителей
+                       {t("setup.onlyTheseViewers")}
                     </div>
                     <div class="text-[11px] leading-snug text-muted-foreground sm:text-xs">
-                      Если список не пустой, остальные сообщения будут скрыты.
+                       {t("setup.onlyTheseViewersHint")}
                     </div>
                   </div>
                   <div class={chipFieldClass}>
@@ -2124,12 +2128,12 @@ export default function ChatSetup() {
                         renderUserChip(
                           login,
                           removeAllowedChatter,
-                          "Убрать из списка зрителей",
+                           t("setup.removeViewer"),
                         )
                       }
                     </For>
                     <input
-                      aria-label="Добавить зрителя в разрешённый список"
+                       aria-label={t("setup.addViewer")}
                       type="text"
                       value={allowedChatterInput()}
                       onInput={(event) =>
@@ -2140,7 +2144,7 @@ export default function ChatSetup() {
                         addAllowedChatters(allowedChatterInput());
                         setAllowedChatterInput("");
                       }}
-                      placeholder="Введите никнейм и нажмите Enter"
+                       placeholder={t("setup.nicknamePlaceholder")}
                       class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                     />
                   </div>
@@ -2149,8 +2153,8 @@ export default function ChatSetup() {
 
               <SectionCard
                 id="setup-section-tts"
-                title="Озвучка сообщений"
-                description="Включи один или оба сервиса синтеза речи для единой команды модератора."
+                title={t("setup.ttsTitle")}
+                description={t("setup.ttsDescription")}
                 icon="hgi-voice-comment"
                 hidden={activeSection() !== "tts"}
               >
@@ -2160,8 +2164,8 @@ export default function ChatSetup() {
 
               <SectionCard
                 id="setup-section-rte"
-                title="RTE-интеграции"
-                description="Необязательный прокси для публичных ресурсов и пользовательской косметики."
+                title={t("setup.rteTitle")}
+                description={t("setup.rteDescription")}
                 icon="hgi-blockchain-05"
                 hidden={activeSection() !== "rte"}
               >
@@ -2172,7 +2176,7 @@ export default function ChatSetup() {
             <div id="setup-preview" tabIndex={-1} class="setup-preview-pane setup-pane-scroll min-h-0 min-w-0 overflow-y-auto overscroll-contain min-[1100px]:h-full">
               <div class="flex min-h-0 flex-col gap-2.5 pb-2 min-[1100px]:h-full min-[1100px]:pb-0">
                 <SectionCard
-                  title="Предпросмотр"
+                  title={t("setup.previewTitle")}
                   compact
                   class="setup-preview-section min-[1100px]:flex min-[1100px]:min-h-0 min-[1100px]:flex-1 min-[1100px]:flex-col"
                 >
@@ -2183,17 +2187,17 @@ export default function ChatSetup() {
                         ref={(element) => (previewControlsRef = element)}
                       >
                         <div class="setup-preview-control-panel">
-                          <div class="setup-preview-control-title">Цвет фона (демо)</div>
+                           <div class="setup-preview-control-title">{t("setup.demoBackgroundColor")}</div>
                           <div
                             class="setup-stage-switcher"
                             role="group"
-                            aria-label="Фон предпросмотра"
+                             aria-label={t("setup.previewBackground")}
                           >
                             <button
                               type="button"
                               class={cn("setup-stage-option", stageBackdrop() === "dark" && "setup-stage-option--active")}
                               aria-pressed={stageBackdrop() === "dark"}
-                              aria-label="Чёрная подложка"
+                               aria-label={t("setup.blackBackground")}
                               onClick={() => setStageBackdrop("dark")}
                             >
                               <span class="setup-stage-swatch setup-stage-swatch--dark" aria-hidden="true" />
@@ -2202,7 +2206,7 @@ export default function ChatSetup() {
                               type="button"
                               class={cn("setup-stage-option", stageBackdrop() === "light" && "setup-stage-option--active")}
                               aria-pressed={stageBackdrop() === "light"}
-                              aria-label="Белая подложка"
+                               aria-label={t("setup.whiteBackground")}
                               onClick={() => setStageBackdrop("light")}
                             >
                               <span class="setup-stage-swatch setup-stage-swatch--light" aria-hidden="true" />
@@ -2211,7 +2215,7 @@ export default function ChatSetup() {
                               type="button"
                               class={cn("setup-stage-option", stageBackdrop() === "checker" && "setup-stage-option--active")}
                               aria-pressed={stageBackdrop() === "checker"}
-                              aria-label="Подложка-сетка"
+                               aria-label={t("setup.checkerBackground")}
                               onClick={() => setStageBackdrop("checker")}
                             >
                               <span class="setup-stage-swatch setup-stage-swatch--checker" aria-hidden="true" />
@@ -2220,7 +2224,7 @@ export default function ChatSetup() {
                               type="button"
                               class={cn("setup-stage-option", stageBackdrop() === "custom" && "setup-stage-option--active")}
                               aria-pressed={stageBackdrop() === "custom"}
-                              aria-label="Свой цвет подложки"
+                               aria-label={t("setup.customBackgroundColor")}
                               onClick={() => setStageBackdrop("custom")}
                             >
                               <span class="setup-stage-swatch" style={`background-color: ${stageColor()}`} aria-hidden="true" />
@@ -2233,22 +2237,22 @@ export default function ChatSetup() {
                                 opacity={100}
                                 showOpacity={false}
                                 showTransparencyGrid={false}
-                                label="Цвет подложки"
+                                 label={t("setup.backgroundColor")}
                                 onChange={(value) => setStageColor(value.color)}
                               />
                             </div>
                           </Show>
                         </div>
                         <div class="setup-preview-control-panel">
-                          <div class="setup-preview-control-title">Настройки</div>
+                           <div class="setup-preview-control-title">{t("setup.previewSettings")}</div>
                           <div class="setup-preview-setting-grid">
                             <div class="setup-preview-setting">
-                              <div class="setup-preview-setting-title">Режим чата</div>
+                               <div class="setup-preview-setting-title">{t("setup.chatMode")}</div>
                               <div
                                 class="setup-preview-selector"
                                 ref={(element) => (previewModeSelectorRef = element)}
                                 role="radiogroup"
-                                aria-label="Режим чата в предпросмотре"
+                                 aria-label={t("setup.previewChatMode")}
                               >
                                 <div
                                   class="setup-selection-thumb"
@@ -2265,7 +2269,7 @@ export default function ChatSetup() {
                                   onClick={() => setPreviewMode("live")}
                                 >
                                   <span class="hgi-stroke hgi-live-streaming-02 setup-preview-selector-icon" aria-hidden="true" />
-                                  <span>Чат канала</span>
+                                   <span>{t("setup.channelChat")}</span>
                                 </button>
                                 <Show when={!isExternalOnly()}>
                                   <button
@@ -2277,14 +2281,14 @@ export default function ChatSetup() {
                                     onClick={() => setPreviewMode("demo")}
                                   >
                                     <span class="hgi-stroke hgi-test-tube-01 setup-preview-selector-icon" aria-hidden="true" />
-                                    <span>Демо</span>
+                                     <span>{t("setup.demo")}</span>
                                   </button>
                                 </Show>
                               </div>
                             </div>
                             <Show when={!isExternalOnly()}>
                               <div class="setup-preview-setting">
-                                <div class="setup-preview-setting-title">Сценарий демо</div>
+                                 <div class="setup-preview-setting-title">{t("setup.demoScenario")}</div>
                                 <div
                                   class={cn(
                                     "setup-preview-selector",
@@ -2292,7 +2296,7 @@ export default function ChatSetup() {
                                   )}
                                   ref={(element) => (previewDemoSelectorRef = element)}
                                   role="radiogroup"
-                                  aria-label="Сценарий демо"
+                                 aria-label={t("setup.demoScenario")}
                                 >
                                   <div
                                     class="setup-selection-thumb"
@@ -2309,7 +2313,7 @@ export default function ChatSetup() {
                                     onClick={() => setPreviewDemoKind("pasta")}
                                   >
                                     <span class="hgi-stroke hgi-message-square-more setup-preview-selector-icon" aria-hidden="true" />
-                                    <span>Сообщения</span>
+                                     <span>{t("setup.messages")}</span>
                                   </button>
                                   <button
                                     type="button"
@@ -2321,7 +2325,7 @@ export default function ChatSetup() {
                                     onClick={() => setPreviewDemoKind("emote")}
                                   >
                                     <span class="hgi-stroke hgi-rubber-duck setup-preview-selector-icon" aria-hidden="true" />
-                                    <span>Эмоуты</span>
+                                     <span>{t("setup.emotes")}</span>
                                   </button>
                                 </div>
                               </div>
@@ -2335,10 +2339,10 @@ export default function ChatSetup() {
                       <div class="setup-preview-playback">
                         <div class="setup-preview-speed">
                           <span class="text-xs font-medium sm:text-sm">
-                            Скорость
+                             {t("setup.speed")}
                           </span>
                           <Slider
-                            aria-label="Скорость сообщений"
+                             aria-label={t("setup.messageSpeed")}
                             minValue={MIN_MESSAGE_SPEED}
                             maxValue={MAX_MESSAGE_SPEED}
                             step={1}
@@ -2366,7 +2370,7 @@ export default function ChatSetup() {
                           <Show when={demoPaused()} fallback={<Pause size={14} aria-hidden="true" />}>
                             <Play size={14} aria-hidden="true" />
                           </Show>
-                          {demoPaused() ? "Продолжить" : "Пауза"}
+                           {demoPaused() ? t("setup.resume") : t("setup.pause")}
                         </button>
                       </div>
                     </Show>
@@ -2380,7 +2384,7 @@ export default function ChatSetup() {
                         src={previewUrl()}
                         onLoad={() => postPreviewConfig()}
                         class="pointer-events-none block h-full w-full border-0 bg-transparent"
-                        title="Предпросмотр чата"
+                         title={t("setup.chatPreview")}
                         scrolling="no"
                         tabIndex={-1}
                       />

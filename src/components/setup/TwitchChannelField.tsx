@@ -7,6 +7,7 @@ import {
   type JSX,
 } from "solid-js";
 import { networkClient } from "~/services/network/networkClient";
+import { locale, t } from "~/i18n";
 import "./TwitchChannelField.css";
 
 type TwitchChannelFieldProps = {
@@ -69,8 +70,8 @@ function fallbackName(login: string): string {
   return login.slice(0, 1).toUpperCase();
 }
 
-function compactNumber(value: number): string {
-  return new Intl.NumberFormat("ru-RU", {
+function compactNumber(value: number, localeName: string): string {
+  return new Intl.NumberFormat(localeName, {
     notation: value >= 10000 ? "compact" : "standard",
     maximumFractionDigits: 1,
   }).format(value);
@@ -390,6 +391,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
   const [summary, setSummary] = createSignal<TwitchChannelSummary | null>(null);
   const [loading, setLoading] = createSignal(false);
   const [failedLogin, setFailedLogin] = createSignal("");
+  const numberLocale = () => (locale() === "ru" ? "ru-RU" : "en-US");
 
   const login = createMemo(() => normalizeLogin(props.value));
   const metrics = createMemo<Metric[]>(() => {
@@ -397,14 +399,14 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
     if (!data) return [];
 
     const allMetrics: Metric[] = [
-      { key: "twitch", label: "Twitch эмоуты", value: data.emotes.twitch, icon: "twitch" },
-      { key: "seven-tv", label: "7TV эмоуты", value: data.emotes.sevenTv, icon: "sevenTv" },
-      { key: "bttv", label: "BTTV эмоуты", value: data.emotes.bttv, icon: "bttv" },
-      { key: "ffz", label: "FFZ эмоуты", value: data.emotes.ffz, icon: "ffz" },
+      { key: "twitch", label: t("setup.channelMetrics.twitchEmotes"), value: data.emotes.twitch, icon: "twitch" },
+      { key: "seven-tv", label: t("setup.channelMetrics.sevenTvEmotes"), value: data.emotes.sevenTv, icon: "sevenTv" },
+      { key: "bttv", label: t("setup.channelMetrics.bttvEmotes"), value: data.emotes.bttv, icon: "bttv" },
+      { key: "ffz", label: t("setup.channelMetrics.ffzEmotes"), value: data.emotes.ffz, icon: "ffz" },
       { key: "vips", label: "VIP", value: data.roles.vips, icon: "vip" },
-      { key: "mods", label: "Модераторы", value: data.roles.moderators, icon: "mod" },
-      { key: "founders", label: "Основатели", value: data.roles.founders, icon: "founder" },
-      { key: "leadmods", label: "Лидмодеры", value: data.roles.leadModerators, icon: "lead" },
+      { key: "mods", label: t("setup.channelMetrics.moderators"), value: data.roles.moderators, icon: "mod" },
+      { key: "founders", label: t("setup.channelMetrics.founders"), value: data.roles.founders, icon: "founder" },
+      { key: "leadmods", label: t("setup.channelMetrics.leadModerators"), value: data.roles.leadModerators, icon: "lead" },
     ];
 
     return allMetrics.filter((metric) => metric.value > 0);
@@ -516,7 +518,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
                         title={metric.label}
                       >
                         {metricIcon(metric.icon)}
-                        {compactNumber(metric.value)}
+                        {compactNumber(metric.value, numberLocale())}
                       </span>
                     )}
                   </For>
@@ -527,7 +529,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
             type="button"
             class="twitch-channel-remove"
             onClick={clearChannel}
-            aria-label={`Убрать ${props.platformName ?? "Twitch"} канал`}
+            aria-label={t("setup.channel.remove", { platform: props.platformName ?? "Twitch" })}
           >
             ×
           </button>
@@ -546,7 +548,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
               commitInput();
             }
           }}
-          placeholder={props.placeholder ?? "Ник Twitch-канала, например linaryx"}
+          placeholder={props.placeholder ?? t("setup.channel.placeholder")}
         />
       )}
     </div>

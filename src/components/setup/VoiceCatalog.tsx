@@ -1,5 +1,6 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { Input } from "~/components/ui/input";
+import { t } from "~/i18n";
 
 const VOICES_URL = "/voices.txt";
 
@@ -97,10 +98,10 @@ export function VoiceCatalog() {
       <div class="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 id="voice-catalog-title" class="text-sm font-semibold text-foreground">
-            Каталог голосов
+            {t("setup.voiceCatalog.title")}
           </h3>
           <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            В ChatYX доступны четыре русских голоса. Команды: <code class="text-foreground">!chat tts</code> или короче <code class="text-foreground">!tts</code>.
+            {t("setup.voiceCatalog.descriptionStart")} <code class="text-foreground">!chat tts</code> {t("setup.voiceCatalog.descriptionMiddle")} <code class="text-foreground">!tts</code>.
           </p>
         </div>
         <a
@@ -109,7 +110,7 @@ export function VoiceCatalog() {
           rel="noreferrer"
           class="text-xs font-medium text-foreground underline decoration-white/30 underline-offset-4 hover:decoration-white"
         >
-          Открыть voices.txt
+          {t("setup.voiceCatalog.open")}
         </a>
       </div>
 
@@ -117,17 +118,17 @@ export function VoiceCatalog() {
         type="search"
         value={query()}
         onInput={(event) => setQuery(event.currentTarget.value)}
-        placeholder="Найти голос или локаль, например ru-RU"
+        placeholder={t("setup.voiceCatalog.searchPlaceholder")}
         class="mt-3 h-8 text-xs"
-        aria-label="Поиск голоса"
+        aria-label={t("setup.voiceCatalog.searchLabel")}
       />
 
       <Show when={voices.loading}>
-        <p class="mt-3 text-xs text-muted-foreground">Загружаю каталог голосов…</p>
+        <p class="mt-3 text-xs text-muted-foreground">{t("setup.voiceCatalog.loading")}</p>
       </Show>
       <Show when={voices.error}>
         <p class="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Не удалось загрузить каталог. Открой <a href={VOICES_URL} target="_blank" rel="noreferrer" class="underline decoration-white/30 underline-offset-2 hover:decoration-white">voices.txt</a> напрямую.
+          {t("setup.voiceCatalog.errorStart")} <a href={VOICES_URL} target="_blank" rel="noreferrer" class="underline decoration-white/30 underline-offset-2 hover:decoration-white">voices.txt</a> {t("setup.voiceCatalog.errorEnd")}
         </p>
       </Show>
       <Show when={voices()}>
@@ -149,10 +150,10 @@ export function VoiceCatalog() {
                     <table class="w-full table-fixed border-collapse text-left text-xs">
                       <thead class="sticky top-0 bg-card text-muted-foreground">
                         <tr>
-                          <th scope="col" class="w-[24%] px-2 py-1.5 font-medium">Голос</th>
-                          <th scope="col" class="w-[18%] px-2 py-1.5 font-medium">Локаль</th>
-                          <th scope="col" class="w-[18%] px-2 py-1.5 font-medium">Пол</th>
-                          <th scope="col" class="px-2 py-1.5 font-medium">Особенности</th>
+                          <th scope="col" class="w-[24%] px-2 py-1.5 font-medium">{t("setup.voiceCatalog.voice")}</th>
+                          <th scope="col" class="w-[18%] px-2 py-1.5 font-medium">{t("setup.voiceCatalog.locale")}</th>
+                          <th scope="col" class="w-[18%] px-2 py-1.5 font-medium">{t("setup.voiceCatalog.gender")}</th>
+                          <th scope="col" class="px-2 py-1.5 font-medium">{t("setup.voiceCatalog.features")}</th>
                         </tr>
                       </thead>
                       <tbody>

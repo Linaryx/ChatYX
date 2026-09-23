@@ -1,6 +1,7 @@
 import { NumberField } from "@kobalte/core/number-field";
 import { Slider } from "~/components/ui/slider";
 import { cn } from "~/lib/utils";
+import { t } from "~/i18n";
 
 type SetupNumberFieldProps = {
   value: string;
@@ -58,7 +59,7 @@ export function SetupNumberField(props: SetupNumberFieldProps) {
           )}
         />
         <Slider
-          aria-label={`${props.label}: ползунок`}
+          aria-label={`${props.label}: ${t("common.slider")}`}
           minValue={rangeMin()}
           maxValue={rangeMax()}
           step={rangeStep()}
