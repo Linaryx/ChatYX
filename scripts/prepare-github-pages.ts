@@ -12,9 +12,8 @@ const rteStatusDir = `${distDir}/rtestatus`;
 
 const indexHtml = await Bun.file(indexPath).text();
 const nestedIndexHtml = indexHtml
-  .replaceAll('href="./favicon.ico"', 'href="../favicon.ico"')
-  .replaceAll('src="./assets/', 'src="../assets/')
-  .replaceAll('href="./assets/', 'href="../assets/');
+  .replaceAll('href="./', 'href="../')
+  .replaceAll('src="./assets/', 'src="../assets/');
 
 await mkdir(chatDir, { recursive: true });
 await mkdir(setupDir, { recursive: true });

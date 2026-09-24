@@ -22,17 +22,23 @@ export type SetupSectionId =
   | "tts"
   | "rte";
 
+export type SetupText = string | (() => string);
+
+export function resolveSetupText(value: SetupText): string {
+  return typeof value === "function" ? value() : value;
+}
+
 export type ControlRow = {
-  label: string;
+  label: SetupText;
   control: (labelId: string) => JSX.Element;
-  hint?: string;
+  hint?: SetupText;
 };
 
 export type ToggleRow = {
-  label: string;
+  label: SetupText;
   checked: () => boolean;
   onChange: (value: boolean) => void;
-  hint?: string;
+  hint?: SetupText;
   disabled?: () => boolean;
 };
 
@@ -99,14 +105,14 @@ export function ControlRows(props: { rows: ControlRow[] }) {
         {(row) => {
           const labelId = `setup-control-label-${createUniqueId()}`;
           return (
-          <div class="setup-control-row grid grid-cols-1 items-center gap-2 min-[1100px]:grid-cols-[132px_minmax(0,1fr)] xl:grid-cols-[168px_minmax(0,1fr)] md:max-[1099px]:grid-cols-[180px_minmax(0,1fr)]">
+          <div class="setup-control-row">
             <div class="flex min-w-0 flex-col gap-0.5">
               <div id={labelId} class="text-sm font-medium leading-normal text-foreground">
-                {row.label}
+                {resolveSetupText(row.label)}
               </div>
-              <Show when={row.hint}>
+              <Show when={row.hint !== undefined}>
                 <div class="text-xs leading-normal text-muted-foreground">
-                  {row.hint}
+                  {resolveSetupText(row.hint!)}
                 </div>
               </Show>
             </div>
@@ -127,8 +133,8 @@ export function ToggleRows(props: { rows: ToggleRow[] }) {
           <SetupSwitch
             checked={row.checked()}
             onChange={row.onChange}
-            label={row.label}
-            hint={row.hint}
+            label={resolveSetupText(row.label)}
+            hint={row.hint === undefined ? undefined : resolveSetupText(row.hint)}
             disabled={row.disabled ? row.disabled() : undefined}
           />
         )}

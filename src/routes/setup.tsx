@@ -84,6 +84,15 @@ type LocalFontWindow = Window & {
   queryLocalFonts?: () => Promise<LocalFontData[]>;
 };
 
+type LocalFontStatus =
+  | { kind: "idle" }
+  | { kind: "available"; browser: string }
+  | { kind: "unsupported" }
+  | { kind: "loading" }
+  | { kind: "found"; count: number }
+  | { kind: "empty" }
+  | { kind: "error" };
+
 const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_WEB_CLIENT_ID =
   import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
@@ -283,8 +292,29 @@ export default function ChatSetup() {
   const [fontCustom, setFontCustom] = createSignal("");
   const [localFontBrowser, setLocalFontBrowser] = createSignal("");
   const [localFonts, setLocalFonts] = createSignal<LocalFontOption[]>([]);
-  const [localFontStatus, setLocalFontStatus] = createSignal("");
+  const [localFontStatus, setLocalFontStatus] = createSignal<LocalFontStatus>({
+    kind: "idle",
+  });
   const [isLoadingLocalFonts, setIsLoadingLocalFonts] = createSignal(false);
+  const localFontStatusText = createMemo(() => {
+    const status = localFontStatus();
+    switch (status.kind) {
+      case "available":
+        return t("setup.localFontsAvailable", { browser: status.browser });
+      case "unsupported":
+        return t("setup.localFontsUnsupported");
+      case "loading":
+        return t("setup.localFontsLoading");
+      case "found":
+        return t("setup.localFontsFound", { count: status.count });
+      case "empty":
+        return t("setup.localFontsEmpty");
+      case "error":
+        return t("setup.localFontsError");
+      case "idle":
+        return "";
+    }
+  });
   const [shadow, setShadow] = createSignal(
     DEFAULT_CHAT_CONFIG.shadow === false
       ? "0"
@@ -547,9 +577,7 @@ export default function ChatSetup() {
 
     if (supportedBrowser) {
       setLocalFontBrowser(supportedBrowser);
-      setLocalFontStatus(
-        t("setup.localFontsAvailable", { browser: supportedBrowser }),
-      );
+      setLocalFontStatus({ kind: "available", browser: supportedBrowser });
     }
 
     onCleanup(() => {
@@ -1127,27 +1155,23 @@ export default function ChatSetup() {
   const loadLocalFonts = async () => {
     const queryLocalFonts = (window as LocalFontWindow).queryLocalFonts;
     if (!localFontBrowser() || typeof queryLocalFonts !== "function") {
-      setLocalFontStatus(
-        t("setup.localFontsUnsupported"),
-      );
+      setLocalFontStatus({ kind: "unsupported" });
       return;
     }
 
     setIsLoadingLocalFonts(true);
-    setLocalFontStatus(t("setup.localFontsLoading"));
+    setLocalFontStatus({ kind: "loading" });
 
     try {
       const fonts = normalizeLocalFonts(await queryLocalFonts());
       setLocalFonts(fonts);
       setLocalFontStatus(
         fonts.length > 0
-          ? t("setup.localFontsFound", { count: fonts.length })
-          : t("setup.localFontsEmpty"),
+          ? { kind: "found", count: fonts.length }
+          : { kind: "empty" },
       );
     } catch {
-      setLocalFontStatus(
-        t("setup.localFontsError"),
-      );
+      setLocalFontStatus({ kind: "error" });
     } finally {
       setIsLoadingLocalFonts(false);
     }
@@ -1155,7 +1179,7 @@ export default function ChatSetup() {
 
   const appearanceRows: ControlRow[] = [
     {
-      label: t("setup.messageSize"),
+      label: () => t("setup.messageSize"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
@@ -1169,7 +1193,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.font"),
+      label: () => t("setup.font"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
@@ -1194,8 +1218,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.customFontName"),
-      hint: t("setup.customFontHint"),
+      label: () => t("setup.customFontName"),
+      hint: () => t("setup.customFontHint"),
       control: (labelId) => (
         <div class="flex flex-col gap-2">
           <Input
@@ -1249,13 +1273,13 @@ export default function ChatSetup() {
               </SetupSelect>
             </div>
           </Show>
-          <div class="text-xs text-muted-foreground">{localFontStatus()}</div>
+          <div class="text-xs text-muted-foreground">{localFontStatusText()}</div>
         </div>
       ),
     },
     {
-      label: t("setup.lineHeight"),
-      hint: t("setup.lineHeightHint"),
+      label: () => t("setup.lineHeight"),
+      hint: () => t("setup.lineHeightHint"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.lineHeight")}
@@ -1268,8 +1292,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.textWeight"),
-      hint: t("setup.textWeightHint"),
+      label: () => t("setup.textWeight"),
+      hint: () => t("setup.textWeightHint"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.textWeight")}
@@ -1282,8 +1306,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.nicknameWeight"),
-      hint: t("setup.nicknameWeightHint"),
+      label: () => t("setup.nicknameWeight"),
+      hint: () => t("setup.nicknameWeightHint"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.nicknameWeight")}
@@ -1296,7 +1320,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.emoteSize"),
+      label: () => t("setup.emoteSize"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.emoteSize")}
@@ -1309,8 +1333,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.gifSize"),
-      hint: t("setup.gifSizeHint"),
+      label: () => t("setup.gifSize"),
+      hint: () => t("setup.gifSizeHint"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.gifSize")}
@@ -1326,7 +1350,7 @@ export default function ChatSetup() {
 
   const stylingRows: ControlRow[] = [
     {
-      label: t("setup.textShadow"),
+      label: () => t("setup.textShadow"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
@@ -1341,7 +1365,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.textStroke"),
+      label: () => t("setup.textStroke"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
@@ -1357,8 +1381,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.hideMessagesAfter"),
-      hint: t("setup.hideMessagesAfterHint"),
+      label: () => t("setup.hideMessagesAfter"),
+      hint: () => t("setup.hideMessagesAfterHint"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.hideMessagesAfter")}
@@ -1370,7 +1394,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.messageBackground"),
+      label: () => t("setup.messageBackground"),
       control: (_labelId) => (
         <ColorPickerField
           label={t("setup.messageBackground")}
@@ -1387,7 +1411,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.backgroundRadius"),
+      label: () => t("setup.backgroundRadius"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.backgroundRadius")}
@@ -1400,8 +1424,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.padding"),
-      hint: t("setup.paddingHint"),
+      label: () => t("setup.padding"),
+      hint: () => t("setup.paddingHint"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.padding")}
@@ -1414,7 +1438,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.borderVisibility"),
+      label: () => t("setup.borderVisibility"),
       control: (_labelId) => (
         <SetupNumberField
           label={t("setup.borderVisibility")}
@@ -1427,8 +1451,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.twitchEventsHighlight"),
-      hint: t("setup.twitchEventsHighlightHint"),
+      label: () => t("setup.twitchEventsHighlight"),
+      hint: () => t("setup.twitchEventsHighlightHint"),
       control: (_labelId) => (
         <ColorPickerField
           label={t("setup.twitchEventsHighlight")}
@@ -1445,8 +1469,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.linkColor"),
-      hint: t("setup.linkColorHint"),
+      label: () => t("setup.linkColor"),
+      hint: () => t("setup.linkColorHint"),
       control: (_labelId) => (
         <ColorPickerField
           label={t("setup.linkColor")}
@@ -1461,8 +1485,8 @@ export default function ChatSetup() {
 
   const behaviorRows: ControlRow[] = [
     {
-      label: t("setup.messageSource"),
-      hint: t("setup.messageSourceHint"),
+      label: () => t("setup.messageSource"),
+      hint: () => t("setup.messageSourceHint"),
       control: (labelId) => (
         <div class="flex items-center gap-2">
           <img class="size-5 rounded-sm" src={getPublicAssetUrl("img/platform-twitch.svg")} alt="Twitch" />
@@ -1482,8 +1506,8 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.messageAnimation"),
-      hint: t("setup.messageAnimationHint"),
+      label: () => t("setup.messageAnimation"),
+      hint: () => t("setup.messageAnimationHint"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
@@ -1500,7 +1524,7 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: t("setup.messageLinks"),
+      label: () => t("setup.messageLinks"),
       control: (labelId) => (
         <SetupSelect
           aria-labelledby={labelId}
@@ -1519,45 +1543,45 @@ export default function ChatSetup() {
 
   const behaviorToggles: ToggleRow[] = [
     {
-      label: t("setup.highlightTwitchEvents"),
+      label: () => t("setup.highlightTwitchEvents"),
       checked: highlightTwitchEvents,
       onChange: setHighlightTwitchEvents,
     },
     {
-      label: t("setup.emphasizeEventText"),
+      label: () => t("setup.emphasizeEventText"),
       checked: twitchEventBold,
       onChange: setTwitchEventBold,
-      hint: t("setup.emphasizeEventTextHint"),
+      hint: () => t("setup.emphasizeEventTextHint"),
     },
     {
-      label: t("setup.italicEvents"),
+      label: () => t("setup.italicEvents"),
       checked: twitchEventItalic,
       onChange: setTwitchEventItalic,
     },
     {
-      label: t("setup.loadRecentMessages"),
+      label: () => t("setup.loadRecentMessages"),
       checked: recentMessages,
       onChange: setRecentMessages,
-      hint: t("setup.loadRecentMessagesHint"),
+      hint: () => t("setup.loadRecentMessagesHint"),
     },
     {
-      label: t("setup.uppercaseNicknames"),
+      label: () => t("setup.uppercaseNicknames"),
       checked: smallCaps,
       onChange: setSmallCaps,
     },
     {
-      label: t("setup.lineBreakAfterNickname"),
+      label: () => t("setup.lineBreakAfterNickname"),
       checked: nlAfterName,
       onChange: setNlAfterName,
     },
-    { label: t("setup.hideNicknames"), checked: hideNames, onChange: setHideNames },
+    { label: () => t("setup.hideNicknames"), checked: hideNames, onChange: setHideNames },
     {
-      label: t("setup.reverseMessageOrder"),
+      label: () => t("setup.reverseMessageOrder"),
       checked: reverseLineOrder,
       onChange: setReverseLineOrder,
     },
     {
-      label: t("setup.horizontalMessageFeed"),
+      label: () => t("setup.horizontalMessageFeed"),
       checked: horizontal,
       onChange: setHorizontal,
     },
@@ -1565,45 +1589,45 @@ export default function ChatSetup() {
 
   const contentToggles: ToggleRow[] = [
     {
-      label: t("setup.showHighlightedMessages"),
+      label: () => t("setup.showHighlightedMessages"),
       checked: showHighlightedMessages,
       onChange: setShowHighlightedMessages,
     },
     {
-      label: t("setup.showPointRewards"),
+      label: () => t("setup.showPointRewards"),
       checked: showChannelPointRewards,
       onChange: setShowChannelPointRewards,
     },
     {
-      label: t("setup.hideLinkRewards"),
+      label: () => t("setup.hideLinkRewards"),
       checked: hideLinkRewards,
       onChange: setHideLinkRewards,
-      hint: t("setup.hideLinkRewardsHint"),
+      hint: () => t("setup.hideLinkRewardsHint"),
     },
     {
-      label: t("setup.showGigantifiedEmotes"),
+      label: () => t("setup.showGigantifiedEmotes"),
       checked: showGigantifiedEmotes,
       onChange: setShowGigantifiedEmotes,
     },
     {
-      label: t("setup.showGifs"),
+      label: () => t("setup.showGifs"),
       checked: showGifs,
       onChange: setShowGifs,
-      hint: t("setup.showGifsHint"),
+      hint: () => t("setup.showGifsHint"),
     },
     {
-      label: t("setup.showPredictions"),
+      label: () => t("setup.showPredictions"),
       checked: showPredictions,
       onChange: setShowPredictions,
-      hint: t("setup.showPredictionsHint"),
+      hint: () => t("setup.showPredictionsHint"),
     },
     {
-      label: t("setup.showCommands"),
+      label: () => t("setup.showCommands"),
       checked: commands,
       onChange: setCommands,
     },
     {
-      label: t("setup.showUnlistedEmotes"),
+      label: () => t("setup.showUnlistedEmotes"),
       checked: show7tvUnlisted,
       onChange: setShow7tvUnlisted,
     },
@@ -1612,49 +1636,49 @@ export default function ChatSetup() {
 
   const ttsToggles: ToggleRow[] = [
     {
-      label: t("setup.chatIsTts"),
+      label: () => t("setup.chatIsTts"),
       checked: rteChatIsTts,
       onChange: setRteChatIsTts,
-      hint: t("setup.chatIsTtsHint"),
+      hint: () => t("setup.chatIsTtsHint"),
     },
     {
-      label: t("setup.azureTts"),
+      label: () => t("setup.azureTts"),
       checked: rteAzureTts,
       onChange: setRteAzureTts,
-      hint: t("setup.azureTtsHint"),
+      hint: () => t("setup.azureTtsHint"),
     },
   ];
 
   const rteToggles: ToggleRow[] = [
     {
-      label: t("setup.rteProxy"),
+      label: () => t("setup.rteProxy"),
       checked: rteProxy,
       onChange: setRteProxy,
-      hint: t("setup.rteProxyHint"),
+      hint: () => t("setup.rteProxyHint"),
     },
     {
-      label: t("setup.rteCosmetics"),
+      label: () => t("setup.rteCosmetics"),
       checked: rteCustomCosmetics,
       onChange: setRteCustomCosmetics,
-      hint: t("setup.rteCosmeticsHint"),
+      hint: () => t("setup.rteCosmeticsHint"),
     },
   ];
 
   const roleBadgeMergeOptions = [
     {
-      label: t("setup.streamer"),
+      label: () => t("setup.streamer"),
       badgeColor: "#e91916",
       checked: ffzBotMixBroadcaster,
       onChange: setFfzBotMixBroadcaster,
     },
     {
-      label: t("setup.moderator"),
+      label: () => t("setup.moderator"),
       badgeColor: "#00ad03",
       checked: ffzBotMixModerator,
       onChange: setFfzBotMixModerator,
     },
     {
-      label: t("setup.vipViewer"),
+      label: () => t("setup.vipViewer"),
       badgeColor: "#e005b9",
       checked: ffzBotMixVip,
       onChange: setFfzBotMixVip,
@@ -1707,7 +1731,7 @@ export default function ChatSetup() {
                   />
                 </span>
                 <span class="text-center leading-tight">
-                  {option.label}
+                  {option.label()}
                 </span>
               </button>
             );
@@ -1722,7 +1746,7 @@ export default function ChatSetup() {
   }> = [
     {
       toggle: {
-        label: t("setup.showTwitchBadges"),
+        label: () => t("setup.showTwitchBadges"),
         checked: showTwitchBadges,
         onChange: setShowTwitchBadges,
         disabled: hideAllBadges,
@@ -1730,7 +1754,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.showYouTubeBadges"),
+        label: () => t("setup.showYouTubeBadges"),
         checked: showYouTubeBadges,
         onChange: setShowYouTubeBadges,
         disabled: hideAllBadges,
@@ -1738,7 +1762,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.showKickBadges"),
+        label: () => t("setup.showKickBadges"),
         checked: showKickBadges,
         onChange: setShowKickBadges,
         disabled: hideAllBadges,
@@ -1746,7 +1770,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.showHomiesBadges"),
+        label: () => t("setup.showHomiesBadges"),
         checked: showHomies,
         onChange: setShowHomies,
         disabled: hideAllBadges,
@@ -1754,7 +1778,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.show7tvBadges"),
+        label: () => t("setup.show7tvBadges"),
         checked: show7tvBadges,
         onChange: setShow7tvBadges,
         disabled: hideAllBadges,
@@ -1762,7 +1786,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.showFfzBadges"),
+        label: () => t("setup.showFfzBadges"),
         checked: showFfzBadges,
         onChange: setShowFfzBadges,
         disabled: hideAllBadges,
@@ -1771,7 +1795,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.showBttvBadges"),
+        label: () => t("setup.showBttvBadges"),
         checked: showBttvBadges,
         onChange: setShowBttvBadges,
         disabled: hideAllBadges,
@@ -1779,7 +1803,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.showChatterinoBadges"),
+        label: () => t("setup.showChatterinoBadges"),
         checked: showChatterinoBadges,
         onChange: setShowChatterinoBadges,
         disabled: hideAllBadges,
@@ -1787,7 +1811,7 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.showChatisBadges"),
+        label: () => t("setup.showChatisBadges"),
         checked: showChatisBadges,
         onChange: setShowChatisBadges,
         disabled: hideAllBadges,
@@ -1795,10 +1819,10 @@ export default function ChatSetup() {
     },
     {
       toggle: {
-        label: t("setup.reyohohoBadge"),
+        label: () => t("setup.reyohohoBadge"),
         checked: rteReyohohoBadge,
         onChange: setRteReyohohoBadge,
-        hint: t("setup.reyohohoBadgeHint"),
+        hint: () => t("setup.reyohohoBadgeHint"),
         disabled: hideAllBadges,
       },
     },
@@ -1807,7 +1831,7 @@ export default function ChatSetup() {
   const renderUserChip = (
     login: string,
     remove: (login: string) => void,
-    ariaLabel: string,
+    ariaLabel: () => string,
   ) => {
     const profile = () => botProfiles()[login];
     const displayName = () => profile()?.displayName || login;
@@ -1853,7 +1877,7 @@ export default function ChatSetup() {
           type="button"
           class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-base leading-none text-white hover:bg-white/10"
           onClick={() => remove(login)}
-          aria-label={`${ariaLabel}: ${displayName()}`}
+          aria-label={`${ariaLabel()}: ${displayName()}`}
         >
           <X size={16} aria-hidden="true" />
         </button>
@@ -2035,8 +2059,8 @@ export default function ChatSetup() {
                 <div class="setup-field-group"><h3>{t("setup.colorAccents")}</h3><ControlRows rows={stylingRows.slice(6)} /></div>
                 <div class="setup-field-group"><h3>{t("setup.nicknameColor")}</h3>
                   <ToggleRows rows={[{
-                    label: t("setup.uniformNicknameColor"),
-                    hint: t("setup.uniformNicknameColorHint"),
+                    label: () => t("setup.uniformNicknameColor"),
+                    hint: () => t("setup.uniformNicknameColorHint"),
                     checked: usersColorEnabled,
                     onChange: setUsersColorEnabled,
                   }]} />
@@ -2071,10 +2095,10 @@ export default function ChatSetup() {
                 <div class="setup-field-group">
                   <h3>{t("setup.badges")}</h3>
                   <ToggleRows rows={[{
-                    label: t("setup.hideAllBadges"),
+                    label: () => t("setup.hideAllBadges"),
                     checked: hideAllBadges,
                     onChange: setHideAllBadges,
-                    hint: t("setup.hideAllBadgesHint"),
+                    hint: () => t("setup.hideAllBadgesHint"),
                   }]} />
                   <For each={badgeProviderRows}>
                     {(row) => (
@@ -2111,7 +2135,7 @@ export default function ChatSetup() {
                         renderUserChip(
                           login,
                           removeBotName,
-                           t("setup.removeBot"),
+                          () => t("setup.removeBot"),
                         )
                       }
                     </For>
@@ -2148,7 +2172,7 @@ export default function ChatSetup() {
                         renderUserChip(
                           login,
                           removeAllowedChatter,
-                           t("setup.removeViewer"),
+                          () => t("setup.removeViewer"),
                         )
                       }
                     </For>
@@ -2194,7 +2218,7 @@ export default function ChatSetup() {
             </div>
 
             <div id="setup-preview" tabIndex={-1} class="setup-preview-pane setup-pane-scroll min-h-0 min-w-0 overflow-y-auto overscroll-contain min-[1100px]:h-full">
-              <div class="flex min-h-0 flex-col gap-2.5 pb-2 min-[1100px]:h-full min-[1100px]:pb-0">
+              <div class="flex min-h-0 flex-col gap-2 pb-2 min-[1100px]:h-full min-[1100px]:pb-0">
                 <SectionCard
                   title={t("setup.previewTitle")}
                   compact
