@@ -1111,7 +1111,7 @@
   }
 }
 
-@media (min-width: 1400px) {
+@media (min-width: 1200px) {
   .setup-source-row {
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   }
