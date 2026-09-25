@@ -37,6 +37,7 @@ export interface ChatPresentationConfig {
     enabled: boolean;
     hideCommands: boolean;
     customBots: string[];
+    kickBots: string[];
     singleChatter: string;
   };
   features: {
@@ -59,6 +60,7 @@ export const DEFAULT_CHAT_PRESENTATION_CONFIG: ChatPresentationConfig = {
     enabled: true,
     hideCommands: true,
     customBots: [],
+    kickBots: [],
     singleChatter: "",
   },
   features: {
@@ -79,6 +81,7 @@ export class ChatPresentationService {
   private sevenTVPaintService: SevenTVPaintService;
   private eventApiService?: SevenTVEventApiService;
   private botFilterService: BotFilterService;
+  private kickBotFilterService: BotFilterService;
   private allowedChatters = new Set<string>();
   private fadeManager: MessageFadeManager;
   private layoutManager?: LayoutManager;
@@ -92,6 +95,7 @@ export class ChatPresentationService {
 
     this.sevenTVPaintService = new SevenTVPaintService();
     this.botFilterService = new BotFilterService(this.config.botFilter.customBots);
+    this.kickBotFilterService = new BotFilterService(this.config.botFilter.kickBots);
     this.updateAllowedChatters();
     this.fadeManager = new MessageFadeManager(this.config.fade);
   }
@@ -256,7 +260,11 @@ export class ChatPresentationService {
   /**
    * Check if message should be displayed
    */
-  shouldDisplayMessage(username: string, message: string): boolean {
+  shouldDisplayMessage(
+    username: string,
+    message: string,
+    platform: "twitch" | "youtube" | "kick" = "twitch",
+  ): boolean {
     if (
       this.allowedChatters.size > 0 &&
       !this.allowedChatters.has(username.toLowerCase())
@@ -271,7 +279,10 @@ export class ChatPresentationService {
       );
     }
 
-    const shouldHide = this.botFilterService.shouldHideMessage(
+    const botFilter = platform === "kick"
+      ? this.kickBotFilterService
+      : this.botFilterService;
+    const shouldHide = botFilter.shouldHideMessage(
       username,
       message,
       {
@@ -583,6 +594,9 @@ export class ChatPresentationService {
     if (config.botFilter?.customBots) {
       this.botFilterService.setBotNames(this.config.botFilter.customBots);
     }
+    if (config.botFilter?.kickBots) {
+      this.kickBotFilterService.setBotNames(this.config.botFilter.kickBots);
+    }
     if (config.botFilter) {
       this.updateAllowedChatters();
     }
@@ -653,6 +667,7 @@ export function createChatPresentationConfig(
       enabled: !params.bots,
       hideCommands: !params.commands,
       customBots: parseBotNames(params.botNames),
+      kickBots: parseBotNames(params.kickBotNames),
       singleChatter: params.singleChatter,
     },
     features: {

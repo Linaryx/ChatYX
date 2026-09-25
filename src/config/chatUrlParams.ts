@@ -51,6 +51,7 @@ export interface ChatConfig {
   nlAfterName: boolean;
   hideNames: boolean;
   botNames: string;
+  kickBotNames: string;
   reverseLineOrder: boolean;
   horizontal: boolean;
   singleChatter: string;
@@ -129,6 +130,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   hideAllBadges: false,
   emoteScale: 1,
   botNames: DEFAULT_BOT_NAMES.join(","),
+  kickBotNames: "",
   singleChatter: "",
   show7tvUnlisted: true,
   smallCaps: false,
@@ -316,6 +318,15 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     query: "bn",
     kind: "string",
     aliases: ["botNames"],
+    serialize: (value) => {
+      const normalized = normalizeBotNames(String(value || ""));
+      return normalized || null;
+    },
+  },
+  kickBotNames: {
+    query: "kbn",
+    kind: "string",
+    aliases: ["kick_bot_names", "kickBotNames"],
     serialize: (value) => {
       const normalized = normalizeBotNames(String(value || ""));
       return normalized || null;
@@ -722,6 +733,7 @@ export function parseChatConfigFromSearchParams(
 
   const botsDef = PARAMS.bots;
   const botNamesDef = PARAMS.botNames;
+  const kickBotNamesDef = PARAMS.kickBotNames;
   const hasExplicitBotsParam = botsDef
     ? hasAnyParam(searchParams, [botsDef.query, ...(botsDef.aliases ?? [])])
     : false;
@@ -731,8 +743,14 @@ export function parseChatConfigFromSearchParams(
         ...(botNamesDef.aliases ?? []),
       ])
     : false;
+  const hasExplicitKickBotNamesParam = kickBotNamesDef
+    ? hasAnyParam(searchParams, [
+        kickBotNamesDef.query,
+        ...(kickBotNamesDef.aliases ?? []),
+      ])
+    : false;
 
-  if (hasExplicitBotNamesParam && !hasExplicitBotsParam) {
+  if ((hasExplicitBotNamesParam || hasExplicitKickBotNamesParam) && !hasExplicitBotsParam) {
     cfg.bots = false;
   }
 

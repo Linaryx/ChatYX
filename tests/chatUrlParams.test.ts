@@ -91,6 +91,7 @@ describe("chat URL params", () => {
       linkColor: "#00ccff",
       hideLinkRewards: false,
       botNames: normalizeBotNames("Nightbot, StreamElements"),
+      kickBotNames: normalizeBotNames("KickBot, BotRix"),
     };
 
     const params = chatConfigToSearchParams(cfg);
@@ -123,6 +124,7 @@ describe("chat URL params", () => {
     expect(params.get("linkcolor")).toBe("#00ccff");
     expect(params.get("hidelinkrewards")).toBe("false");
     expect(params.get("bn")).toBe("nightbot,streamelements");
+    expect(params.get("kbn")).toBe("kickbot,botrix");
 
     expect(parseChatConfigFromSearchParams(params)).toEqual(cfg);
   });
@@ -195,6 +197,15 @@ describe("chat URL params", () => {
     );
 
     expect(cfg.bots).toBe(true);
+  });
+
+  test("treats Kick bot names without an explicit bots flag as a hide-list", () => {
+    const cfg = parseChatConfigFromSearchParams(
+      new URLSearchParams("kbn=kickbot,botrix"),
+    );
+
+    expect(cfg.kickBotNames).toBe("kickbot,botrix");
+    expect(cfg.bots).toBe(false);
   });
 
   test("supports animation modes and legacy animate links", () => {

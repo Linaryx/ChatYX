@@ -429,6 +429,8 @@ export default function ChatSetup() {
     ...DEFAULT_BOT_NAMES,
   ]);
   const [botInput, setBotInput] = createSignal("");
+  const [kickBotNames, setKickBotNames] = createSignal<string[]>([]);
+  const [kickBotInput, setKickBotInput] = createSignal("");
   const [botProfiles, setBotProfiles] = createSignal<
     Record<string, BotProfile>
   >({});
@@ -631,6 +633,7 @@ export default function ChatSetup() {
       nlAfterName: setNlAfterName,
       hideNames: setHideNames,
       botNames: setBotNames,
+      kickBotNames: setKickBotNames,
       reverseLineOrder: setReverseLineOrder,
       horizontal: setHorizontal,
       singleChatter: setAllowedChatters,
@@ -781,6 +784,7 @@ export default function ChatSetup() {
     showGifs: showGifs(),
     gifScale: toFloat(gifScale(), DEFAULT_CHAT_CONFIG.gifScale),
     botNames: normalizeBotNames(botNames().join(",")),
+    kickBotNames: normalizeBotNames(kickBotNames().join(",")),
     singleChatter: normalizeBotNames(allowedChatters().join(",")),
     show7tvUnlisted: show7tvUnlisted(),
     smallCaps: smallCaps(),
@@ -956,12 +960,20 @@ export default function ChatSetup() {
     setBotNames((current) => mergeUniqueLogins(current, raw));
   };
 
+  const addKickBotNames = (raw: string) => {
+    setKickBotNames((current) => mergeUniqueLogins(current, raw));
+  };
+
   const addAllowedChatters = (raw: string) => {
     setAllowedChatters((current) => mergeUniqueLogins(current, raw));
   };
 
   const removeBotName = (login: string) => {
     setBotNames((current) => current.filter((entry) => entry !== login));
+  };
+
+  const removeKickBotName = (login: string) => {
+    setKickBotNames((current) => current.filter((entry) => entry !== login));
   };
 
   const removeAllowedChatter = (login: string) => {
@@ -978,6 +990,19 @@ export default function ChatSetup() {
 
     if (event.key === "Backspace" && botInput().trim() === "") {
       setBotNames((current) => current.slice(0, -1));
+    }
+  };
+
+  const handleKickBotInputKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addKickBotNames(kickBotInput());
+      setKickBotInput("");
+      return;
+    }
+
+    if (event.key === "Backspace" && kickBotInput().trim() === "") {
+      setKickBotNames((current) => current.slice(0, -1));
     }
   };
 
@@ -1135,10 +1160,12 @@ export default function ChatSetup() {
     importSettings({
       ...DEFAULT_CHAT_CONFIG,
       botNames: [...DEFAULT_BOT_NAMES],
+      kickBotNames: [],
       singleChatter: [],
     });
     setUsersColorEnabled(false);
     setBotInput("");
+    setKickBotInput("");
     setBotProfiles({});
     setAllowedChatterInput("");
     setStageBackdrop("dark");
@@ -2152,6 +2179,40 @@ export default function ChatSetup() {
                         setBotInput("");
                       }}
                        placeholder={t("setup.nicknamePlaceholder")}
+                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </div>
+
+                <div class="setup-control-row flex flex-col gap-2">
+                  <div class="flex min-w-0 flex-col gap-0.5">
+                    <div class="text-xs font-medium text-foreground sm:text-sm">
+                      {t("setup.kickBotNicknames")}
+                    </div>
+                  </div>
+                  <div class={chipFieldClass}>
+                    <For each={kickBotNames()}>
+                      {(login) =>
+                        renderUserChip(
+                          login,
+                          removeKickBotName,
+                          () => t("setup.removeKickBot"),
+                        )
+                      }
+                    </For>
+                    <input
+                      aria-label={t("setup.addKickBot")}
+                      type="text"
+                      value={kickBotInput()}
+                      onInput={(event) =>
+                        setKickBotInput(event.currentTarget.value)
+                      }
+                      onKeyDown={handleKickBotInputKeyDown}
+                      onBlur={() => {
+                        addKickBotNames(kickBotInput());
+                        setKickBotInput("");
+                      }}
+                      placeholder={t("setup.nicknamePlaceholder")}
                       class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                     />
                   </div>

@@ -45,7 +45,7 @@ export class MessagePreparationPipeline {
     const service = this.options.getService();
     if (!config || !service || this.isDuplicate(message)) return null;
 
-    if (!service.shouldDisplayMessage(message.username, message.message)) {
+    if (!service.shouldDisplayMessage(message.username, message.message, message.platform)) {
       return null;
     }
 

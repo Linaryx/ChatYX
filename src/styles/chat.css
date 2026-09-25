@@ -374,6 +374,10 @@ body {
   --chat-platform-marker: #ff0033;
 }
 
+.chat_line.platform-marked[data-platform="kick"] {
+  --chat-platform-marker: #53fc18;
+}
+
 .chat-platform-icon {
   border-radius: 0.16em;
   vertical-align: -0.12em;

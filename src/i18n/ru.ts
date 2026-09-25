@@ -101,7 +101,7 @@ export const dictionary = {
     contentTitle: "Контент и бейджи", contentDescription: "Выбери, какие сообщения, эмоуты и бейджи попадут в оверлей.",
     messagesAndEvents: "Сообщения и события", badges: "Бейджи", hideAllBadges: "Скрыть все бейджи", hideAllBadgesHint: "Прячет все бейджи: Twitch, YouTube, Kick, 7TV, FFZ, BTTV, Homies, Chatterino и ChatIS.",
     botsTitle: "Боты и фильтры", botsDescription: "Спрячь ботов, команды или оставь сообщения только выбранных пользователей.",
-    hideBots: "Скрывать ботов", botNicknames: "Ники ботов", removeBot: "Убрать из списка ботов", addBot: "Добавить ник бота", nicknamePlaceholder: "Введите никнейм и нажмите Enter",
+    hideBots: "Скрывать ботов", botNicknames: "Ники ботов", removeBot: "Убрать из списка ботов", addBot: "Добавить ник бота", kickBotNicknames: "Игнорируемые боты Kick", removeKickBot: "Убрать из списка ботов Kick", addKickBot: "Добавить бота Kick", nicknamePlaceholder: "Введите никнейм и нажмите Enter",
     onlyTheseViewers: "Показывать только этих зрителей", onlyTheseViewersHint: "Если список не пустой, остальные сообщения будут скрыты.", removeViewer: "Убрать из списка зрителей", addViewer: "Добавить зрителя в разрешённый список",
     ttsTitle: "Озвучка сообщений", ttsDescription: "Включи один или оба сервиса синтеза речи для единой команды модератора.",
     rteTitle: "RTE-интеграции", rteDescription: "Необязательный прокси для публичных ресурсов и пользовательской косметики.",

@@ -11,7 +11,9 @@ export function getRteChatSpeechRequest(
     return null;
   }
 
-  const filter = new BotFilterService(parseBotNames(config.botNames));
+  const filter = new BotFilterService(
+    parseBotNames(message.platform === "kick" ? config.kickBotNames : config.botNames),
+  );
   if (filter.isCommand(message.message)) return null;
   if (!config.ttsReadBots && filter.isBot(message.username)) return null;
 

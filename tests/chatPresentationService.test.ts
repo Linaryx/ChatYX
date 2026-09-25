@@ -4,10 +4,11 @@ import { ChatPresentationService } from "../src/services/chat/chatPresentationSe
 function createService(singleChatter: string) {
   return new ChatPresentationService({
     botFilter: {
-      enabled: false,
-      hideCommands: false,
-      customBots: [],
-      singleChatter,
+        enabled: false,
+        hideCommands: false,
+        customBots: [],
+        kickBots: [],
+        singleChatter,
     },
   });
 }
@@ -30,6 +31,7 @@ describe("ChatPresentationService chatter filter", () => {
         enabled: false,
         hideCommands: false,
         customBots: [],
+        kickBots: [],
         singleChatter: "beta",
       },
     });
@@ -46,6 +48,7 @@ describe("ChatPresentationService bot filter", () => {
         enabled: true,
         hideCommands: true,
         customBots: ["mybot"],
+        kickBots: [],
         singleChatter: "",
       },
     });
@@ -60,10 +63,27 @@ describe("ChatPresentationService bot filter", () => {
         enabled: false,
         hideCommands: false,
         customBots: ["mybot"],
+        kickBots: [],
         singleChatter: "",
       },
     });
 
     expect(service.shouldDisplayMessage("MyBot", "announcement text")).toBe(true);
+  });
+
+  test("uses the Kick list only for Kick messages", () => {
+    const service = new ChatPresentationService({
+      botFilter: {
+        enabled: true,
+        hideCommands: false,
+        customBots: ["twitchbot"],
+        kickBots: ["kickbot"],
+        singleChatter: "",
+      },
+    });
+
+    expect(service.shouldDisplayMessage("KickBot", "hello", "kick")).toBe(false);
+    expect(service.shouldDisplayMessage("KickBot", "hello", "twitch")).toBe(true);
+    expect(service.shouldDisplayMessage("TwitchBot", "hello", "kick")).toBe(true);
   });
 });
