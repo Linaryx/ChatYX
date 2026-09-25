@@ -280,6 +280,90 @@ describe("overlay runtime lifecycle", () => {
     expect(scrollCalls).toEqual([{ behavior: "auto", force: true }]);
   });
 
+  test("orders external history with existing Twitch messages by timestamp", async () => {
+    (globalThis as any).window = {
+      requestAnimationFrame: () => 1,
+    };
+
+    let displayedMessages = [
+      message({
+        id: "twitch-message",
+        platform: "twitch",
+        timestamp: new Date("2026-09-25T12:00:02.000Z"),
+      }),
+    ];
+    const runtime = new LiveChatRuntime("channel", {
+      onConfigResolved: () => {},
+      onServiceReady: () => {},
+      onLoadingChange: () => {},
+      onCommandStatusChange: () => {},
+      onConnectionChange: () => {},
+      onMessagesChange: (updater) => {
+        displayedMessages = updater(displayedMessages);
+      },
+      onAnimationDurationChange: () => {},
+      onChannelResolved: () => {},
+    });
+    (runtime as any).activeConfig = {
+      animation: "none",
+      recentMessages: true,
+    } as ChatConfig;
+    (runtime as any).prepareMessageForDisplay = async (value: TwitchMessage) => value;
+
+    await (runtime as any).connectionManager.options.onExternalHistory([
+      message({
+        id: "kick-message",
+        platform: "kick",
+        timestamp: new Date("2026-09-25T12:00:01.000Z"),
+      }),
+    ]);
+
+    expect(displayedMessages.map((entry) => entry.id)).toEqual([
+      "kick-message",
+      "twitch-message",
+    ]);
+  });
+
+  test("does not let filtered bots reduce the external history limit", async () => {
+    (globalThis as any).window = {
+      requestAnimationFrame: () => 1,
+    };
+
+    let displayedMessages: TwitchMessage[] = [];
+    const runtime = new LiveChatRuntime("channel", {
+      onConfigResolved: () => {},
+      onServiceReady: () => {},
+      onLoadingChange: () => {},
+      onCommandStatusChange: () => {},
+      onConnectionChange: () => {},
+      onMessagesChange: (updater) => {
+        displayedMessages = updater(displayedMessages);
+      },
+      onAnimationDurationChange: () => {},
+      onChannelResolved: () => {},
+    });
+    (runtime as any).activeConfig = {
+      animation: "none",
+      recentMessages: true,
+    } as ChatConfig;
+    (runtime as any).recentMessageLimit = 2;
+    (runtime as any).prepareMessageForDisplay = async (value: TwitchMessage) =>
+      value.username === "bot" ? null : value;
+
+    await (runtime as any).connectionManager.options.onExternalHistory([
+      message({ id: "visible-old", timestamp: new Date("2026-09-25T12:00:01.000Z") }),
+      message({ id: "bot-1", username: "bot", timestamp: new Date("2026-09-25T12:00:02.000Z") }),
+      message({ id: "bot-2", username: "bot", timestamp: new Date("2026-09-25T12:00:03.000Z") }),
+      message({ id: "bot-3", username: "bot", timestamp: new Date("2026-09-25T12:00:04.000Z") }),
+      message({ id: "visible-new", timestamp: new Date("2026-09-25T12:00:05.000Z") }),
+    ]);
+
+    expect(displayedMessages.map((entry) => entry.id)).toEqual([
+      "visible-old",
+      "visible-new",
+    ]);
+  });
+
   test("destroy invalidates an initialization waiting for channel identity", async () => {
     let listenerAdds = 0;
     (globalThis as any).window = {

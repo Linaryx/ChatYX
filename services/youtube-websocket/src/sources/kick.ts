@@ -45,6 +45,7 @@ type KickMessage = {
   content?: unknown;
   type?: unknown;
   created_at?: unknown;
+  createdAt?: unknown;
   sender?: KickSender;
   metadata?: unknown;
 };
@@ -145,6 +146,7 @@ export function normalizeKickMessage(value: unknown): ChatSourceMessage | null {
   const author = normalizeSender(message.sender);
   if (!id || !author.name) return null;
   const reply = message.type === "reply" ? parseReply(message.metadata) : undefined;
+  const createdAt = asString(message.createdAt) || asString(message.created_at);
   return {
     type: "message",
     platform: "kick",
@@ -152,7 +154,7 @@ export function normalizeKickMessage(value: unknown): ChatSourceMessage | null {
     message: displayKickContent(message.content),
     author,
     ...(reply ? { reply } : {}),
-    unix: Date.parse(asString(message.created_at)) || Date.now(),
+    unix: Date.parse(createdAt) || Date.now(),
   };
 }
 

@@ -139,22 +139,15 @@ export class LiveChatRuntime {
       },
       onExternalHistory: async (messages) => {
         if (!this.activeConfig?.recentMessages) return;
-        const ignoredCount = 1;
-        const sliceLimit = this.recentMessageLimit * (1 + ignoredCount);
         const restoredMessages = (
           await Promise.all(
             messages
-              .slice(-sliceLimit)
               .map((message) => this.prepareMessageForDisplay(message)),
           )
         ).filter((message): message is TwitchMessage => Boolean(message))
           .map((message) => ({ ...message, restored: true }));
         if (restoredMessages.length === 0) return;
-        this.hooks.onMessagesChange((current) => {
-          const next = [...current, ...restoredMessages];
-          if (next.length <= 100) return next;
-          return next.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()).slice(-100);
-        });
+        this.mergeRecentHistory(restoredMessages);
         this.scrollToLatestAfterRender(true);
       },
       onExternalUserBan: (userId) => this.banExternalUser(userId),
@@ -622,8 +615,7 @@ export class LiveChatRuntime {
     if (!this.activeConfig || !this.chatService) return 0;
 
     try {
-      const ignoredCount = 1;
-      const fetchLimit = this.recentMessageLimit * (1 + ignoredCount);
+      const fetchLimit = Math.max(this.recentMessageLimit, 100);
       const rawMessages = await fetchRecentMessages(
         this.channel,
         fetchLimit,
@@ -646,11 +638,7 @@ export class LiveChatRuntime {
         restored: true,
       }));
 
-      this.hooks.onMessagesChange((messages) => {
-        const nextMessages = [...messages, ...restoredMessages];
-        if (nextMessages.length <= 100) return nextMessages;
-        return nextMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()).slice(-100);
-      });
+      this.mergeRecentHistory(restoredMessages);
       this.scrollToLatestAfterRender(true);
 
       return preparedMessages.length;
@@ -658,6 +646,14 @@ export class LiveChatRuntime {
       log.warn(LOG_CATEGORIES.CHAT, "Failed to load recent messages", error);
       return 0;
     }
+  }
+
+  private mergeRecentHistory(restoredMessages: TwitchMessage[]) {
+    this.hooks.onMessagesChange((current) =>
+      [...current, ...restoredMessages]
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+        .slice(-this.recentMessageLimit),
+    );
   }
 
   private async prepareMessageForDisplay(

@@ -41,6 +41,17 @@ describe("Kick source normalization", () => {
     });
   });
 
+  test("uses the createdAt timestamp returned by the history API", () => {
+    expect(normalizeKickMessage({
+      id: "history-message",
+      content: "From history",
+      createdAt: "2026-09-10T12:00:00.000Z",
+      sender: { username: "viewer" },
+    })).toMatchObject({
+      unix: Date.parse("2026-09-10T12:00:00.000Z"),
+    });
+  });
+
   test("preserves reply context and rejects malformed messages", () => {
     expect(normalizeKickMessage({
       id: "reply-1",
