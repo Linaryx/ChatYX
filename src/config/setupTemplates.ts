@@ -5,10 +5,13 @@ const STORAGE_KEY = "chatyx.setup.templates.v1";
 const STORAGE_VERSION = 1;
 
 type VisualSettingKey =
+  | "animation"
   | "emoteScale"
   | "font"
   | "fontCustom"
   | "fontWeight"
+  | "gifScale"
+  | "highlightTwitchEvents"
   | "lineHeight"
   | "linkColor"
   | "linkMode"
@@ -20,6 +23,11 @@ type VisualSettingKey =
   | "overlayPadding"
   | "platformMarker"
   | "shadow"
+  | "showChannelPointRewards"
+  | "showGifs"
+  | "showGigantifiedEmotes"
+  | "showHighlightedMessages"
+  | "showPredictions"
   | "size"
   | "smallCaps"
   | "stroke"
@@ -46,7 +54,7 @@ export type UserSetupTemplate = {
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 export type BuiltInSetupTemplate = {
-  readonly id: "standard";
+  readonly id: "standard" | "atom";
   readonly settings: VisualSetupPatch;
 };
 
@@ -54,10 +62,13 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
   {
     id: "standard",
     settings: {
+      animation: DEFAULT_CHAT_CONFIG.animation,
       emoteScale: DEFAULT_CHAT_CONFIG.emoteScale,
       font: DEFAULT_CHAT_CONFIG.font,
       fontCustom: DEFAULT_CHAT_CONFIG.fontCustom,
       fontWeight: DEFAULT_CHAT_CONFIG.fontWeight,
+      gifScale: DEFAULT_CHAT_CONFIG.gifScale,
+      highlightTwitchEvents: DEFAULT_CHAT_CONFIG.highlightTwitchEvents,
       lineHeight: DEFAULT_CHAT_CONFIG.lineHeight,
       linkColor: DEFAULT_CHAT_CONFIG.linkColor,
       linkMode: DEFAULT_CHAT_CONFIG.linkMode,
@@ -69,6 +80,11 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       overlayPadding: DEFAULT_CHAT_CONFIG.overlayPadding,
       platformMarker: DEFAULT_CHAT_CONFIG.platformMarker,
       shadow: DEFAULT_CHAT_CONFIG.shadow,
+      showChannelPointRewards: DEFAULT_CHAT_CONFIG.showChannelPointRewards,
+      showGifs: DEFAULT_CHAT_CONFIG.showGifs,
+      showGigantifiedEmotes: DEFAULT_CHAT_CONFIG.showGigantifiedEmotes,
+      showHighlightedMessages: DEFAULT_CHAT_CONFIG.showHighlightedMessages,
+      showPredictions: DEFAULT_CHAT_CONFIG.showPredictions,
       size: DEFAULT_CHAT_CONFIG.size,
       smallCaps: DEFAULT_CHAT_CONFIG.smallCaps,
       stroke: DEFAULT_CHAT_CONFIG.stroke,
@@ -77,6 +93,42 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       twitchEventColor: DEFAULT_CHAT_CONFIG.twitchEventColor,
       twitchEventItalic: DEFAULT_CHAT_CONFIG.twitchEventItalic,
       usersColor: DEFAULT_CHAT_CONFIG.usersColor,
+    },
+  },
+  {
+    id: "atom",
+    settings: {
+      animation: "fade",
+      emoteScale: 1,
+      font: 13,
+      fontCustom: "",
+      fontWeight: 600,
+      gifScale: 1,
+      highlightTwitchEvents: false,
+      lineHeight: 100,
+      linkColor: "#BD1313",
+      linkMode: "highlight",
+      nickFontWeight: 600,
+      overlayBackgroundColor: "#000000",
+      overlayBackgroundOpacity: 0,
+      overlayBackgroundRadius: 20,
+      overlayBorderOpacity: 0,
+      overlayPadding: 10,
+      platformMarker: "stripe",
+      shadow: false,
+      showChannelPointRewards: false,
+      showGifs: false,
+      showGigantifiedEmotes: true,
+      showHighlightedMessages: false,
+      showPredictions: false,
+      size: 1,
+      smallCaps: true,
+      stroke: false,
+      twitchEventBackgroundOpacity: 0,
+      twitchEventBold: false,
+      twitchEventColor: "#FF0000",
+      twitchEventItalic: false,
+      usersColor: "#BD1313",
     },
   },
 ];
@@ -121,9 +173,10 @@ function createId(): string {
 
 export function toVisualSetupPatch<T extends Partial<Record<VisualSettingKey, unknown>>>(patch: T): VisualSetupPatch {
   const keys: readonly VisualSettingKey[] = [
-    "emoteScale", "font", "fontCustom", "fontWeight", "lineHeight", "linkColor", "linkMode", "nickFontWeight",
+    "animation",
+    "emoteScale", "font", "fontCustom", "fontWeight", "gifScale", "highlightTwitchEvents", "lineHeight", "linkColor", "linkMode", "nickFontWeight",
     "overlayBackgroundColor", "overlayBackgroundOpacity", "overlayBackgroundRadius", "overlayBorderOpacity",
-    "overlayPadding", "platformMarker", "shadow", "size", "smallCaps", "stroke",
+    "overlayPadding", "platformMarker", "shadow", "showChannelPointRewards", "showGifs", "showGigantifiedEmotes", "showHighlightedMessages", "showPredictions", "size", "smallCaps", "stroke",
     "twitchEventBackgroundOpacity", "twitchEventBold", "twitchEventColor", "twitchEventItalic", "usersColor",
   ];
 

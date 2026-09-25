@@ -154,6 +154,7 @@ export function SetupImportCard(props: SetupImportCardProps) {
   const builtInTemplateName = (id: (typeof BUILT_IN_SETUP_TEMPLATES)[number]["id"]) => {
     switch (id) {
       case "standard": return t("setup.import.templates.standardName");
+      case "atom": return t("setup.import.templates.atomName");
       default: return id satisfies never;
     }
   };
@@ -161,6 +162,7 @@ export function SetupImportCard(props: SetupImportCardProps) {
   const builtInTemplateDescription = (id: (typeof BUILT_IN_SETUP_TEMPLATES)[number]["id"]) => {
     switch (id) {
       case "standard": return t("setup.import.templates.standardDescription");
+      case "atom": return t("setup.import.templates.atomDescription");
       default: return id satisfies never;
     }
   };

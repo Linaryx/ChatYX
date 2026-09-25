@@ -26,12 +26,52 @@ test("standard overlay template contains only visual settings", () => {
     size: DEFAULT_CHAT_CONFIG.size,
     font: DEFAULT_CHAT_CONFIG.font,
     overlayBackgroundColor: DEFAULT_CHAT_CONFIG.overlayBackgroundColor,
+    animation: DEFAULT_CHAT_CONFIG.animation,
+    gifScale: DEFAULT_CHAT_CONFIG.gifScale,
   });
   expect(standard?.settings).not.toHaveProperty("channel");
   expect(standard?.settings).not.toHaveProperty("youtubeChannel");
   expect(standard?.settings).not.toHaveProperty("kickChannel");
-  expect(standard?.settings).not.toHaveProperty("animation");
-  expect(standard?.settings).not.toHaveProperty("gifScale");
+});
+
+test("built-in templates keep both standard and atom presets", () => {
+  expect(BUILT_IN_SETUP_TEMPLATES.map((template) => template.id)).toEqual(["standard", "atom"]);
+
+  const atom = BUILT_IN_SETUP_TEMPLATES.find((template) => template.id === "atom");
+  expect(atom?.settings).toEqual({
+    animation: "fade",
+    emoteScale: 1,
+    font: 13,
+    fontCustom: "",
+    fontWeight: 600,
+    gifScale: 1,
+    highlightTwitchEvents: false,
+    lineHeight: 100,
+    linkColor: "#BD1313",
+    linkMode: "highlight",
+    nickFontWeight: 600,
+    overlayBackgroundColor: "#000000",
+    overlayBackgroundOpacity: 0,
+    overlayBackgroundRadius: 20,
+    overlayBorderOpacity: 0,
+    overlayPadding: 10,
+    platformMarker: "stripe",
+    shadow: false,
+    showChannelPointRewards: false,
+    showGifs: false,
+    showGigantifiedEmotes: true,
+    showHighlightedMessages: false,
+    showPredictions: false,
+    size: 1,
+    smallCaps: true,
+    stroke: false,
+    twitchEventBackgroundOpacity: 0,
+    twitchEventBold: false,
+    twitchEventColor: "#FF0000",
+    twitchEventItalic: false,
+    usersColor: "#BD1313",
+  });
+  expect(atom?.settings).not.toHaveProperty("channel");
 });
 
 test("visual template patches exclude channels and behavior settings", () => {
@@ -44,7 +84,12 @@ test("visual template patches exclude channels and behavior settings", () => {
     overlayBackgroundColor: "#123456",
   });
 
-  expect(settings).toEqual({ font: 4, overlayBackgroundColor: "#123456" });
+  expect(settings).toEqual({
+    animation: "flow",
+    font: 4,
+    gifScale: 1.5,
+    overlayBackgroundColor: "#123456",
+  });
 });
 
 test("user templates persist, use unique names, and can be renamed or removed", () => {
