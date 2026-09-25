@@ -5,6 +5,7 @@ import type { ChatSourcePlatform } from "./source-events";
 import { KickSourceWorker } from "./sources/kick";
 import { YouTubeSourceWorker, isYouTubeSourceId, type YouTubeSourceMode } from "./sources/youtube";
 import { getYouTubeProxyUrl, isVideoId, resolveLiveVideoIds } from "./youtube";
+import { searchKickChannels } from "./kickSearch";
 
 type LegacyWebSocketData = {
   kind: "legacy";
@@ -146,6 +147,16 @@ const server = Bun.serve<WebSocketData>({
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return jsonResponse({ service: "ChatYX chat sources", status: "ok" });
+    }
+    if (url.pathname === "/api/kick/channels") {
+      return searchKickChannels(url.searchParams.get("query") || "")
+        .then((channels) => jsonResponse({ channels }))
+        .catch(() =>
+          jsonResponse(
+            { error: { code: "KICK_SEARCH_UNAVAILABLE", message: "Kick search is unavailable" } },
+            502,
+          ),
+        );
     }
 
     const route = parseWebSocketRoute(url.pathname);
