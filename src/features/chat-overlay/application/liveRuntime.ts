@@ -139,13 +139,13 @@ export class LiveChatRuntime {
       },
       onExternalHistory: async (messages) => {
         if (!this.activeConfig?.recentMessages) return;
-        const restoredMessages = (
+        const preparedMessages = (
           await Promise.all(
             messages
               .map((message) => this.prepareMessageForDisplay(message)),
           )
-        ).filter((message): message is TwitchMessage => Boolean(message))
-          .map((message) => ({ ...message, restored: true }));
+        ).filter((message): message is TwitchMessage => Boolean(message));
+        const restoredMessages = this.restoreRecentHistoryMessages(preparedMessages);
         if (restoredMessages.length === 0) return;
         this.mergeRecentHistory(restoredMessages);
         this.scrollToLatestAfterRender(true);
@@ -633,10 +633,7 @@ export class LiveChatRuntime {
       ).filter((message): message is TwitchMessage => Boolean(message));
 
       if (preparedMessages.length === 0) return 0;
-      const restoredMessages = preparedMessages.map((message) => ({
-        ...message,
-        restored: true,
-      }));
+      const restoredMessages = this.restoreRecentHistoryMessages(preparedMessages);
 
       this.mergeRecentHistory(restoredMessages);
       this.scrollToLatestAfterRender(true);
@@ -652,8 +649,15 @@ export class LiveChatRuntime {
     this.hooks.onMessagesChange((current) =>
       [...current, ...restoredMessages]
         .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-        .slice(-this.recentMessageLimit),
+        .slice(-100),
     );
+  }
+
+  private restoreRecentHistoryMessages(messages: TwitchMessage[]) {
+    return messages
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      .slice(-this.recentMessageLimit)
+      .map((message) => ({ ...message, restored: true }));
   }
 
   private async prepareMessageForDisplay(

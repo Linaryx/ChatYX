@@ -308,6 +308,7 @@ describe("overlay runtime lifecycle", () => {
       animation: "none",
       recentMessages: true,
     } as ChatConfig;
+    (runtime as any).recentMessageLimit = 1;
     (runtime as any).prepareMessageForDisplay = async (value: TwitchMessage) => value;
 
     await (runtime as any).connectionManager.options.onExternalHistory([
