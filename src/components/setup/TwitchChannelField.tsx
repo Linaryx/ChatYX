@@ -50,9 +50,9 @@ type Metric = {
   icon: "twitch" | "sevenTv" | "bttv" | "ffz" | "vip" | "mod" | "founder" | "lead";
 };
 
-type KickChannelSuggestion = {
-  slug: string;
-  username: string;
+type ChannelSuggestion = {
+  login: string;
+  displayName: string;
   avatarUrl: string;
 };
 
@@ -87,18 +87,18 @@ function isSafeHttpsUrl(value: unknown): value is string {
   }
 }
 
-function normalizeKickSuggestions(value: unknown): KickChannelSuggestion[] {
+function normalizeKickSuggestions(value: unknown): ChannelSuggestion[] {
   const channels = (value as { channels?: unknown })?.channels;
   if (!Array.isArray(channels)) return [];
 
   return channels.flatMap((channel) => {
     if (!channel || typeof channel !== "object") return [];
     const entry = channel as Record<string, unknown>;
-    const slug = normalizeLogin(String(entry.slug || ""));
-    const username = String(entry.username || "").trim();
+    const login = normalizeLogin(String(entry.slug || ""));
+    const displayName = String(entry.username || "").trim();
     const avatarUrl = isSafeHttpsUrl(entry.avatarUrl) ? entry.avatarUrl : "";
-    return /^[a-z0-9_-]{1,64}$/i.test(slug) && username
-      ? [{ slug, username: username.slice(0, 64), avatarUrl }]
+    return /^[a-z0-9_-]{1,64}$/i.test(login) && displayName
+      ? [{ login, displayName: displayName.slice(0, 64), avatarUrl }]
       : [];
   }).slice(0, 8);
 }
@@ -106,12 +106,69 @@ function normalizeKickSuggestions(value: unknown): KickChannelSuggestion[] {
 async function searchKickChannels(
   query: string,
   signal: AbortSignal,
-): Promise<KickChannelSuggestion[]> {
+): Promise<ChannelSuggestion[]> {
   const url = new URL(KICK_SEARCH_ENDPOINT);
   url.searchParams.set("query", query);
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error(`Kick search failed (${response.status})`);
   return normalizeKickSuggestions(await response.json());
+}
+
+export function normalizeTwitchSearchSuggestions(
+  value: unknown,
+): ChannelSuggestion[] {
+  const payload = Array.isArray(value) ? value[0] : null;
+  const edges = (payload as {
+    data?: { searchSuggestions?: { edges?: unknown } };
+  })?.data?.searchSuggestions?.edges;
+  if (!Array.isArray(edges)) return [];
+
+  return edges.flatMap((edge) => {
+    if (!edge || typeof edge !== "object") return [];
+    const entry = edge as Record<string, unknown>;
+    const content = (entry.node as { content?: unknown } | undefined)?.content;
+    if (!content || typeof content !== "object") return [];
+    const channel = content as Record<string, unknown>;
+    const login = normalizeLogin(String(channel.login || ""));
+    const displayName = String(entry.text || login).trim();
+    const avatarUrl = isSafeHttpsUrl(channel.profileImageURL)
+      ? channel.profileImageURL
+      : "";
+    return channel.__typename === "SearchSuggestionChannel" && login
+      ? [{ login, displayName: displayName.slice(0, 64), avatarUrl }]
+      : [];
+  }).slice(0, 8);
+}
+
+async function searchTwitchChannels(
+  query: string,
+  signal: AbortSignal,
+): Promise<ChannelSuggestion[]> {
+  const payload = [{
+    operationName: "SearchTray_SearchSuggestions",
+    variables: {
+      requestID: crypto.randomUUID(),
+      queryFragment: query,
+      withOfflineChannelContent: true,
+    },
+    extensions: {
+      persistedQuery: {
+        version: 1,
+        sha256Hash: "1d2cd6ae289d7baa682ef4437ab010c8ea42749ebb81c052f87a8a857ea93378",
+      },
+    },
+  }];
+  const response = await fetch(TWITCH_GQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Client-ID": TWITCH_WEB_CLIENT_ID,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  if (!response.ok) throw new Error(`Twitch search failed (${response.status})`);
+  return normalizeTwitchSearchSuggestions(await response.json());
 }
 
 function compactNumber(value: number, localeName: string): string {
@@ -435,14 +492,17 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
   const [summary, setSummary] = createSignal<TwitchChannelSummary | null>(null);
   const [loading, setLoading] = createSignal(false);
   const [failedLogin, setFailedLogin] = createSignal("");
-  const [kickSuggestions, setKickSuggestions] = createSignal<KickChannelSuggestion[]>([]);
-  const [kickSearchLoading, setKickSearchLoading] = createSignal(false);
-  const [activeKickSuggestion, setActiveKickSuggestion] = createSignal(-1);
+  const [suggestions, setSuggestions] = createSignal<ChannelSuggestion[]>([]);
+  const [searchLoading, setSearchLoading] = createSignal(false);
+  const [activeSuggestion, setActiveSuggestion] = createSignal(-1);
   const [kickAvatarUrl, setKickAvatarUrl] = createSignal("");
+  const [kickDisplayName, setKickDisplayName] = createSignal("");
   const numberLocale = () => (locale() === "ru" ? "ru-RU" : "en-US");
 
   const login = createMemo(() => normalizeLogin(props.value));
   const isKick = () => props.platform === "kick";
+  const isSearchable = () => isKick() || props.platform === undefined;
+  const suggestionsId = () => `${props.inputId || "setup-twitch"}-suggestions`;
   const metrics = createMemo<Metric[]>(() => {
     const data = summary();
     if (!data) return [];
@@ -498,28 +558,29 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
   });
 
   createEffect(() => {
-    if (!isKick()) return;
+    if (!isSearchable()) return;
     const query = normalizeLogin(input());
-    setActiveKickSuggestion(-1);
+    setActiveSuggestion(-1);
     if (query.length < 2) {
-      setKickSuggestions([]);
-      setKickSearchLoading(false);
+      setSuggestions([]);
+      setSearchLoading(false);
       return;
     }
 
     let cancelled = false;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
-      setKickSearchLoading(true);
-      void searchKickChannels(query, controller.signal)
+      setSearchLoading(true);
+      const search = isKick() ? searchKickChannels : searchTwitchChannels;
+      void search(query, controller.signal)
         .then((suggestions) => {
-          if (!cancelled) setKickSuggestions(suggestions);
+          if (!cancelled) setSuggestions(suggestions);
         })
         .catch(() => {
-          if (!cancelled) setKickSuggestions([]);
+          if (!cancelled) setSuggestions([]);
         })
         .finally(() => {
-          if (!cancelled) setKickSearchLoading(false);
+          if (!cancelled) setSearchLoading(false);
         });
     }, KICK_SEARCH_DELAY_MS);
 
@@ -534,6 +595,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
     const currentLogin = login();
     if (!isKick() || !currentLogin) {
       setKickAvatarUrl("");
+      setKickDisplayName("");
       return;
     }
 
@@ -543,12 +605,16 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
       .then((suggestions) => {
         if (cancelled) return;
         const matchingChannel = suggestions.find(
-          (suggestion) => suggestion.slug === currentLogin,
+          (suggestion) => suggestion.login === currentLogin,
         );
         setKickAvatarUrl(matchingChannel?.avatarUrl || "");
+        setKickDisplayName(matchingChannel?.displayName || "");
       })
       .catch(() => {
-        if (!cancelled) setKickAvatarUrl("");
+        if (!cancelled) {
+          setKickAvatarUrl("");
+          setKickDisplayName("");
+        }
       });
 
     onCleanup(() => {
@@ -562,15 +628,18 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
     if (!nextLogin) return;
     props.onChange(nextLogin);
     setInput("");
-    setKickSuggestions([]);
+    setSuggestions([]);
   };
 
-  const selectKickSuggestion = (suggestion: KickChannelSuggestion) => {
-    props.onChange(suggestion.slug);
-    setKickAvatarUrl(suggestion.avatarUrl);
+  const selectSuggestion = (suggestion: ChannelSuggestion) => {
+    props.onChange(suggestion.login);
+    if (isKick()) {
+      setKickAvatarUrl(suggestion.avatarUrl);
+      setKickDisplayName(suggestion.displayName);
+    }
     setInput("");
-    setKickSuggestions([]);
-    setActiveKickSuggestion(-1);
+    setSuggestions([]);
+    setActiveSuggestion(-1);
   };
 
   const clearChannel = () => {
@@ -579,12 +648,14 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
     setSummary(null);
     setFailedLogin("");
     setKickAvatarUrl("");
-    setKickSuggestions([]);
+    setKickDisplayName("");
+    setSuggestions([]);
   };
 
   const displayName = createMemo(
     () =>
       summary()?.profile.displayName ||
+      (isKick() && kickDisplayName()) ||
       (props.loadSummary === false ? login() : props.value || failedLogin()),
   );
   const avatarUrl = createMemo(
@@ -663,46 +734,46 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
             id={props.inputId}
             type="text"
             value={input()}
-            role={isKick() ? "combobox" : undefined}
-            aria-autocomplete={isKick() ? "list" : undefined}
-            aria-controls={isKick() ? "kick-channel-suggestions" : undefined}
-            aria-expanded={isKick() ? kickSuggestions().length > 0 : undefined}
+            role={isSearchable() ? "combobox" : undefined}
+            aria-autocomplete={isSearchable() ? "list" : undefined}
+            aria-controls={isSearchable() ? suggestionsId() : undefined}
+            aria-expanded={isSearchable() ? suggestions().length > 0 : undefined}
             aria-activedescendant={
-              isKick() && activeKickSuggestion() >= 0
-                ? `kick-channel-suggestion-${activeKickSuggestion()}`
+              isSearchable() && activeSuggestion() >= 0
+                ? `${suggestionsId()}-option-${activeSuggestion()}`
                 : undefined
             }
             onInput={(event) => setInput(event.currentTarget.value)}
             onBlur={() => {
               window.setTimeout(() => {
-                setKickSuggestions([]);
+                setSuggestions([]);
                 commitInput();
               }, 100);
             }}
             onKeyDown={(event) => {
-              const suggestions = kickSuggestions();
-              if (isKick() && suggestions.length > 0) {
+              const availableSuggestions = suggestions();
+              if (isSearchable() && availableSuggestions.length > 0) {
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
-                  setActiveKickSuggestion((index) =>
-                    Math.min(index + 1, suggestions.length - 1),
+                  setActiveSuggestion((index) =>
+                    Math.min(index + 1, availableSuggestions.length - 1),
                   );
                   return;
                 }
                 if (event.key === "ArrowUp") {
                   event.preventDefault();
-                  setActiveKickSuggestion((index) => Math.max(index - 1, 0));
+                  setActiveSuggestion((index) => Math.max(index - 1, 0));
                   return;
                 }
                 if (event.key === "Escape") {
                   event.preventDefault();
-                  setKickSuggestions([]);
-                  setActiveKickSuggestion(-1);
+                  setSuggestions([]);
+                  setActiveSuggestion(-1);
                   return;
                 }
-                if (event.key === "Enter" && activeKickSuggestion() >= 0) {
+                if (event.key === "Enter" && activeSuggestion() >= 0) {
                   event.preventDefault();
-                  selectKickSuggestion(suggestions[activeKickSuggestion()]);
+                  selectSuggestion(availableSuggestions[activeSuggestion()]);
                   return;
                 }
               }
@@ -713,43 +784,44 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
             }}
             placeholder={props.placeholder ?? t("setup.channel.placeholder")}
           />
-          {isKick() && (kickSuggestions().length > 0 || kickSearchLoading()) && (
+          {isSearchable() && (suggestions().length > 0 || searchLoading()) && (
             <div
-              id="kick-channel-suggestions"
-              class="kick-channel-suggestions"
+              id={suggestionsId()}
+              class="channel-suggestions"
+              classList={{ "channel-suggestions--kick": isKick() }}
               role="listbox"
             >
-              <For each={kickSuggestions()}>
+              <For each={suggestions()}>
                 {(suggestion, index) => (
                   <div
-                    id={`kick-channel-suggestion-${index()}`}
-                    class="kick-channel-suggestion"
-                    classList={{ "kick-channel-suggestion--active": activeKickSuggestion() === index() }}
+                    id={`${suggestionsId()}-option-${index()}`}
+                    class="channel-suggestion"
+                    classList={{ "channel-suggestion--active": activeSuggestion() === index() }}
                     role="option"
-                    aria-selected={activeKickSuggestion() === index()}
+                    aria-selected={activeSuggestion() === index()}
                     onPointerDown={(event) => {
                       event.preventDefault();
-                      selectKickSuggestion(suggestion);
+                      selectSuggestion(suggestion);
                     }}
                   >
                     {suggestion.avatarUrl ? (
                       <img src={suggestion.avatarUrl} alt="" loading="lazy" />
                     ) : (
-                      <span class="kick-channel-suggestion-avatar-fallback">
-                        {fallbackName(suggestion.slug)}
+                      <span class="channel-suggestion-avatar-fallback">
+                        {fallbackName(suggestion.login)}
                       </span>
                     )}
-                    <span class="kick-channel-suggestion-copy">
-                      <span>{suggestion.username}</span>
-                      {suggestion.username.toLowerCase() !== suggestion.slug && (
-                        <small>{suggestion.slug}</small>
+                    <span class="channel-suggestion-copy">
+                      <span>{suggestion.displayName}</span>
+                      {suggestion.displayName.toLowerCase() !== suggestion.login && (
+                        <small>{suggestion.login}</small>
                       )}
                     </span>
                   </div>
                 )}
               </For>
-              {kickSearchLoading() && kickSuggestions().length === 0 && (
-                <span class="kick-channel-suggestions-loading" role="status" />
+              {searchLoading() && suggestions().length === 0 && (
+                <span class="channel-suggestions-loading" role="status" />
               )}
             </div>
           )}
