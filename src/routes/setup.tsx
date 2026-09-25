@@ -34,7 +34,7 @@ import { TwitchChannelField } from "~/components/setup/TwitchChannelField";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Slider } from "~/components/ui/slider";
-import { DEFAULT_BOT_NAMES } from "~/config/botNames";
+import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES } from "~/config/botNames";
 import {
   DEFAULT_CHAT_CONFIG,
   chatConfigToSearchParams,
@@ -255,6 +255,41 @@ async function loadBotProfiles(logins: string[]): Promise<BotProfile[]> {
   }
 }
 
+async function loadKickBotProfiles(logins: string[]): Promise<BotProfile[]> {
+  const profiles = await Promise.all(
+    logins.map(async (login) => {
+      try {
+        const payload = await fetchJsonWithTimeout(
+          `https://kick.com/api/v2/channels/${encodeURIComponent(login)}/info`,
+          {},
+          3500,
+        );
+        const channel = payload as {
+          slug?: unknown;
+          user?: { username?: unknown; profile_pic?: unknown };
+        };
+        if (typeof channel.slug !== "string") return null;
+        const avatarUrl = channel.user?.profile_pic;
+
+        return {
+          login: channel.slug.toLowerCase(),
+          displayName:
+            typeof channel.user?.username === "string" && channel.user.username.trim()
+              ? channel.user.username.trim()
+              : channel.slug,
+          avatarUrl:
+            typeof avatarUrl === "string" && avatarUrl.startsWith("https://")
+              ? avatarUrl
+              : "",
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return profiles.filter((profile): profile is BotProfile => profile !== null);
+}
+
 function mergeUniqueLogins(current: string[], raw: string): string[] {
   const nextLogins = splitBotLogins(raw);
   if (nextLogins.length === 0) return current;
@@ -429,9 +464,14 @@ export default function ChatSetup() {
     ...DEFAULT_BOT_NAMES,
   ]);
   const [botInput, setBotInput] = createSignal("");
-  const [kickBotNames, setKickBotNames] = createSignal<string[]>([]);
+  const [kickBotNames, setKickBotNames] = createSignal<string[]>([
+    ...DEFAULT_KICK_BOT_NAMES,
+  ]);
   const [kickBotInput, setKickBotInput] = createSignal("");
   const [botProfiles, setBotProfiles] = createSignal<
+    Record<string, BotProfile>
+  >({});
+  const [kickBotProfiles, setKickBotProfiles] = createSignal<
     Record<string, BotProfile>
   >({});
   const [allowedChatters, setAllowedChatters] = createSignal<string[]>([]);
@@ -955,6 +995,7 @@ export default function ChatSetup() {
   );
   const ffzBotBadgePreviewUrl = getPublicAssetUrl("img/ffz-bot-badge.png");
   const requestedBotProfiles = new Set<string>();
+  const requestedKickBotProfiles = new Set<string>();
 
   const addBotNames = (raw: string) => {
     setBotNames((current) => mergeUniqueLogins(current, raw));
@@ -1035,6 +1076,30 @@ export default function ChatSetup() {
       if (profiles.length === 0) return;
 
       setBotProfiles((current) => {
+        const next = { ...current };
+        for (const profile of profiles) {
+          next[profile.login] = profile;
+        }
+        return next;
+      });
+    });
+  });
+
+  createEffect(() => {
+    const missing = Array.from(new Set(kickBotNames())).filter(
+      (login) =>
+        !kickBotProfiles()[login] && !requestedKickBotProfiles.has(login),
+    );
+    if (missing.length === 0) return;
+
+    for (const login of missing) {
+      requestedKickBotProfiles.add(login);
+    }
+
+    void loadKickBotProfiles(missing).then((profiles) => {
+      if (profiles.length === 0) return;
+
+      setKickBotProfiles((current) => {
         const next = { ...current };
         for (const profile of profiles) {
           next[profile.login] = profile;
@@ -1859,8 +1924,9 @@ export default function ChatSetup() {
     login: string,
     remove: (login: string) => void,
     ariaLabel: () => string,
+    profiles: () => Record<string, BotProfile> = botProfiles,
   ) => {
-    const profile = () => botProfiles()[login];
+    const profile = () => profiles()[login];
     const displayName = () => profile()?.displayName || login;
     const avatarUrl = () => profile()?.avatarUrl || "";
 
@@ -2197,6 +2263,7 @@ export default function ChatSetup() {
                           login,
                           removeKickBotName,
                           () => t("setup.removeKickBot"),
+                          kickBotProfiles,
                         )
                       }
                     </For>

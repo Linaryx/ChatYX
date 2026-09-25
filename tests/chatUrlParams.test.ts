@@ -24,6 +24,9 @@ describe("chat URL params", () => {
       "wss://ytwss.ruina.team",
     );
     expect(DEFAULT_CHAT_CONFIG.kickWebSocketUrl).toBe("wss://ytwss.ruina.team");
+    expect(DEFAULT_CHAT_CONFIG.kickBotNames).toBe(
+      "twirbot,fossabot,botrix,kickbot",
+    );
     expect(DEFAULT_CHAT_CONFIG.bots).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.showGifs).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.gifScale).toBe(1);

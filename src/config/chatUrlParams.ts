@@ -1,4 +1,4 @@
-import { DEFAULT_BOT_NAMES } from "./botNames";
+import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES } from "./botNames";
 import {
   DEFAULT_MESSAGE_SPEED,
   clampMessageSpeed,
@@ -130,7 +130,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   hideAllBadges: false,
   emoteScale: 1,
   botNames: DEFAULT_BOT_NAMES.join(","),
-  kickBotNames: "",
+  kickBotNames: DEFAULT_KICK_BOT_NAMES.join(","),
   singleChatter: "",
   show7tvUnlisted: true,
   smallCaps: false,

@@ -29,3 +29,10 @@ export const DEFAULT_BOT_NAMES = [
   "turtegbot",
   "streamqbot",
 ] as const;
+
+export const DEFAULT_KICK_BOT_NAMES = [
+  "twirbot",
+  "fossabot",
+  "botrix",
+  "kickbot",
+] as const;
