@@ -7,6 +7,9 @@ dist
 .netlify
 netlify
 
+# Local visual review artifacts
+output/
+
 # Cloudflare Pages
 functions
 
