@@ -25,6 +25,7 @@ import {
 import { VoiceCatalog } from "~/components/setup/VoiceCatalog";
 import { SetupImportCard } from "~/components/setup/SetupImportCard";
 import { parseSetupImport } from "~/config/setupImport";
+import { toVisualSetupPatch } from "~/config/setupTemplates";
 import { applySetupImport } from "~/components/setup/setupImportAdapter";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
@@ -272,6 +273,7 @@ export default function ChatSetup() {
   );
   const [size, setSize] = createSignal(String(DEFAULT_CHAT_CONFIG.size));
   const [font, setFont] = createSignal(String(DEFAULT_CHAT_CONFIG.font));
+  const [lineHeight, setLineHeight] = createSignal(String(DEFAULT_CHAT_CONFIG.lineHeight));
   const [fontWeight, setFontWeight] = createSignal(
     String(DEFAULT_CHAT_CONFIG.fontWeight),
   );
@@ -591,6 +593,7 @@ export default function ChatSetup() {
       fade: setFade,
       size: setSize,
       font: setFont,
+      lineHeight: setLineHeight,
       fontWeight: setFontWeight,
       fontCustom: setFontCustom,
       stroke: setStroke,
@@ -709,6 +712,7 @@ export default function ChatSetup() {
     kickChannel: kickChannel().trim().replace(/^@/, ""),
     size: toInt(size(), DEFAULT_CHAT_CONFIG.size),
     font: toInt(font(), DEFAULT_CHAT_CONFIG.font),
+    lineHeight: toClampedInt(lineHeight(), DEFAULT_CHAT_CONFIG.lineHeight, 80, 200),
     fontWeight: toClampedInt(
       fontWeight(),
       DEFAULT_CHAT_CONFIG.fontWeight,
@@ -1185,6 +1189,7 @@ export default function ChatSetup() {
           <option value="10">Indie Flower</option>
           <option value="11">Open Sans</option>
           <option value="12">Alsina (Vsauce)</option>
+          <option value="13">BF Mono</option>
         </SetupSelect>
       ),
     },
@@ -1246,6 +1251,20 @@ export default function ChatSetup() {
           </Show>
           <div class="text-xs text-muted-foreground">{localFontStatus()}</div>
         </div>
+      ),
+    },
+    {
+      label: t("setup.lineHeight"),
+      hint: t("setup.lineHeightHint"),
+      control: (_labelId) => (
+        <SetupNumberField
+          label={t("setup.lineHeight")}
+          value={lineHeight()}
+          onChange={setLineHeight}
+          min={80}
+          max={200}
+          step={1}
+        />
       ),
     },
     {
@@ -1990,6 +2009,7 @@ export default function ChatSetup() {
               <SetupImportCard
                 hidden={activeSection() !== "import"}
                 onImport={importSettings}
+                getCurrentTemplateSettings={() => toVisualSetupPatch(buildConfig(channel().trim()))}
               />
 
               <SectionCard

@@ -403,14 +403,19 @@
     border-color 0.15s ease;
 }
 
-.setup-reset-button {
-  margin-left: auto;
+.setup-reset-button,
+.setup-template-delete-button {
   border-color: hsl(0 72% 55% / 0.85);
   background: #0b0b0d;
   color: hsl(0 84% 68%);
 }
 
-.setup-reset-button:hover:not(:disabled) {
+.setup-reset-button {
+  margin-left: auto;
+}
+
+.setup-reset-button:hover:not(:disabled),
+.setup-template-delete-button:hover:not(:disabled) {
   border-color: hsl(0 84% 68%);
   background: hsl(0 84% 68%);
   color: #000;

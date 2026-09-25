@@ -34,6 +34,7 @@ export function applySetupImport(
   if (patch.fade !== undefined) setters.fade(String(patch.fade === false ? 0 : patch.fade));
   if (patch.size !== undefined) setters.size(String(patch.size));
   if (patch.font !== undefined) setters.font(String(patch.font));
+  if (patch.lineHeight !== undefined) setters.lineHeight(String(patch.lineHeight));
   if (patch.fontWeight !== undefined) setters.fontWeight(String(patch.fontWeight));
   if (patch.fontCustom !== undefined) setters.fontCustom(patch.fontCustom);
   if (patch.stroke !== undefined) setters.stroke(String(patch.stroke === false ? 0 : patch.stroke));

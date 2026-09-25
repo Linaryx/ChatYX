@@ -61,4 +61,8 @@ describe("chat event style variables", () => {
       );
     }
   });
+
+  test("scales the message line height", () => {
+    expect(generateSizeStyles(1, 150)).toContain("line-height: 45px");
+  });
 });

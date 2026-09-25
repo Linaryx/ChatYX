@@ -32,7 +32,7 @@ export class OverlayStyleManager {
 
     appendStyleElement(
       "chat-size-styles",
-      generateSizeStyles(config.size as 1 | 2 | 3),
+      generateSizeStyles(config.size as 1 | 2 | 3, config.lineHeight),
     );
 
     if (config.shadow) {

@@ -29,7 +29,7 @@ export function injectPreviewStyles(config: ChatConfig) {
 
   const sizeEl = document.createElement("style");
   sizeEl.id = "chat-size-styles";
-  sizeEl.innerHTML = generateSizeStyles(config.size as 1 | 2 | 3);
+  sizeEl.innerHTML = generateSizeStyles(config.size as 1 | 2 | 3, config.lineHeight);
   document.head.appendChild(sizeEl);
 
   if (config.shadow) {

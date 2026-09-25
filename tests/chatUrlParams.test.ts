@@ -31,7 +31,7 @@ describe("chat URL params", () => {
 
   test("parses aliases and typed values", () => {
     const params = new URLSearchParams(
-      "channel=forsen&yt=@someyt&ytws=ws://localhost:9905&kick=xqc&kickws=ws://localhost:9906&bgp=18&s=2&fw=700&nfw=900&sh=0&fd=0&a=false&ms=91&rm=false&b=false&cmd=false&es=1.5&gifs=true&gifscale=1.8&sg=someuser&u7=false",
+      "channel=forsen&yt=@someyt&ytws=ws://localhost:9905&kick=xqc&kickws=ws://localhost:9906&bgp=18&s=2&lh=125&fw=700&nfw=900&sh=0&fd=0&a=false&ms=91&rm=false&b=false&cmd=false&es=1.5&gifs=true&gifscale=1.8&sg=someuser&u7=false",
     );
 
     const cfg = parseChatConfigFromSearchParams(params);
@@ -43,6 +43,7 @@ describe("chat URL params", () => {
     expect(cfg.kickWebSocketUrl).toBe("ws://localhost:9906");
     expect(cfg.overlayPadding).toBe(18);
     expect(cfg.size).toBe(2);
+    expect(cfg.lineHeight).toBe(125);
     expect(cfg.fontWeight).toBe(700);
     expect(cfg.nickFontWeight).toBe(900);
     expect(cfg.shadow).toBe(false);
@@ -72,6 +73,7 @@ describe("chat URL params", () => {
       fade: false,
       recentMessages: false,
       shadow: false,
+      lineHeight: 125,
       fontWeight: 700,
       nickFontWeight: 900,
       messageSpeed: 72,
@@ -103,6 +105,7 @@ describe("chat URL params", () => {
     expect(params.get("fd")).toBe("0");
     expect(params.get("rm")).toBe("false");
     expect(params.get("sh")).toBe("0");
+    expect(params.get("lh")).toBe("125");
     expect(params.get("fw")).toBe("700");
     expect(params.get("nfw")).toBe("900");
     expect(params.get("ms")).toBe("72");

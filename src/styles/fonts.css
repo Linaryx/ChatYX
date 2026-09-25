@@ -40,3 +40,11 @@
   font-weight: normal;
   font-style: normal;
 }
+
+@font-face {
+  font-family: "BF Mono";
+  src: url("/v3/font/BF_MONO_BOOK.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

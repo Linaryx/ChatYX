@@ -65,15 +65,16 @@ export const SIZE_CONFIGS = {
   },
 } as const;
 
-export const generateSizeStyles = (size: 1 | 2 | 3) => {
+export const generateSizeStyles = (size: 1 | 2 | 3, lineHeight = 100) => {
   const config = SIZE_CONFIGS[size];
+  const lineHeightPx = Number.parseInt(config.lineHeight, 10) * Math.min(Math.max(lineHeight, 80), 200) / 100;
   return `
 #chat_container {
     font-size: ${config.fontSize};
 }
 
 .chat_line {
-    line-height: ${config.lineHeight};
+    line-height: ${lineHeightPx}px;
 }
 
 .badge {
@@ -222,6 +223,7 @@ export const FONTS = [
   "'Indie Flower', cursive",
   "'Open Sans', sans-serif",
   "'AlsinaUltrajada', sans-serif",
+  "'BF Mono', monospace",
 ] as const;
 
 export const getFontFamily = (config: ChatConfig): string => {

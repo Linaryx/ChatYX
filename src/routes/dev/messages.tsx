@@ -356,7 +356,7 @@ function installDevChatStyles(config: ChatConfig) {
   }
 
   styleEl.textContent = [
-    generateSizeStyles(config.size as 1 | 2 | 3),
+    generateSizeStyles(config.size as 1 | 2 | 3, config.lineHeight),
     config.shadow ? generateShadowStyles(config.shadow as 1 | 2 | 3) : "",
     config.stroke ? generateStrokeStyles(config.stroke as 1 | 2 | 3 | 4) : "",
     generateVariantStyles(config),

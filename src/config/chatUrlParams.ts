@@ -40,6 +40,7 @@ export interface ChatConfig {
   fade: number | false; // seconds; false disables fade
   size: number;
   font: number;
+  lineHeight: number;
   fontWeight: number;
   nickFontWeight: number;
   fontCustom: string;
@@ -104,6 +105,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   gifScale: 1,
   size: 1,
   font: 2,
+  lineHeight: 100,
   fontWeight: DEFAULT_FONT_WEIGHT,
   nickFontWeight: DEFAULT_FONT_WEIGHT,
   fontCustom: "",
@@ -177,6 +179,12 @@ export function normalizeFontWeight(
   const numeric = Number(value);
   const resolved = Number.isFinite(numeric) ? numeric : fallback;
   return Math.min(Math.max(Math.round(resolved), 100), 1000);
+}
+
+export function normalizeLineHeight(value: number | undefined): number {
+  const numeric = Number(value);
+  const resolved = Number.isFinite(numeric) ? numeric : DEFAULT_CHAT_CONFIG.lineHeight;
+  return Math.min(Math.max(Math.round(resolved), 80), 200);
 }
 
 export function parseBotNames(raw: string): string[] {
@@ -253,6 +261,7 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
 
   size: { query: "s", kind: "int", aliases: ["size"] },
   font: { query: "f", kind: "int", aliases: ["font"] },
+  lineHeight: { query: "lh", kind: "int", aliases: ["line_height", "lineHeight"] },
   fontWeight: {
     query: "fw",
     kind: "int",
@@ -756,6 +765,7 @@ export function parseChatConfigFromSearchParams(
 
   cfg.messageSpeed = clampMessageSpeed(cfg.messageSpeed);
   cfg.fontWeight = normalizeFontWeight(cfg.fontWeight);
+  cfg.lineHeight = normalizeLineHeight(cfg.lineHeight);
   cfg.nickFontWeight = normalizeFontWeight(cfg.nickFontWeight);
   cfg.animation = normalizeChatAnimationMode(cfg.animation);
   cfg.ttsVolume = Math.min(Math.max(cfg.ttsVolume, 0), 1);
