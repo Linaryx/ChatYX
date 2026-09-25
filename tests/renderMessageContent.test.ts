@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderMessageWithEmotes } from "../src/components/chat/renderMessageContent";
 import { DEFAULT_CHAT_CONFIG } from "../src/config/chatUrlParams";
 import type { ChatPresentationService } from "../src/services/chat/chatPresentationService";
+import { mentionStyleService } from "../src/services/chat";
 import type { TwitchMessage } from "../src/services/chat/twitch/twitchService";
 import { createMessageTokenSnapshot } from "../src/utils/chat/emojiUtils";
 import { setRteProxyEnabled } from "../src/services/network/rteProxyTransport";
@@ -200,5 +201,49 @@ describe("renderMessageWithEmotes display text", () => {
     const html = render(original);
     expect(html).not.toContain("chat-gif");
     expect(html).toContain("[GIF]");
+  });
+
+  test("colors @mentions with the uniform nickname color when enabled", () => {
+    const html = render(
+      message("@viewer hello", []),
+      undefined,
+      { ...DEFAULT_CHAT_CONFIG, usersColor: "#ff0000" },
+    );
+
+    expect(html).toContain(
+      '<span class="mention" style="color: #ff0000;">@viewer</span>',
+    );
+    expect(html.replace(/<[^>]*>/g, "")).toBe("@viewer hello");
+  });
+
+  test("uniform nickname color overrides a known colorful mention", () => {
+    const viewer = message("hi", []);
+    viewer.username = "viewer";
+    mentionStyleService.registerMessageAuthor(viewer);
+    try {
+      const withoutUniform = render(message("@viewer hello", []));
+      expect(withoutUniform).toContain(
+        '<span class="mention" style="color: #fff;">@viewer</span>',
+      );
+
+      const withUniform = render(
+        message("@viewer hello", []),
+        undefined,
+        { ...DEFAULT_CHAT_CONFIG, usersColor: "#ff0000" },
+      );
+      expect(withUniform).toContain(
+        '<span class="mention" style="color: #ff0000;">@viewer</span>',
+      );
+      expect(withUniform).not.toContain("color: #fff");
+    } finally {
+      mentionStyleService.reset();
+    }
+  });
+
+  test("keeps unknown mentions unstyled without the uniform color", () => {
+    const html = render(message("@viewer hello", []));
+
+    expect(html).not.toContain("mention");
+    expect(html).toContain("@viewer");
   });
 });

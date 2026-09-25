@@ -528,7 +528,10 @@ export const ChatMessage = (props: ChatMessageProps) => {
                   )}
                   alt="Рейд"
                 />
-                <span class="chat-event-fact">
+                <span
+                  class="chat-event-fact"
+                  style={usersColor() ? { color: nickColor() } : undefined}
+                >
                   {event().detail || event().label}
                 </span>
                 <span class="chat-event-detail">

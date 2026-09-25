@@ -29,13 +29,24 @@ class MentionStyleService {
     this.knownUsers.clear();
   }
 
-  resolveMention(token: string, service: ChatPresentationService): MentionStyle | null {
+  resolveMention(
+    token: string,
+    service: ChatPresentationService,
+    uniformColor?: string,
+  ): MentionStyle | null {
     const match = token.match(/^@([A-Za-z0-9_][A-Za-z0-9_.-]*)(.*)$/);
     if (!match) return null;
 
     const mentionText = `@${match[1]}`;
     const username = this.normalizeUsername(match[1]);
     const suffix = match[2] || "";
+
+    // The uniform nickname color overrides paints and per-user colors so
+    // @mentions match the nicknames exactly.
+    if (uniformColor) {
+      return { kind: "color", text: mentionText, suffix, color: uniformColor };
+    }
+
     const knownUser = this.knownUsers.get(username);
 
     const cachedPaint = sevenTVCosmeticsService.calculatePaintCSS(username);

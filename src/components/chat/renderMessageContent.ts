@@ -104,11 +104,19 @@ function twitchEmoteImageAttrs(
   return ` style="width: auto; height: auto; max-width: ${maxWidth}px; max-height: ${maxHeight}px;"`;
 }
 
+const CSS_COLOR_PATTERN =
+  /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|[a-zA-Z]{1,30})$/;
+
 function renderMentionHtml(
   token: string,
   service: ChatPresentationService,
+  uniformColor?: string,
 ): string | null {
-  const mentionStyle = mentionStyleService.resolveMention(token, service);
+  const mentionStyle = mentionStyleService.resolveMention(
+    token,
+    service,
+    uniformColor,
+  );
   if (!mentionStyle) return null;
 
   const escapedText = escapeHtml(mentionStyle.text);
@@ -122,12 +130,9 @@ function renderMentionHtml(
       return `<span class="mention" style="${safeCss}">${escapedText}</span>${escapedSuffix}`;
     }
     case "color": {
-      const safeColor =
-        /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|[a-zA-Z]{1,30})$/.test(
-          mentionStyle.color,
-        )
-          ? mentionStyle.color
-          : "#ffffff";
+      const safeColor = CSS_COLOR_PATTERN.test(mentionStyle.color)
+        ? mentionStyle.color
+        : "#ffffff";
       return `<span class="mention" style="color: ${safeColor};">${escapedText}</span>${escapedSuffix}`;
     }
   }
@@ -162,6 +167,12 @@ export function renderMessageWithEmotes(
     SIZE_CONFIGS[config.size as keyof typeof SIZE_CONFIGS] || SIZE_CONFIGS[2];
   const rawMessage = displayText;
   const emoteScale = getEmoteScale(config);
+  // Matches ChatMessage's uniform nickname color: when enabled, @mentions
+  // must use the same color instead of paints or per-user colors.
+  const uniformNickColor =
+    config.usersColor && CSS_COLOR_PATTERN.test(config.usersColor)
+      ? config.usersColor
+      : "";
 
   type Replacement =
     | { kind: "html"; html: string; isOverlayTarget: boolean }
@@ -374,7 +385,11 @@ export function renderMessageWithEmotes(
     const restoredText = restoreEmojis(textWithPlaceholders, emojis);
     if (!restoredText) return;
 
-    const mentionHtml = renderMentionHtml(restoredText, service);
+    const mentionHtml = renderMentionHtml(
+      restoredText,
+      service,
+      uniformNickColor,
+    );
     if (mentionHtml) {
       segments.push({ kind: "text", html: mentionHtml });
       return;
