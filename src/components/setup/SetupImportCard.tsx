@@ -290,9 +290,6 @@ export function SetupImportCard(props: SetupImportCardProps) {
             </Show>
           </div>
         </section>
-        <h3 id="setup-import-title" class="text-xs font-medium text-foreground sm:text-sm">
-          {t("setup.import.importSection")}
-        </h3>
         <div class="flex min-w-0 flex-col gap-1.5">
           <label for="setup-import-source" class="text-xs font-medium text-foreground sm:text-sm">
             {t("setup.import.source")}
