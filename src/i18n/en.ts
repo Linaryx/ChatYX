@@ -1,7 +1,7 @@
 import type { Dictionary } from "./types";
 
 const eventColorTranslations = {
-  borderThickness: "Border thickness", borderColor: "Border color", eventColorsOpacity: "Event opacity", eventColorDefault: "Default", eventColorFirst: "First", eventColorHighlight: "Highlighted", eventColorReward: "Reward", eventColorSubscription: "Subscription", eventColorRaid: "Raid", eventColorStreak: "Streak", eventColorPowerUp: "Power-Up", eventColorAnnPrimary: "Announcement", eventColorAnnPurple: "Ann.: purple", eventColorAnnBlue: "Ann.: blue", eventColorAnnGreen: "Ann.: green", eventColorAnnOrange: "Ann.: orange",
+  borderThickness: "Border thickness", borderColor: "Border color", eventColorsOpacity: "Event opacity", eventColorDefault: "Default", eventColorFirst: "First", eventColorHighlight: "Highlighted", eventColorReward: "Reward", eventColorSubscription: "Subscription", eventColorRaid: "Raid", eventColorStreak: "Streak", eventColorPowerUp: "Power-Up", eventColorAnnPrimary: "Announcement", eventColorAnnPurple: "Announcement: purple", eventColorAnnBlue: "Announcement: blue", eventColorAnnGreen: "Announcement: green", eventColorAnnOrange: "Announcement: orange",
 } satisfies Pick<Dictionary["setup"], "borderThickness" | "borderColor" | "eventColorsOpacity" | "eventColorDefault" | "eventColorFirst" | "eventColorHighlight" | "eventColorReward" | "eventColorSubscription" | "eventColorRaid" | "eventColorStreak" | "eventColorPowerUp" | "eventColorAnnPrimary" | "eventColorAnnPurple" | "eventColorAnnBlue" | "eventColorAnnGreen" | "eventColorAnnOrange">;
 
 export const dictionary: Dictionary = {

@@ -60,7 +60,7 @@ export const dictionary = {
     paddingHint: "Применяется только при скруглении фона. При 0 px чат занимает всю ширину.",
     borderVisibility: "Видимость рамки", borderThickness: "Толщина рамки", borderColor: "Цвет рамки", twitchEventsHighlight: "Подсветка событий Twitch",
     twitchEventsHighlightHint: "Включает фон и боковые полосы у системных событий Twitch.", eventColorsOpacity: "Прозрачность событий",
-    eventColorDefault: "Обычное", eventColorFirst: "Первое", eventColorHighlight: "Выделенное", eventColorReward: "Награда", eventColorSubscription: "Подписка", eventColorRaid: "Рейд", eventColorStreak: "Серия", eventColorPowerUp: "Power-Up", eventColorAnnPrimary: "Анонс", eventColorAnnPurple: "Анонс-Фио.", eventColorAnnBlue: "Анонс-Син.", eventColorAnnGreen: "Анонс-Зел.", eventColorAnnOrange: "Анонс-Ора.",
+    eventColorDefault: "Обычное", eventColorFirst: "Первое", eventColorHighlight: "Выделенное", eventColorReward: "Награда", eventColorSubscription: "Подписка", eventColorRaid: "Рейд", eventColorStreak: "Серия", eventColorPowerUp: "Power-Up", eventColorAnnPrimary: "Анонс", eventColorAnnPurple: "Анонс: фиолетовый", eventColorAnnBlue: "Анонс: синий", eventColorAnnGreen: "Анонс: зелёный", eventColorAnnOrange: "Анонс: оранжевый",
     linkColor: "Цвет ссылок", linkColorHint: "Используется, когда для ссылок выбран режим выделения.",
     messageSource: "Источник сообщений", messageSourceHint: "Показывается, когда подключены Twitch и YouTube.",
     none: "Ничего", stripe: "Полоска", icon: "Иконка", messageAnimation: "Анимация сообщений",

@@ -14,6 +14,7 @@ type ColorPickerFieldProps = {
   showTransparencyGrid?: boolean;
   label?: string;
   triggerLabel?: string;
+  compact?: boolean;
   onChange: (value: { color: string; opacity: number }) => void;
 };
 
@@ -71,10 +72,11 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
 
   return (
     <Popover gutter={8}>
-      <div class="flex w-full items-center gap-2">
+      <div class="flex items-center gap-2" classList={{ "w-full": !props.compact }}>
         <Popover.Trigger
-          class="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-background p-1.5 text-left text-sm transition-colors hover:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          class={`flex h-10 min-w-0 cursor-pointer items-center gap-2 rounded-md border border-input bg-background p-1.5 text-left text-sm transition-colors hover:border-ring hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${props.compact ? "w-auto" : "flex-1"}`}
           aria-label={`${props.label ?? t("common.color")}: ${t("common.openPalette")}`}
+          title={props.label}
         >
           <span
             class="relative size-7 shrink-0 overflow-hidden rounded-[5px] border border-white/10"

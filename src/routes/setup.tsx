@@ -2197,9 +2197,9 @@ export default function ChatSetup() {
                       <Slider id="setup-event-opacity" minValue={0} maxValue={100} step={1} value={[toInt(eventColorOpacity(), DEFAULT_CHAT_CONFIG.eventColorOpacity)]} onChange={(value) => setEventColorOpacity(String(value[0] ?? 0))} class="flex-1" />
                       <output class="w-10 text-right text-xs tabular-nums text-muted-foreground">{eventColorOpacity()}%</output>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                    <div class="flex flex-wrap gap-2">
                       <For each={eventColorPalette}>{(item) => (
-                        <ColorPickerField label={item.label()} triggerLabel={item.label()} color={eventColors()[item.field]} opacity={100} showOpacity={false} onChange={({ color }) => setEventColor(item.field, color)} />
+                        <ColorPickerField compact label={item.label()} triggerLabel={item.label()} color={eventColors()[item.field]} opacity={100} showOpacity={false} onChange={({ color }) => setEventColor(item.field, color)} />
                       )}</For>
                     </div>
                   </div>
