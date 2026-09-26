@@ -82,8 +82,8 @@ describe("chat URL params", () => {
       messageSpeed: 72,
       animation: "scroll",
       emoteScale: 1.25,
-      twitchEventColor: "#ff00ff",
-      twitchEventBackgroundOpacity: 35,
+      eventColorRaid: "#ff00ff",
+      eventColorOpacity: 35,
       twitchEventBold: false,
       twitchEventItalic: true,
       showHighlightedMessages: false,
@@ -115,8 +115,8 @@ describe("chat URL params", () => {
     expect(params.get("ms")).toBe("72");
     expect(params.get("an")).toBe("scroll");
     expect(params.get("es")).toBe("1.25");
-    expect(params.get("tec")).toBe("#ff00ff");
-    expect(params.get("teo")).toBe("35");
+    expect(params.get("evc")).toBe("ra:ff00ff");
+    expect(params.get("eva")).toBe("35");
     expect(params.get("teb")).toBe("false");
     expect(params.get("tei")).toBe("true");
     expect(params.get("hl")).toBe("false");
@@ -130,6 +130,30 @@ describe("chat URL params", () => {
     expect(params.get("kbn")).toBe("kickbot,botrix");
 
     expect(parseChatConfigFromSearchParams(params)).toEqual(cfg);
+  });
+
+  test("omits the default event palette and reads legacy event colors", () => {
+    expect(chatConfigToSearchParams(DEFAULT_CHAT_CONFIG).get("evc")).toBeNull();
+
+    const legacy = parseChatConfigFromSearchParams(new URLSearchParams("tec=%23ff0000&teo=35"));
+    expect(legacy.eventColorDefault).toBe("#ff0000");
+    expect(legacy.eventColorRaid).toBe("#ff0000");
+    expect(legacy.eventColorOpacity).toBe(35);
+    expect(chatConfigToSearchParams(legacy).get("tec")).toBeNull();
+    expect(chatConfigToSearchParams(legacy).get("teo")).toBeNull();
+    expect(chatConfigToSearchParams(legacy).get("evc")).not.toBeNull();
+  });
+
+  test("omits custom event colors while highlighting is disabled", () => {
+    const params = chatConfigToSearchParams({
+      ...DEFAULT_CHAT_CONFIG,
+      highlightTwitchEvents: false,
+      eventColorRaid: "#ff00ff",
+      eventColorOpacity: 35,
+    });
+
+    expect(params.get("teh")).toBe("false");
+    expect(params.get("evc")).toBeNull();
   });
 
   test("serializes hidden badge providers as a nobadge list and round-trips", () => {

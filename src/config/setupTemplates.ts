@@ -1,4 +1,5 @@
 import { DEFAULT_CHAT_CONFIG } from "./chatUrlParams";
+import { DEFAULT_EVENT_COLORS } from "./eventColors";
 import type { SetupImportPatch } from "./setupImport";
 
 const STORAGE_KEY = "chatyx.setup.templates.v1";
@@ -19,7 +20,8 @@ type VisualSettingKey =
   | "overlayBackgroundColor"
   | "overlayBackgroundOpacity"
   | "overlayBackgroundRadius"
-  | "overlayBorderOpacity"
+  | "overlayBorderWidth"
+  | "overlayBorderColor"
   | "overlayPadding"
   | "platformMarker"
   | "shadow"
@@ -31,9 +33,21 @@ type VisualSettingKey =
   | "size"
   | "smallCaps"
   | "stroke"
-  | "twitchEventBackgroundOpacity"
+  | "eventColorDefault"
+  | "eventColorFirst"
+  | "eventColorHighlight"
+  | "eventColorReward"
+  | "eventColorSubscription"
+  | "eventColorRaid"
+  | "eventColorStreak"
+  | "eventColorPowerUp"
+  | "eventColorAnnPrimary"
+  | "eventColorAnnPurple"
+  | "eventColorAnnBlue"
+  | "eventColorAnnGreen"
+  | "eventColorAnnOrange"
+  | "eventColorOpacity"
   | "twitchEventBold"
-  | "twitchEventColor"
   | "twitchEventItalic"
   | "usersColor";
 
@@ -76,7 +90,8 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       overlayBackgroundColor: DEFAULT_CHAT_CONFIG.overlayBackgroundColor,
       overlayBackgroundOpacity: DEFAULT_CHAT_CONFIG.overlayBackgroundOpacity,
       overlayBackgroundRadius: DEFAULT_CHAT_CONFIG.overlayBackgroundRadius,
-      overlayBorderOpacity: DEFAULT_CHAT_CONFIG.overlayBorderOpacity,
+      overlayBorderWidth: DEFAULT_CHAT_CONFIG.overlayBorderWidth,
+      overlayBorderColor: DEFAULT_CHAT_CONFIG.overlayBorderColor,
       overlayPadding: DEFAULT_CHAT_CONFIG.overlayPadding,
       platformMarker: DEFAULT_CHAT_CONFIG.platformMarker,
       shadow: DEFAULT_CHAT_CONFIG.shadow,
@@ -88,9 +103,9 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       size: DEFAULT_CHAT_CONFIG.size,
       smallCaps: DEFAULT_CHAT_CONFIG.smallCaps,
       stroke: DEFAULT_CHAT_CONFIG.stroke,
-      twitchEventBackgroundOpacity: DEFAULT_CHAT_CONFIG.twitchEventBackgroundOpacity,
+      ...DEFAULT_EVENT_COLORS,
+      eventColorOpacity: DEFAULT_CHAT_CONFIG.eventColorOpacity,
       twitchEventBold: DEFAULT_CHAT_CONFIG.twitchEventBold,
-      twitchEventColor: DEFAULT_CHAT_CONFIG.twitchEventColor,
       twitchEventItalic: DEFAULT_CHAT_CONFIG.twitchEventItalic,
       usersColor: DEFAULT_CHAT_CONFIG.usersColor,
     },
@@ -112,7 +127,8 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       overlayBackgroundColor: "#000000",
       overlayBackgroundOpacity: 0,
       overlayBackgroundRadius: 20,
-      overlayBorderOpacity: 0,
+      overlayBorderWidth: 0,
+      overlayBorderColor: "#ffffff",
       overlayPadding: 10,
       platformMarker: "stripe",
       shadow: false,
@@ -124,9 +140,9 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       size: 1,
       smallCaps: true,
       stroke: false,
-      twitchEventBackgroundOpacity: 0,
+      ...DEFAULT_EVENT_COLORS,
+      eventColorOpacity: 0,
       twitchEventBold: false,
-      twitchEventColor: "#FF0000",
       twitchEventItalic: false,
       usersColor: "#BD1313",
     },
@@ -175,9 +191,9 @@ export function toVisualSetupPatch<T extends Partial<Record<VisualSettingKey, un
   const keys: readonly VisualSettingKey[] = [
     "animation",
     "emoteScale", "font", "fontCustom", "fontWeight", "gifScale", "highlightTwitchEvents", "lineHeight", "linkColor", "linkMode", "nickFontWeight",
-    "overlayBackgroundColor", "overlayBackgroundOpacity", "overlayBackgroundRadius", "overlayBorderOpacity",
+    "overlayBackgroundColor", "overlayBackgroundOpacity", "overlayBackgroundRadius", "overlayBorderWidth", "overlayBorderColor",
     "overlayPadding", "platformMarker", "shadow", "showChannelPointRewards", "showGifs", "showGigantifiedEmotes", "showHighlightedMessages", "showPredictions", "size", "smallCaps", "stroke",
-    "twitchEventBackgroundOpacity", "twitchEventBold", "twitchEventColor", "twitchEventItalic", "usersColor",
+    "eventColorDefault", "eventColorFirst", "eventColorHighlight", "eventColorReward", "eventColorSubscription", "eventColorRaid", "eventColorStreak", "eventColorPowerUp", "eventColorAnnPrimary", "eventColorAnnPurple", "eventColorAnnBlue", "eventColorAnnGreen", "eventColorAnnOrange", "eventColorOpacity", "twitchEventBold", "twitchEventItalic", "usersColor",
   ];
 
   return Object.fromEntries(

@@ -13,6 +13,7 @@ type ColorPickerFieldProps = {
   showOpacity?: boolean;
   showTransparencyGrid?: boolean;
   label?: string;
+  triggerLabel?: string;
   onChange: (value: { color: string; opacity: number }) => void;
 };
 
@@ -89,7 +90,9 @@ export function ColorPickerField(props: ColorPickerFieldProps) {
           >
             <ColorSwatch value={value()} class="size-full" />
           </span>
-          <span class="min-w-0 truncate font-mono text-sm uppercase text-foreground">{hex()}</span>
+          <span class="min-w-0 truncate text-sm text-foreground" classList={{ "font-mono uppercase": !props.triggerLabel }}>
+            {props.triggerLabel ?? hex()}
+          </span>
         </Popover.Trigger>
       </div>
 

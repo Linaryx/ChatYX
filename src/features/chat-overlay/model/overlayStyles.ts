@@ -34,7 +34,7 @@ export function createOverlayRootStyle(visible: boolean) {
 
 export function createSurfaceStyle(config: ChatConfig, fadeDurationMs: number) {
   const backgroundOpacity = clamp(config.overlayBackgroundOpacity, 0, 100) / 100;
-  const borderOpacity = clamp(config.overlayBorderOpacity, 0, 100) / 100;
+  const borderWidth = clamp(config.overlayBorderWidth, 0, 8);
   const borderRadius = clamp(config.overlayBackgroundRadius, 0, 128);
   const padding = borderRadius > 0 ? clamp(config.overlayPadding, 0, 128) : 0;
 
@@ -52,8 +52,8 @@ export function createSurfaceStyle(config: ChatConfig, fadeDurationMs: number) {
     "pointer-events": "none",
     overflow: "hidden",
     "background-color": `rgba(${hexToRgb(config.overlayBackgroundColor)}, ${backgroundOpacity})`,
-    border: borderOpacity > 0
-      ? `1px solid rgba(255, 255, 255, ${borderOpacity})`
+    border: borderWidth > 0
+      ? `${borderWidth}px solid ${config.overlayBorderColor}`
       : "none",
     "border-radius": `${borderRadius}px`,
     "--chat-surface-padding": `${padding}px`,

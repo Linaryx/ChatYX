@@ -214,8 +214,8 @@ export const ChatMessage = (props: ChatMessageProps) => {
     "--chat-message-enter-duration": `${props.animationDurationMs}ms`,
     ...getChatEventStyleVariables({
       event: visibleTwitchEvent(),
-      fallbackAccent: props.config.twitchEventColor,
-      backgroundOpacity: props.config.twitchEventBackgroundOpacity,
+      colors: props.config,
+      opacity: props.config.eventColorOpacity,
     }),
     "--chat-event-font-weight": eventFontWeight(),
     "--chat-link-color": safeCssColor(props.config.linkColor, "#53b7ff"),

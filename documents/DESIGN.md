@@ -45,21 +45,13 @@ State color is restricted to the icon, factual event title, and shallow event ti
 
 | Token | Value | Role |
 |---|---|---|
-| `--chat-event-accent-default` | `#9146ff` | Unknown/fallback Twitch event |
-| `--chat-event-accent-first` | `#34d399` | First message |
-| `--chat-event-accent-highlight` | `#fbbf24` | Highlighted authored message |
-| `--chat-event-accent-reward` | `#f59e0b` | Channel-point reward |
-| `--chat-event-accent-subscription` | `#c084fc` | Subscription |
-| `--chat-event-accent-raid` | `#60a5fa` | Raid |
-| `--chat-event-accent-streak` | `#2dd4bf` | Watch streak |
-| `--chat-event-accent-power` | `#f472b6` | Power-up/gigantified emote |
-| `--chat-event-accent-announcement-*` | Twitch `PURPLE`, `BLUE`, `GREEN`, `ORANGE`, and `PRIMARY` colors | Announcement level |
+| `--chat-event-color` | Configured `#RRGGBB` palette color | Event background, rails, icons, and factual title |
+| `--chat-event-opacity` | Shared event opacity | Transparency for every event color |
 | `--chat-event-text` | `rgba(255, 255, 255, 0.82)` | Factual event detail |
 | `--chat-event-muted` | `rgba(255, 255, 255, 0.72)` | Secondary counts and context |
 | `--chat-event-separator-color` | `rgba(255, 255, 255, 0.48)` | Factual cluster separator |
-| `--chat-event-background-opacity-default` | `18%` | Tint fallback when no configured opacity is available |
 
-Announcements use Twitch's resolved announcement color as their state accent. The configured `twitchEventColor` is a fallback only; it must not override known semantic event states. The configured background opacity controls system-notice tints; highlighted authored messages retain their explicit shallow full-row tint.
+The setup palette owns the color for every semantic event, including announcement levels. The shared opacity control applies to the background, rails, and icons without changing individual HEX colors. Disabling event highlighting removes this treatment but leaves event messages visible.
 
 ### Typography Roles
 

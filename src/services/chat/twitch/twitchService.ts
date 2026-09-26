@@ -12,15 +12,6 @@ export type { ChatPlatform, TwitchEvent, TwitchEventType } from "../message";
 export type TwitchMessage = ChatMessage;
 export type TwitchGif = ChatGif;
 
-const ANNOUNCEMENT_COLORS: Record<string, string> = {
-  PRIMARY: "#9147ff",
-  BLUE: "#1f69ff",
-  GREEN: "#00c800",
-  ORANGE: "#ff7621",
-  PURPLE: "#9900fe",
-};
-
-
 function parseGifs(raw: string | undefined): TwitchGif[] | undefined {
   if (!raw) return undefined;
   const gifs = raw.split(",").flatMap((entry): TwitchGif[] => {
@@ -158,7 +149,6 @@ function getUserNoticeEvent(
       type: "announcement",
       label: "Объявление",
       level,
-      color: ANNOUNCEMENT_COLORS[level] || ANNOUNCEMENT_COLORS.PRIMARY,
     };
   }
 

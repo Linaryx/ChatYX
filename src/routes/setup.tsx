@@ -36,6 +36,12 @@ import { Input } from "~/components/ui/input";
 import { Slider } from "~/components/ui/slider";
 import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES } from "~/config/botNames";
 import {
+  DEFAULT_EVENT_COLORS,
+  normalizeEventColor,
+  type EventColorConfig,
+  type EventColorField,
+} from "~/config/eventColors";
+import {
   DEFAULT_CHAT_CONFIG,
   chatConfigToSearchParams,
   normalizeBotNames,
@@ -58,6 +64,25 @@ import { cn } from "~/lib/utils";
 import Monitor from "lucide-solid/icons/monitor";
 import Pause from "lucide-solid/icons/pause";
 import Play from "lucide-solid/icons/play";
+
+const eventColorPalette: ReadonlyArray<{
+  readonly field: EventColorField;
+  readonly label: () => string;
+}> = [
+  { field: "eventColorDefault", label: () => t("setup.eventColorDefault") },
+  { field: "eventColorFirst", label: () => t("setup.eventColorFirst") },
+  { field: "eventColorHighlight", label: () => t("setup.eventColorHighlight") },
+  { field: "eventColorReward", label: () => t("setup.eventColorReward") },
+  { field: "eventColorSubscription", label: () => t("setup.eventColorSubscription") },
+  { field: "eventColorRaid", label: () => t("setup.eventColorRaid") },
+  { field: "eventColorStreak", label: () => t("setup.eventColorStreak") },
+  { field: "eventColorPowerUp", label: () => t("setup.eventColorPowerUp") },
+  { field: "eventColorAnnPrimary", label: () => t("setup.eventColorAnnPrimary") },
+  { field: "eventColorAnnPurple", label: () => t("setup.eventColorAnnPurple") },
+  { field: "eventColorAnnBlue", label: () => t("setup.eventColorAnnBlue") },
+  { field: "eventColorAnnGreen", label: () => t("setup.eventColorAnnGreen") },
+  { field: "eventColorAnnOrange", label: () => t("setup.eventColorAnnOrange") },
+];
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import X from "lucide-solid/icons/x";
 import "~/components/setup/SetupWorkspace.css";
@@ -511,17 +536,33 @@ export default function ChatSetup() {
   const [overlayPadding, setOverlayPadding] = createSignal(
     String(DEFAULT_CHAT_CONFIG.overlayPadding),
   );
-  const [overlayBorderOpacity, setOverlayBorderOpacity] = createSignal(
-    String(DEFAULT_CHAT_CONFIG.overlayBorderOpacity),
+  const [overlayBorderWidth, setOverlayBorderWidth] = createSignal(
+    String(DEFAULT_CHAT_CONFIG.overlayBorderWidth),
   );
+  const [overlayBorderColor, setOverlayBorderColor] = createSignal(
+    DEFAULT_CHAT_CONFIG.overlayBorderColor,
+  );
+  const borderColorOpacity = createMemo(() => {
+    const alpha = overlayBorderColor().slice(7);
+    return /^[0-9a-f]{2}$/i.test(alpha)
+      ? Math.round(Number.parseInt(alpha, 16) / 2.55)
+      : 100;
+  });
   const [highlightTwitchEvents, setHighlightTwitchEvents] = createSignal(
     DEFAULT_CHAT_CONFIG.highlightTwitchEvents,
   );
-  const [twitchEventColor, setTwitchEventColor] = createSignal(
-    DEFAULT_CHAT_CONFIG.twitchEventColor,
+  const [eventColors, setEventColors] = createSignal<EventColorConfig>(
+    DEFAULT_EVENT_COLORS,
   );
-  const [twitchEventBackgroundOpacity, setTwitchEventBackgroundOpacity] =
-    createSignal(String(DEFAULT_CHAT_CONFIG.twitchEventBackgroundOpacity));
+  const [eventColorOpacity, setEventColorOpacity] = createSignal(
+    String(DEFAULT_CHAT_CONFIG.eventColorOpacity),
+  );
+  const setEventColor = (field: EventColorField, color: string) => {
+    setEventColors((colors) => ({
+      ...colors,
+      [field]: normalizeEventColor(color, colors[field]),
+    }));
+  };
   const [twitchEventBold, setTwitchEventBold] = createSignal(
     DEFAULT_CHAT_CONFIG.twitchEventBold,
   );
@@ -691,10 +732,23 @@ export default function ChatSetup() {
       overlayBackgroundOpacity: setOverlayBackgroundOpacity,
       overlayBackgroundRadius: setOverlayBackgroundRadius,
       overlayPadding: setOverlayPadding,
-      overlayBorderOpacity: setOverlayBorderOpacity,
+      overlayBorderWidth: setOverlayBorderWidth,
+      overlayBorderColor: setOverlayBorderColor,
       highlightTwitchEvents: setHighlightTwitchEvents,
-      twitchEventColor: setTwitchEventColor,
-      twitchEventBackgroundOpacity: setTwitchEventBackgroundOpacity,
+      eventColorOpacity: setEventColorOpacity,
+      eventColorDefault: (value) => setEventColor("eventColorDefault", value),
+      eventColorFirst: (value) => setEventColor("eventColorFirst", value),
+      eventColorHighlight: (value) => setEventColor("eventColorHighlight", value),
+      eventColorReward: (value) => setEventColor("eventColorReward", value),
+      eventColorSubscription: (value) => setEventColor("eventColorSubscription", value),
+      eventColorRaid: (value) => setEventColor("eventColorRaid", value),
+      eventColorStreak: (value) => setEventColor("eventColorStreak", value),
+      eventColorPowerUp: (value) => setEventColor("eventColorPowerUp", value),
+      eventColorAnnPrimary: (value) => setEventColor("eventColorAnnPrimary", value),
+      eventColorAnnPurple: (value) => setEventColor("eventColorAnnPurple", value),
+      eventColorAnnBlue: (value) => setEventColor("eventColorAnnBlue", value),
+      eventColorAnnGreen: (value) => setEventColor("eventColorAnnGreen", value),
+      eventColorAnnOrange: (value) => setEventColor("eventColorAnnOrange", value),
       twitchEventBold: setTwitchEventBold,
       twitchEventItalic: setTwitchEventItalic,
       showPredictions: setShowPredictions,
@@ -729,10 +783,11 @@ export default function ChatSetup() {
     if (bodyScrollRef) bodyScrollRef.scrollTop = viewScrollPositions[view];
   };
 
-  const normalizeHexColor = (raw: string, fallback: string): string => {
+  const normalizeHexColor = (raw: string, fallback: string, allowAlpha = false): string => {
     const value = raw.trim();
     const withHash = value.startsWith("#") ? value : `#${value}`;
-    return /^#[0-9a-fA-F]{6}$/.test(withHash) ? withHash : fallback;
+    const pattern = allowAlpha ? /^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/ : /^#[0-9a-fA-F]{6}$/;
+    return pattern.test(withHash) ? withHash : fallback;
   };
 
   const toIntOrFalse = (raw: string): number | false => {
@@ -853,19 +908,18 @@ export default function ChatSetup() {
       overlayPadding(),
       DEFAULT_CHAT_CONFIG.overlayPadding,
     ),
-    overlayBorderOpacity: toInt(
-      overlayBorderOpacity(),
-      DEFAULT_CHAT_CONFIG.overlayBorderOpacity,
+    overlayBorderWidth: toInt(
+      overlayBorderWidth(),
+      DEFAULT_CHAT_CONFIG.overlayBorderWidth,
+    ),
+    overlayBorderColor: normalizeHexColor(
+      overlayBorderColor(),
+      DEFAULT_CHAT_CONFIG.overlayBorderColor,
+      true,
     ),
     highlightTwitchEvents: highlightTwitchEvents(),
-    twitchEventColor: normalizeHexColor(
-      twitchEventColor(),
-      DEFAULT_CHAT_CONFIG.twitchEventColor,
-    ),
-    twitchEventBackgroundOpacity: toInt(
-      twitchEventBackgroundOpacity(),
-      DEFAULT_CHAT_CONFIG.twitchEventBackgroundOpacity,
-    ),
+    eventColorOpacity: toInt(eventColorOpacity(), DEFAULT_CHAT_CONFIG.eventColorOpacity),
+    ...eventColors(),
     twitchEventBold: twitchEventBold(),
     twitchEventItalic: twitchEventItalic(),
     showHighlightedMessages: showHighlightedMessages(),
@@ -1530,73 +1584,56 @@ export default function ChatSetup() {
       ),
     },
     {
-      label: () => t("setup.borderVisibility"),
+      label: () => t("setup.borderThickness"),
       control: (_labelId) => (
         <SetupNumberField
-          label={t("setup.borderVisibility")}
-          value={overlayBorderOpacity()}
-          onChange={setOverlayBorderOpacity}
+          label={t("setup.borderThickness")}
+          value={overlayBorderWidth()}
+          onChange={setOverlayBorderWidth}
           min={0}
-          max={100}
+          max={8}
           step={1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.twitchEventsHighlight"),
-      hint: () => t("setup.twitchEventsHighlightHint"),
-      control: (_labelId) => (
-        <ColorPickerField
-          label={t("setup.twitchEventsHighlight")}
-          color={twitchEventColor()}
-          opacity={toInt(
-            twitchEventBackgroundOpacity(),
-            DEFAULT_CHAT_CONFIG.twitchEventBackgroundOpacity,
-          )}
-          onChange={({ color, opacity }) => {
-            setTwitchEventColor(color);
-            setTwitchEventBackgroundOpacity(String(opacity));
-          }}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.linkColor"),
-      hint: () => t("setup.linkColorHint"),
-      control: (_labelId) => (
-        <ColorPickerField
-          label={t("setup.linkColor")}
-          color={linkColor()}
-          opacity={100}
-          showOpacity={false}
-          onChange={({ color }) => setLinkColor(color)}
         />
       ),
     },
   ];
 
+  const linkColorRow: ControlRow = {
+    label: () => t("setup.linkColor"),
+    control: (_labelId) => (
+      <ColorPickerField
+        label={t("setup.linkColor")}
+        color={linkColor()}
+        opacity={100}
+        showOpacity={false}
+        onChange={({ color }) => setLinkColor(color)}
+      />
+    ),
+  };
+
+  const messageSourceRow: ControlRow = {
+    label: () => t("setup.messageSource"),
+    hint: () => t("setup.messageSourceHint"),
+    control: (labelId) => (
+      <div class="flex items-center gap-2">
+        <img class="size-5 rounded-sm" src={getPublicAssetUrl("img/platform-twitch.svg")} alt="Twitch" />
+        <img class="size-5 rounded-sm" src={getPublicAssetUrl("img/platform-youtube.svg")} alt="YouTube" />
+        <SetupSelect
+          aria-labelledby={labelId}
+          value={platformMarker()}
+          onChange={(event) =>
+            setPlatformMarker(event.currentTarget.value as PlatformMarkerMode)
+          }
+        >
+          <option value="none">{t("setup.none")}</option>
+          <option value="stripe">{t("setup.stripe")}</option>
+          <option value="icon">{t("setup.icon")}</option>
+        </SetupSelect>
+      </div>
+    ),
+  };
+
   const behaviorRows: ControlRow[] = [
-    {
-      label: () => t("setup.messageSource"),
-      hint: () => t("setup.messageSourceHint"),
-      control: (labelId) => (
-        <div class="flex items-center gap-2">
-          <img class="size-5 rounded-sm" src={getPublicAssetUrl("img/platform-twitch.svg")} alt="Twitch" />
-          <img class="size-5 rounded-sm" src={getPublicAssetUrl("img/platform-youtube.svg")} alt="YouTube" />
-          <SetupSelect
-            aria-labelledby={labelId}
-            value={platformMarker()}
-            onChange={(event) =>
-              setPlatformMarker(event.currentTarget.value as PlatformMarkerMode)
-            }
-          >
-            <option value="none">{t("setup.none")}</option>
-            <option value="stripe">{t("setup.stripe")}</option>
-            <option value="icon">{t("setup.icon")}</option>
-          </SetupSelect>
-        </div>
-      ),
-    },
     {
       label: () => t("setup.messageAnimation"),
       hint: () => t("setup.messageAnimationHint"),
@@ -1634,11 +1671,6 @@ export default function ChatSetup() {
   ];
 
   const behaviorToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.highlightTwitchEvents"),
-      checked: highlightTwitchEvents,
-      onChange: setHighlightTwitchEvents,
-    },
     {
       label: () => t("setup.emphasizeEventText"),
       checked: twitchEventBold,
@@ -2148,8 +2180,30 @@ export default function ChatSetup() {
                 hidden={activeSection() !== "styling"}
               >
                 <div class="setup-field-group"><h3>{t("setup.textReadability")}</h3><ControlRows rows={stylingRows.slice(0, 3)} /></div>
-                <div class="setup-field-group"><h3>{t("setup.messageBacking")}</h3><ControlRows rows={stylingRows.slice(3, 6)} /></div>
-                <div class="setup-field-group"><h3>{t("setup.colorAccents")}</h3><ControlRows rows={stylingRows.slice(6)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.messageBacking")}</h3><ControlRows rows={stylingRows.slice(3)} /></div>
+                <Show when={toInt(overlayBorderWidth(), 0) > 0}>
+                  <div class="setup-field-group"><h3>{t("setup.borderColor")}</h3><ColorPickerField label={t("setup.borderColor")} color={overlayBorderColor().slice(0, 7)} opacity={borderColorOpacity()} onChange={({ color, opacity }) => setOverlayBorderColor(`${color}${Math.round(opacity * 2.55).toString(16).padStart(2, "0")}`)} /></div>
+                </Show>
+                <div class="setup-field-group"><h3>{t("setup.eventStyling")}</h3>
+                  <ToggleRows rows={[{
+                    label: () => t("setup.highlightTwitchEvents"),
+                    hint: () => t("setup.twitchEventsHighlightHint"),
+                    checked: highlightTwitchEvents,
+                    onChange: setHighlightTwitchEvents,
+                  }]} />
+                  <div class="mt-3 flex flex-col gap-3">
+                    <label class="text-xs font-medium text-foreground" for="setup-event-opacity">{t("setup.eventColorsOpacity")}</label>
+                    <div class="flex items-center gap-3">
+                      <Slider id="setup-event-opacity" minValue={0} maxValue={100} step={1} value={[toInt(eventColorOpacity(), DEFAULT_CHAT_CONFIG.eventColorOpacity)]} onChange={(value) => setEventColorOpacity(String(value[0] ?? 0))} class="flex-1" />
+                      <output class="w-10 text-right text-xs tabular-nums text-muted-foreground">{eventColorOpacity()}%</output>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                      <For each={eventColorPalette}>{(item) => (
+                        <ColorPickerField label={item.label()} triggerLabel={item.label()} color={eventColors()[item.field]} opacity={100} showOpacity={false} onChange={({ color }) => setEventColor(item.field, color)} />
+                      )}</For>
+                    </div>
+                  </div>
+                </div>
                 <div class="setup-field-group"><h3>{t("setup.nicknameColor")}</h3>
                   <ToggleRows rows={[{
                     label: () => t("setup.uniformNicknameColor"),
@@ -2172,9 +2226,9 @@ export default function ChatSetup() {
                 icon="hgi-arrow-up-right-stack"
                 hidden={activeSection() !== "behavior"}
               >
-                <div class="setup-field-group"><h3>{t("setup.animationAndLinks")}</h3><ControlRows rows={behaviorRows} /></div>
-                <div class="setup-field-group"><h3>{t("setup.eventStyling")}</h3><ToggleRows rows={behaviorToggles.slice(0, 3)} /></div>
-                <div class="setup-field-group"><h3>{t("setup.messageFlow")}</h3><ToggleRows rows={behaviorToggles.slice(3)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.animationAndLinks")}</h3><ControlRows rows={behaviorRows} /><Show when={linkMode() === "highlight"}><ControlRows rows={[linkColorRow]} /></Show></div>
+                <div class="setup-field-group"><h3>{t("setup.eventStyling")}</h3><ToggleRows rows={behaviorToggles.slice(0, 2)} /></div>
+                <div class="setup-field-group"><h3>{t("setup.messageFlow")}</h3><ToggleRows rows={behaviorToggles.slice(2)} /></div>
               </SectionCard>
 
               <SectionCard
@@ -2187,6 +2241,7 @@ export default function ChatSetup() {
                 <div class="setup-field-group"><h3>{t("setup.messagesAndEvents")}</h3><ToggleRows rows={contentToggles} /></div>
                 <div class="setup-field-group">
                   <h3>{t("setup.badges")}</h3>
+                  <ControlRows rows={[messageSourceRow]} />
                   <ToggleRows rows={[{
                     label: () => t("setup.hideAllBadges"),
                     checked: hideAllBadges,

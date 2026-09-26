@@ -1,5 +1,13 @@
 import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES } from "./botNames";
 import {
+  DEFAULT_EVENT_COLORS,
+  EVENT_COLOR_FIELDS,
+  EVENT_COLOR_TOKENS,
+  eventColorsMatchDefaults,
+  normalizeEventColor,
+  type EventColorConfig,
+} from "./eventColors";
+import {
   DEFAULT_MESSAGE_SPEED,
   clampMessageSpeed,
   normalizeChatAnimationMode,
@@ -11,7 +19,7 @@ export type { ChatAnimationMode } from "../utils/ui/animationUtils";
 export type LinkDisplayMode = "normal" | "hide" | "highlight";
 export type PlatformMarkerMode = "none" | "stripe" | "icon";
 
-export interface ChatConfig {
+export interface ChatConfig extends EventColorConfig {
   // Required query param: `?c=...` (alias: `channel`)
   channel: string;
   youtubeChannel: string;
@@ -65,10 +73,10 @@ export interface ChatConfig {
   overlayBackgroundOpacity: number;
   overlayBackgroundRadius: number;
   overlayPadding: number;
-  overlayBorderOpacity: number;
+  overlayBorderWidth: number;
+  overlayBorderColor: string;
   highlightTwitchEvents: boolean;
-  twitchEventColor: string;
-  twitchEventBackgroundOpacity: number;
+  eventColorOpacity: number;
   twitchEventBold: boolean;
   twitchEventItalic: boolean;
   showHighlightedMessages: boolean;
@@ -147,10 +155,11 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   overlayBackgroundOpacity: 50,
   overlayBackgroundRadius: 20,
   overlayPadding: 10,
-  overlayBorderOpacity: 0,
+  overlayBorderWidth: 0,
+  overlayBorderColor: "#ffffff",
   highlightTwitchEvents: true,
-  twitchEventColor: "#9146ff",
-  twitchEventBackgroundOpacity: 22,
+  eventColorOpacity: 22,
+  ...DEFAULT_EVENT_COLORS,
   twitchEventBold: true,
   twitchEventItalic: false,
   showHighlightedMessages: true,
@@ -388,25 +397,20 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     kind: "int",
     aliases: ["overlay_padding", "overlayPadding"],
   },
-  overlayBorderOpacity: {
-    query: "bgb",
+  overlayBorderWidth: {
+    query: "bgw",
     kind: "int",
-    aliases: ["overlay_border_opacity"],
+    aliases: ["overlay_border_width", "bgb", "overlay_border_opacity"],
+  },
+  overlayBorderColor: {
+    query: "bcl",
+    kind: "string",
+    aliases: ["overlay_border_color"],
   },
   highlightTwitchEvents: {
     query: "teh",
     kind: "bool",
     aliases: ["highlight_twitch_events"],
-  },
-  twitchEventColor: {
-    query: "tec",
-    kind: "string",
-    aliases: ["twitch_event_color"],
-  },
-  twitchEventBackgroundOpacity: {
-    query: "teo",
-    kind: "int",
-    aliases: ["twitch_event_background_opacity"],
   },
   twitchEventBold: {
     query: "teb",
@@ -540,6 +544,57 @@ export const BADGES_HIDDEN_PARAM = {
   aliases: ["hidden_badges", "hiddenBadges"],
 } as const;
 
+const EVENT_COLORS_PARAM = {
+  query: "evc",
+  aliases: ["event_colors"],
+} as const;
+
+const EVENT_OPACITY_PARAM = {
+  query: "eva",
+  aliases: ["event_opacity"],
+} as const;
+
+const LEGACY_EVENT_COLOR_PARAMS = {
+  color: ["tec", "twitch_event_color"],
+  opacity: ["teo", "twitch_event_background_opacity"],
+} as const;
+
+function parseEventColors(raw: string): EventColorConfig | null {
+  const values = raw.split(",");
+  const colors = { ...DEFAULT_EVENT_COLORS };
+  if (values.every((value) => value.includes(":"))) {
+    const fieldsByToken = new Map(
+      EVENT_COLOR_FIELDS.map((field) => [EVENT_COLOR_TOKENS[field], field]),
+    );
+    for (const value of values) {
+      const [token, color] = value.split(":", 2);
+      const field = token ? fieldsByToken.get(token) : undefined;
+      const normalized = normalizeEventColor(color ?? "", "");
+      if (!field || !normalized) return null;
+      colors[field] = normalized;
+    }
+    return colors;
+  }
+
+  if (values.length !== EVENT_COLOR_FIELDS.length) return null;
+  for (const [index, field] of EVENT_COLOR_FIELDS.entries()) {
+    const normalized = normalizeEventColor(values[index] ?? "", "");
+    if (!normalized) return null;
+    colors[field] = normalized;
+  }
+  return colors;
+}
+
+function serializeEventColors(cfg: EventColorConfig): string | null {
+  if (eventColorsMatchDefaults(cfg)) return null;
+  return EVENT_COLOR_FIELDS.flatMap((field) => {
+    const color = normalizeEventColor(cfg[field], DEFAULT_EVENT_COLORS[field]);
+    return color === DEFAULT_EVENT_COLORS[field]
+      ? []
+      : [`${EVENT_COLOR_TOKENS[field]}:${color.slice(1)}`];
+  }).join(",");
+}
+
 export function parseHiddenBadgeProviders(
   searchParams: URLSearchParams,
 ): ReadonlyArray<keyof ChatConfig> {
@@ -598,6 +653,12 @@ export const CHAT_CONFIG_QUERY_KEYS: readonly string[] = [
   ...Object.values(PARAMS).flatMap((def) => [def.query, ...(def.aliases ?? [])]),
   BADGES_HIDDEN_PARAM.query,
   ...BADGES_HIDDEN_PARAM.aliases,
+  EVENT_COLORS_PARAM.query,
+  ...EVENT_COLORS_PARAM.aliases,
+  EVENT_OPACITY_PARAM.query,
+  ...EVENT_OPACITY_PARAM.aliases,
+  ...LEGACY_EVENT_COLOR_PARAMS.color,
+  ...LEGACY_EVENT_COLOR_PARAMS.opacity,
   "a", "animate",
 ];
 
@@ -618,7 +679,8 @@ export function isValidChatConfigImport(params: URLSearchParams): boolean {
         if (key === "animation" && normalizeChatAnimationMode(raw) !== raw) return false;
         if (key === "linkMode" && !["normal", "hide", "highlight"].includes(raw)) return false;
         if (key === "platformMarker" && !["none", "stripe", "icon"].includes(raw)) return false;
-        if (key.endsWith("Color") && !/^#?[0-9a-f]{6}$/i.test(raw)) return false;
+        if (key === "overlayBorderColor" && !/^#?[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(raw)) return false;
+        if (key !== "overlayBorderColor" && key.endsWith("Color") && !/^#?[0-9a-f]{6}$/i.test(raw)) return false;
       }
     }
   }
@@ -630,6 +692,18 @@ export function isValidChatConfigImport(params: URLSearchParams): boolean {
         return false;
       }
     }
+  }
+  for (const query of [EVENT_COLORS_PARAM.query, ...EVENT_COLORS_PARAM.aliases]) {
+    if (params.getAll(query).some((raw) => parseEventColors(raw) === null)) return false;
+  }
+  for (const query of [EVENT_OPACITY_PARAM.query, ...EVENT_OPACITY_PARAM.aliases]) {
+    if (params.getAll(query).some((raw) => !/^\d+$/.test(raw))) return false;
+  }
+  for (const query of LEGACY_EVENT_COLOR_PARAMS.color) {
+    if (params.getAll(query).some((raw) => !/^#?[0-9a-f]{6}$/i.test(raw))) return false;
+  }
+  for (const query of LEGACY_EVENT_COLOR_PARAMS.opacity) {
+    if (params.getAll(query).some((raw) => !/^\d+$/.test(raw))) return false;
   }
   return ["a", "animate"].every((key) =>
     params.getAll(key).every((raw) => parseBool(raw) !== null),
@@ -729,6 +803,38 @@ export function parseChatConfigFromSearchParams(
         break;
       }
     }
+  }
+
+  const eventColors = getFirstParam(searchParams, [
+    EVENT_COLORS_PARAM.query,
+    ...EVENT_COLORS_PARAM.aliases,
+  ]);
+  const parsedEventColors = eventColors === null ? null : parseEventColors(eventColors);
+  if (parsedEventColors) {
+    Object.assign(cfg, parsedEventColors);
+  } else if (eventColors === null) {
+    const legacyColor = getFirstParam(searchParams, [...LEGACY_EVENT_COLOR_PARAMS.color]);
+    const legacyOpacity = getFirstParam(searchParams, [...LEGACY_EVENT_COLOR_PARAMS.opacity]);
+    if (legacyColor !== null || legacyOpacity !== null) {
+      const color = normalizeEventColor(
+        legacyColor ?? DEFAULT_EVENT_COLORS.eventColorDefault,
+        DEFAULT_EVENT_COLORS.eventColorDefault,
+      );
+      for (const field of EVENT_COLOR_FIELDS) {
+        cfg[field] = color;
+      }
+      cfg.eventColorOpacity = legacyOpacity === null
+        ? 22
+        : Math.min(Math.max(parseIntSafe(legacyOpacity) ?? 22, 0), 100);
+    }
+  }
+
+  const eventOpacity = getFirstParam(searchParams, [
+    EVENT_OPACITY_PARAM.query,
+    ...EVENT_OPACITY_PARAM.aliases,
+  ]);
+  if (eventOpacity !== null) {
+    cfg.eventColorOpacity = Math.min(Math.max(parseIntSafe(eventOpacity) ?? 22, 0), 100);
   }
 
   const botsDef = PARAMS.bots;
@@ -837,6 +943,14 @@ export function chatConfigToSearchParams(cfg: ChatConfig): URLSearchParams {
   const hiddenProviders = serializeHiddenBadgeProviders(cfg);
   if (hiddenProviders !== null) {
     params.set(BADGES_HIDDEN_PARAM.query, hiddenProviders);
+  }
+
+  if (cfg.highlightTwitchEvents) {
+    const eventColors = serializeEventColors(cfg);
+    if (eventColors !== null) params.set(EVENT_COLORS_PARAM.query, eventColors);
+    if (cfg.eventColorOpacity !== DEFAULT_CHAT_CONFIG.eventColorOpacity) {
+      params.set(EVENT_OPACITY_PARAM.query, String(Math.min(Math.max(cfg.eventColorOpacity, 0), 100)));
+    }
   }
 
   return params;

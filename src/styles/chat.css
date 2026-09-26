@@ -33,23 +33,9 @@ body {
   --chat-feed-gap: 0.16em;
   --chat-event-radius: 0.24em;
   --chat-event-rail: 0.12em;
-  --chat-event-accent-default: #9146ff;
-  --chat-event-accent-first: #34d399;
-  --chat-event-accent-highlight: #fbbf24;
-  --chat-event-accent-reward: #f59e0b;
-  --chat-event-accent-subscription: #c084fc;
-  --chat-event-accent-raid: #60a5fa;
-  --chat-event-accent-streak: #2dd4bf;
-  --chat-event-accent-power: #f472b6;
-  --chat-event-accent-announcement-purple: #9900fe;
-  --chat-event-accent-announcement-blue: #1f69ff;
-  --chat-event-accent-announcement-green: #00c800;
-  --chat-event-accent-announcement-orange: #ff7621;
-  --chat-event-accent-announcement-primary: #9147ff;
   --chat-event-text: rgba(255, 255, 255, 0.82);
   --chat-event-muted: rgba(255, 255, 255, 0.72);
   --chat-event-separator-color: rgba(255, 255, 255, 0.48);
-  --chat-event-background-opacity-default: 18%;
   width: 100%;
   padding: 0;
   position: absolute;
@@ -71,9 +57,10 @@ body {
 }
 
 .chat_line {
-  --chat-event-accent: var(
-    --chat-event-state-accent,
-    var(--chat-event-fallback-accent, var(--chat-event-accent-default))
+  --chat-event-accent: color-mix(
+    in srgb,
+    var(--chat-event-color, #9146ff) var(--chat-event-opacity, 22%),
+    transparent
   );
   box-sizing: border-box;
   inline-size: fit-content;
@@ -118,27 +105,12 @@ body {
   max-inline-size: 100%;
 }
 
-.chat-event-first-message {
-  --chat-event-state-accent: var(--chat-event-accent-first);
-}
-
-.chat-event-highlighted-message {
-  --chat-event-state-accent: var(--chat-event-accent-highlight);
-}
-
 .chat_line.chat-event-highlight:not(.gigantified-emote) {
   position: relative;
   inline-size: 100%;
   max-inline-size: 100%;
   border-radius: var(--chat-event-radius);
-  background-color: color-mix(
-    in srgb,
-    var(--chat-event-accent) var(
-      --chat-event-background-opacity,
-      var(--chat-event-background-opacity-default)
-    ),
-    transparent
-  );
+  background-color: var(--chat-event-accent);
 }
 
 .chat_line.chat-event-highlight:not(.gigantified-emote)::before,
@@ -159,50 +131,6 @@ body {
   inset-inline-end: 0;
 }
 
-
-.chat-event-reward {
-  --chat-event-state-accent: var(--chat-event-accent-reward);
-}
-
-.chat-event-subscription {
-  --chat-event-state-accent: var(--chat-event-accent-subscription);
-}
-
-.chat-event-raid {
-  --chat-event-state-accent: var(--chat-event-accent-raid);
-}
-
-.chat-event-watch-streak {
-  --chat-event-state-accent: var(--chat-event-accent-streak);
-}
-
-.chat-event-power-up {
-  --chat-event-state-accent: var(--chat-event-accent-power);
-}
-
-.chat-event-announcement {
-  --chat-event-state-accent: var(--chat-event-accent-default);
-}
-
-.chat-event-announcement-purple {
-  --chat-event-state-accent: var(--chat-event-accent-announcement-purple);
-}
-
-.chat-event-announcement-blue {
-  --chat-event-state-accent: var(--chat-event-accent-announcement-blue);
-}
-
-.chat-event-announcement-green {
-  --chat-event-state-accent: var(--chat-event-accent-announcement-green);
-}
-
-.chat-event-announcement-orange {
-  --chat-event-state-accent: var(--chat-event-accent-announcement-orange);
-}
-
-.chat-event-announcement-primary {
-  --chat-event-state-accent: var(--chat-event-accent-announcement-primary);
-}
 
 .chat-event-fact {
   min-inline-size: 0;

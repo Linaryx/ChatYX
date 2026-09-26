@@ -160,7 +160,7 @@ describe("Twitch IRC event classification", () => {
     expect(message?.twitchEvent).toBeUndefined();
   });
 
-  test("uses the color selected for announcements", () => {
+  test("keeps the selected announcement level", () => {
     const message = service.parseMessageLine(
       "@badges=broadcaster/1;color=#9146ff;display-name=Streamer;id=announcement-1;login=streamer;mod=0;msg-id=announcement;msg-param-color=GREEN;subscriber=0;user-id=10 :tmi.twitch.tv USERNOTICE #channel :important update",
     );
@@ -169,7 +169,6 @@ describe("Twitch IRC event classification", () => {
       type: "announcement",
       label: "Объявление",
       level: "GREEN",
-      color: "#00c800",
     });
   });
 

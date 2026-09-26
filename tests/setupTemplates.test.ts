@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { DEFAULT_CHAT_CONFIG } from "../src/config/chatUrlParams";
+import { DEFAULT_EVENT_COLORS } from "../src/config/eventColors";
 import {
   BUILT_IN_SETUP_TEMPLATES,
   createUserSetupTemplate,
@@ -53,7 +54,8 @@ test("built-in templates keep both standard and atom presets", () => {
     overlayBackgroundColor: "#000000",
     overlayBackgroundOpacity: 0,
     overlayBackgroundRadius: 20,
-    overlayBorderOpacity: 0,
+    overlayBorderWidth: 0,
+    overlayBorderColor: "#ffffff",
     overlayPadding: 10,
     platformMarker: "stripe",
     shadow: false,
@@ -65,9 +67,9 @@ test("built-in templates keep both standard and atom presets", () => {
     size: 1,
     smallCaps: true,
     stroke: false,
-    twitchEventBackgroundOpacity: 0,
+    ...DEFAULT_EVENT_COLORS,
+    eventColorOpacity: 0,
     twitchEventBold: false,
-    twitchEventColor: "#FF0000",
     twitchEventItalic: false,
     usersColor: "#BD1313",
   });
