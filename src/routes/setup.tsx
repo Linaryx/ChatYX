@@ -61,6 +61,7 @@ import {
   getChatPreviewSessionKey,
 } from "~/services/chat/preview";
 import { cn } from "~/lib/utils";
+import { isSetupSearchMatch } from "~/utils/setupSearch";
 import Monitor from "lucide-solid/icons/monitor";
 import Pause from "lucide-solid/icons/pause";
 import Play from "lucide-solid/icons/play";
@@ -83,6 +84,7 @@ const eventColorPalette: ReadonlyArray<{
   { field: "eventColorAnnGreen", label: () => t("setup.eventColorAnnGreen") },
   { field: "eventColorAnnOrange", label: () => t("setup.eventColorAnnOrange") },
 ];
+
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import X from "lucide-solid/icons/x";
 import "~/components/setup/SetupWorkspace.css";
@@ -677,8 +679,47 @@ export default function ChatSetup() {
     });
   });
 
-  const [activeSection, setActiveSection] =
+const [activeSection, setActiveSection] =
     createSignal<SetupSectionId>("appearance");
+  const [setupSearch, setSetupSearch] = createSignal("");
+  const [setupSearchIndex, setSetupSearchIndex] = createSignal(0);
+  const setupSearchQuery = createMemo(() => setupSearch().trim());
+  const setupSearchResults = createMemo(() => {
+    const query = setupSearchQuery();
+    if (query.length < 3 || typeof document === "undefined") return [] as HTMLElement[];
+    return Array.from(document.querySelectorAll<HTMLElement>(
+      ".setup-section .setup-control-row, .setup-section .setup-switch-row, .setup-section .setup-field-group > h3",
+    )).filter((element) => isSetupSearchMatch(query, element.textContent ?? ""));
+  });
+  const matchedSearchSections = createMemo(() => new Set(
+    setupSearchResults().flatMap((element) => {
+      const id = element.closest<HTMLElement>(".setup-section")?.id.replace("setup-section-", "") as SetupSectionId | undefined;
+      return id ? [id] : [];
+    }),
+  ));
+  const focusSearchResult = (index: number) => {
+    const results = setupSearchResults();
+    if (results.length === 0) return;
+    const next = (index + results.length) % results.length;
+    setSetupSearchIndex(next);
+    const target = results[next]!;
+    const section = target.closest<HTMLElement>(".setup-section")?.id.replace("setup-section-", "") as SetupSectionId | undefined;
+    if (section) scrollToSection(section);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }));
+  };
+  let previousSearchQuery = "";
+  createEffect(() => {
+    document.querySelectorAll(".setup-search-match").forEach((element) => element.classList.remove("setup-search-match"));
+    const results = setupSearchResults();
+    results.forEach((element) => element.classList.add("setup-search-match"));
+    const query = setupSearchQuery();
+    if (query === previousSearchQuery) return;
+    previousSearchQuery = query;
+    setSetupSearchIndex(0);
+    if (results.length > 0) focusSearchResult(0);
+  });
 
   const importSettings = (patch: Parameters<typeof applySetupImport>[0]) => {
     applySetupImport(patch, {
@@ -2137,7 +2178,7 @@ export default function ChatSetup() {
           <div class="setup-workspace">
             <aside class="setup-sidebar setup-pane-scroll">
               <p class="setup-sidebar-caption">{t("setup.overlaySettings")}</p>
-                <SetupNav active={activeSection()} onSelect={scrollToSection} />
+                <SetupNav active={activeSection()} onSelect={scrollToSection} matchedSections={matchedSearchSections()} />
             </aside>
 
             <div
@@ -2153,6 +2194,39 @@ export default function ChatSetup() {
                 <SetupSelect id="setup-section-picker" value={activeSection()} onChange={(event) => scrollToSection(event.currentTarget.value as SetupSectionId)}>
                   <For each={SETUP_NAV}>{(item) => <option value={item.id}>{t(item.labelKey)}</option>}</For>
                 </SetupSelect>
+              </div>
+
+<div class="setup-field-group">
+                <div class="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background pl-2 pr-1 transition-colors focus-within:border-white focus-within:shadow-[inset_0_0_0_1px_white]">
+                  <button
+                    type="button"
+                    class="shrink-0 size-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={setupSearch() ? t("setup.clearSearch") : t("setup.searchSettings")}
+                    onClick={() => setSetupSearch("")}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <Show when={!setupSearch()}>
+                      <span class="hgi-stroke hgi-searching" aria-hidden="true" />
+                    </Show>
+                    <Show when={setupSearch()}>
+                      <span class="hgi-stroke hgi-x text-sm" aria-hidden="true" />
+                    </Show>
+                  </button>
+                  <label for="setup-settings-search" class="sr-only">{t("setup.searchSettings")}</label>
+                  <input
+                    id="setup-settings-search"
+                    type="search"
+                    value={setupSearch()}
+                    onInput={(event) => setSetupSearch(event.currentTarget.value)}
+                    placeholder={t("setup.searchSettings")}
+                    class="h-7 min-w-0 flex-1 appearance-none border-0 bg-transparent px-0 text-sm text-foreground outline-none ring-0 placeholder:text-muted-foreground focus:border-0 focus:outline-none focus:ring-0"
+                  />
+                  <div class="ml-auto flex shrink-0 items-center gap-1">
+                    <span class="whitespace-nowrap text-xs text-muted-foreground">{t("setup.searchResults", { count: setupSearchResults().length })}</span>
+                    <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><span class="hgi-stroke hgi-arrow-left-01" aria-hidden="true" /></Button>
+                    <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><span class="hgi-stroke hgi-arrow-right-01" aria-hidden="true" /></Button>
+                  </div>
+                </div>
               </div>
 
               <SetupImportCard

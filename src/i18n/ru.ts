@@ -49,7 +49,7 @@ export const dictionary = {
     customFontHint: "Работает, когда выше выбран пункт «Свой шрифт».",
     customFontPlaceholder: "Например: Comic Sans MS", loading: "Загрузка...", local: "Локальные",
     selectLocalFont: "Выбрать локальный шрифт", loadLocalFontsFirst: "Сначала загрузить список",
-    lineHeight: "Высота строки", lineHeightHint: "В процентах от стандартной высоты строки. 100% сохраняет текущий интервал.",
+    lineHeight: "Высота строки", lineHeightHint: "В процентах от стандартной высоты строки. 100% сохраняет текущий интервал.", searchSettings: "Поиск настроек", searchResults: "Найдено: {{count}}", searchPrevious: "Предыдущий результат", searchNext: "Следующий результат", clearSearch: "Очистить",
     textWeight: "Вес текста", textWeightHint: "Толщина текста сообщений. 800 — текущий стандарт.",
     nicknameWeight: "Вес ника", nicknameWeightHint: "Толщина имени автора и двоеточия. 800 — текущий стандарт.",
     emoteSize: "Размер эмоутов", gifSize: "Размер GIF", gifSizeHint: "Масштаб GIF относительно размера эмоутов.",

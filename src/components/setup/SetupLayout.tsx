@@ -183,6 +183,7 @@ export function SectionCard(props: {
 export function SetupNav(props: {
   active: SetupSectionId;
   onSelect: (id: SetupSectionId) => void;
+  matchedSections?: ReadonlySet<SetupSectionId>;
 }) {
   const [thumbStyle, setThumbStyle] = createSignal<JSX.CSSProperties>({
     opacity: "0",
@@ -233,6 +234,7 @@ export function SetupNav(props: {
               onClick={() => props.onSelect(item.id)}
               ref={(element) => itemRefs.set(item.id, element)}
               class="setup-nav-item"
+              classList={{ "setup-nav-item--search-match": props.matchedSections?.has(item.id) ?? false }}
               aria-controls={`setup-section-${item.id}`}
               aria-current={active() ? "location" : undefined}
             >
