@@ -310,7 +310,20 @@ downstream blocks.
 9. **Section metadata and blocks.** Extract the section descriptor arrays
    (`:1400-2027`), `ffzBadgeMergeBlock` (`:1886-1940`), `renderUserChip`
    (`:2029-2085`) and the preview controls (`:2553-2753`) into
-   `components/setup/`.
+   `components/setup/`. **Partly done.** `renderUserChip` became
+   `src/components/setup/UserChip.tsx`, and `ffzBadgeMergeBlock` became
+   `src/components/setup/FfzBadgeMergeBlock.tsx`, which also took over the badge
+   preview asset URL. Both kept their reactive shape: `UserChip` receives the
+   profile map as a getter, not as one resolved profile, because bot profiles
+   arrive after the chip renders. `roleBadgeMergeOptions` stays in the route
+   because it is the signal wiring. Verified in a browser: the Twitch bot row
+   renders 29 chips with 29 avatars and the first resolved name `Nightbot`,
+   removing one leaves 28, and the three role pills toggle `aria-pressed` with
+   the badge preview resolving. **Outstanding:** the three `ControlRow`
+   descriptor arrays (`appearanceRows`, `stylingRows`, `behaviorRows`) and the
+   preview controls block. They are already declarative data consumed by the
+   extracted `ControlRows` component, so moving them is mechanical but wide; it
+   is tracked here rather than done in this pass.
 
 **Exit criteria after each step:** `bun run check` passes and the setup page
 round-trips a config through export, import and preview unchanged.

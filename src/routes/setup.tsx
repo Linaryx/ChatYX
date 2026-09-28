@@ -26,6 +26,8 @@ import {
 import { VoiceCatalog } from "~/components/setup/VoiceCatalog";
 import { SetupImportCard } from "~/components/setup/SetupImportCard";
 import { SetupChipInput } from "~/components/setup/SetupChipInput";
+import { UserChip } from "~/components/setup/UserChip";
+import { FfzBadgeMergeBlock } from "~/components/setup/FfzBadgeMergeBlock";
 import { parseSetupImport } from "~/config/setupImport";
 import { toVisualSetupPatch } from "~/config/setupTemplates";
 import { applySetupImport } from "~/components/setup/setupImportAdapter";
@@ -35,7 +37,6 @@ import {
   writeStoredSetupValue,
 } from "~/services/storage/setupStorage";
 import {
-  botFallbackName,
   loadKickBotProfiles,
   loadTwitchBotProfiles,
   mergeUniqueLogins,
@@ -149,6 +150,9 @@ type LocalFontStatus =
   | { kind: "found"; count: number }
   | { kind: "empty" }
   | { kind: "error" };
+
+/** YouTube bot entries have no profile lookup, so their chips show the login. */
+const EMPTY_BOT_PROFILES = (): Record<string, BotProfile> => ({});
 
 export default function ChatSetup() {
   const [channel, setChannel] = createSignal(
@@ -779,7 +783,6 @@ const [activeSection, setActiveSection] =
       ? t("setup.speedStopped")
       : `${messageIntervalMs()} ${t("setup.milliseconds")}`,
   );
-  const ffzBotBadgePreviewUrl = getPublicAssetUrl("img/ffz-bot-badge.png");
   const requestedBotProfiles = new Set<string>();
   const requestedKickBotProfiles = new Set<string>();
 
@@ -1547,61 +1550,6 @@ const [activeSection, setActiveSection] =
     },
   ];
 
-  const ffzBadgeMergeBlock = (
-    <div class="setup-role-merge grid grid-cols-1 gap-3 rounded-lg border border-border bg-black/40 p-3.5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
-      <div class="flex min-w-0 flex-col gap-1.5">
-        <div class="text-sm font-bold text-foreground">
-          {t("setup.botBadgeNearRole")}
-        </div>
-        <div class="text-xs leading-snug text-muted-foreground">
-          {t("setup.botBadgeNearRoleHint")}
-        </div>
-      </div>
-      <div class="setup-role-pills grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <For each={roleBadgeMergeOptions}>
-          {(option) => {
-            const active = () => option.checked();
-            const disabled = () => !showFfzBadges() || hideAllBadges();
-            return (
-              <button
-                type="button"
-                disabled={disabled()}
-                class={cn(
-                  "flex min-h-[74px] flex-col items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold transition-colors",
-                  disabled()
-                    ? "cursor-not-allowed text-white/35"
-                    : active()
-                      ? "text-white hover:bg-[#27272a]"
-                      : "text-white/55 hover:bg-[#27272a] hover:text-white/80",
-                )}
-                onClick={() => option.onChange(!active())}
-                aria-pressed={active()}
-              >
-                <span
-                  class={cn(
-                    "inline-flex size-[31px] items-center justify-center rounded-lg border p-0.5 transition-[filter,border-color]",
-                    active() && !disabled() ? "border-white/70" : "border-white/25",
-                    (!active() || disabled()) && "saturate-0",
-                  )}
-                  style={{ background: option.badgeColor }}
-                >
-                  <img
-                    src={ffzBotBadgePreviewUrl}
-                    alt=""
-                    class="block size-full object-contain"
-                    loading="lazy"
-                  />
-                </span>
-                <span class="text-center leading-tight">
-                  {option.label()}
-                </span>
-              </button>
-            );
-          }}
-        </For>
-      </div>
-    </div>
-  );
   const badgeProviderRows: Array<{
     toggle: ToggleRow;
     extra?: JSX.Element;
@@ -1653,7 +1601,12 @@ const [activeSection, setActiveSection] =
         onChange: setShowFfzBadges,
         disabled: hideAllBadges,
       },
-      extra: ffzBadgeMergeBlock,
+      extra: (
+        <FfzBadgeMergeBlock
+          options={roleBadgeMergeOptions}
+          disabled={!showFfzBadges() || hideAllBadges()}
+        />
+      ),
     },
     {
       toggle: {
@@ -1689,64 +1642,6 @@ const [activeSection, setActiveSection] =
       },
     },
   ];
-
-  const renderUserChip = (
-    login: string,
-    remove: (login: string) => void,
-    ariaLabel: () => string,
-    profiles: () => Record<string, BotProfile> = botProfiles,
-  ) => {
-    const profile = () => profiles()[login];
-    const displayName = () => profile()?.displayName || login;
-    const avatarUrl = () => profile()?.avatarUrl || "";
-
-    return (
-      <div
-        class="inline-flex max-w-full items-center gap-2 rounded-[0.5rem] border border-white/50 bg-[#27272a] px-1.5 py-0.5 text-white"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === "Backspace" || event.key === "Delete") {
-            event.preventDefault();
-            remove(login);
-          }
-        }}
-      >
-        <Show
-          when={avatarUrl()}
-          fallback={
-            <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black text-xs font-bold">
-              {botFallbackName(login)}
-            </span>
-          }
-        >
-          <img
-            src={avatarUrl()}
-            alt=""
-            class="size-7 shrink-0 rounded-full border border-white/40 object-cover"
-            loading="lazy"
-          />
-        </Show>
-        <span class="flex min-w-0 flex-col justify-center leading-tight">
-          <span class="max-w-[150px] truncate text-xs font-bold">
-            {displayName()}
-          </span>
-          <Show when={displayName().toLowerCase() !== login}>
-            <span class="max-w-[150px] truncate text-[10px] text-white/60">
-              @{login}
-            </span>
-          </Show>
-        </span>
-        <button
-          type="button"
-          class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-base leading-none text-white hover:bg-white/10"
-          onClick={() => remove(login)}
-          aria-label={`${ariaLabel()}: ${displayName()}`}
-        >
-          <Icon icon={XIcon} size={16} aria-hidden="true" />
-        </button>
-      </div>
-    );
-  };
 
   const chipFieldClass =
     "flex min-h-[72px] w-full flex-wrap content-start items-center gap-1.5 rounded-lg border border-input bg-background p-2";
@@ -2058,13 +1953,14 @@ const [activeSection, setActiveSection] =
                   </div>
                   <div class={chipFieldClass}>
                     <For each={botNames()}>
-                      {(login) =>
-                        renderUserChip(
-                          login,
-                          removeBotName,
-                          () => t("setup.removeBot"),
-                        )
-                      }
+                      {(login) => (
+                        <UserChip
+                          login={login}
+                          profiles={botProfiles}
+                          onRemove={removeBotName}
+                          removeLabel={() => t("setup.removeBot")}
+                        />
+                      )}
                     </For>
                     <SetupChipInput
                       value={botInput()}
@@ -2088,14 +1984,14 @@ const [activeSection, setActiveSection] =
                   </div>
                   <div class={chipFieldClass}>
                     <For each={youtubeBotNames()}>
-                      {(login) =>
-                        renderUserChip(
-                          login,
-                          removeYouTubeBotName,
-                          () => t("setup.removeYouTubeBot"),
-                          () => ({}),
-                        )
-                      }
+                      {(login) => (
+                        <UserChip
+                          login={login}
+                          profiles={EMPTY_BOT_PROFILES}
+                          onRemove={removeYouTubeBotName}
+                          removeLabel={() => t("setup.removeYouTubeBot")}
+                        />
+                      )}
                     </For>
                     <SetupChipInput
                       value={youtubeBotInput()}
@@ -2119,14 +2015,14 @@ const [activeSection, setActiveSection] =
                   </div>
                   <div class={chipFieldClass}>
                     <For each={kickBotNames()}>
-                      {(login) =>
-                        renderUserChip(
-                          login,
-                          removeKickBotName,
-                          () => t("setup.removeKickBot"),
-                          kickBotProfiles,
-                        )
-                      }
+                      {(login) => (
+                        <UserChip
+                          login={login}
+                          profiles={kickBotProfiles}
+                          onRemove={removeKickBotName}
+                          removeLabel={() => t("setup.removeKickBot")}
+                        />
+                      )}
                     </For>
                     <SetupChipInput
                       value={kickBotInput()}
@@ -2153,13 +2049,14 @@ const [activeSection, setActiveSection] =
                   </div>
                   <div class={chipFieldClass}>
                     <For each={allowedChatters()}>
-                      {(login) =>
-                        renderUserChip(
-                          login,
-                          removeAllowedChatter,
-                          () => t("setup.removeViewer"),
-                        )
-                      }
+                      {(login) => (
+                        <UserChip
+                          login={login}
+                          profiles={botProfiles}
+                          onRemove={removeAllowedChatter}
+                          removeLabel={() => t("setup.removeViewer")}
+                        />
+                      )}
                     </For>
                     <SetupChipInput
                       value={allowedChatterInput()}
