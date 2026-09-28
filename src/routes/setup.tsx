@@ -456,6 +456,7 @@ export default function ChatSetup() {
     }
 
     onCleanup(() => {
+      previewSync.dispose();
       stopMotionWatch();
       releaseDocumentLock();
     });
