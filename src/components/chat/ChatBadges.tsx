@@ -11,7 +11,7 @@ import {
   orderThirdPartyBadges,
   ROLE_BADGE_ORDER,
   SUB_BADGE_ORDER,
-} from "~/utils/chat/badgePriority";
+} from "./badgePriority";
 
 type ChatBadgesProps = {
   message: TwitchMessage;
