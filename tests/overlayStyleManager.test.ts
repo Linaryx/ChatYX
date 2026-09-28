@@ -108,3 +108,20 @@ test("applying twice does not accumulate animation stylesheets", () => {
     shim.restore();
   }
 });
+
+test("applying after clearing reconstructs the published state", () => {
+  const shim = installDocument();
+  try {
+    applyOverlayStyles({ ...DEFAULT_CHAT_CONFIG, hideNames: true, animation: "fade" });
+    clearOverlayStyles();
+    applyOverlayStyles({ ...DEFAULT_CHAT_CONFIG, hideNames: true, animation: "fade" });
+
+    expect(shim.properties.get("--chat-size-font-size")).toBe(
+      SIZE_CONFIGS[DEFAULT_CHAT_CONFIG.size as 1 | 2 | 3].fontSize,
+    );
+    expect(shim.attributes.has("data-hide-names")).toBe(true);
+    expect(shim.head.map((element) => element.id)).toEqual(["chat-animations"]);
+  } finally {
+    shim.restore();
+  }
+});
