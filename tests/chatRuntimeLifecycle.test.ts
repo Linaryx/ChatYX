@@ -386,6 +386,11 @@ describe("overlay runtime lifecycle", () => {
         style: {},
         remove: () => {},
       }),
+      documentElement: {
+        style: { setProperty: () => {}, removeProperty: () => {} },
+        setAttribute: () => {},
+        removeAttribute: () => {},
+      },
       getElementById: () => null,
       querySelectorAll: () => [],
     };
@@ -434,6 +439,11 @@ describe("overlay runtime lifecycle", () => {
         style: {},
         remove: () => {},
       }),
+      documentElement: {
+        style: { setProperty: () => {}, removeProperty: () => {} },
+        setAttribute: () => {},
+        removeAttribute: () => {},
+      },
       getElementById: () => null,
       querySelectorAll: () => [],
     };

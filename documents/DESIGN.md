@@ -12,6 +12,35 @@ Setup is a compact operational interface for producing an OBS overlay URL. It pr
 - The RTE proxy routes only allowlisted public emote and badge hosts; Twitch authentication and user URLs are never routed through it.
 - Reyohoho badges and RTE paints are soft optional cosmetics; unavailable data leaves the existing chat rendering unchanged.
 
+## Token Contract
+
+Tokens are the interface between the stylesheets and the runtime. Two rules make
+that interface stable:
+
+1. `src/styles/chat.css` owns the rules. A rule's shape is fixed at build time.
+2. The runtime writes only custom properties. `overlayStyleManager` sets values
+   on the document; it does not emit a stylesheet whose shape depends on which
+   preset the user picked.
+
+A value that changes while the overlay runs — a user-selected color, emote
+geometry, a measured layout shift, 7TV paint, provider cosmetics — is passed as a
+custom property. A value that is a reusable design decision belongs in the
+stylesheet.
+
+Two boundaries are allowed to generate CSS, because there the rule shape is data
+supplied from outside rather than a design decision:
+
+- provider cosmetics (7TV paint), where colors and gradients arrive as protocol
+  data;
+- emote modifiers, where geometry depends on the emote's own dimensions.
+
+`src/styles/chatStyles.ts` is the remaining exception: `SIZE_CONFIGS` and the
+shadow, stroke and variant generators still emit rules whose shape follows a
+preset. Note that this table is also read by `renderMessageContent.ts` for emote
+geometry, so the conversion is to keep one table as the single source of truth
+and have it publish custom properties, rather than to delete it. That work is
+recorded in `REFACTOR_PLAN.md`.
+
 ## Reusable Primitives
 
 - `SetupNav`: desktop section navigation and its compact mobile equivalent.

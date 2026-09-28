@@ -79,9 +79,27 @@ and `bun run check` passes.
    (`SIZE_CONFIGS` `:5-66`, shadow `:129-140`, stroke `:142-155`) with static
    CSS rules driven by custom properties, following the already-correct pattern
    in `src/styles/chatEventStyles.ts:21-27` consumed by `src/styles/chat.css`.
+   **Done.** The four generators are replaced by `getOverlayStyleVariables`, which
+   returns a property map the same way `getChatEventStyleVariables` does, and
+   `chat.css` owns every rule. `SIZE_CONFIGS` itself stays: `renderMessageContent`
+   reads it for emote geometry, so the table remains the single source of truth
+   and now publishes properties instead of emitting rules. The emote scale is
+   folded into the published emote and emoji sizes, because a stylesheet cannot
+   multiply a preset by a runtime value. `OVERLAY_STYLE_PROPERTIES` and
+   `OVERLAY_ATTRIBUTES` are guarded by `tests/overlayStylesheet.test.ts`, which
+   fails if the published list, the stylesheet and the attribute selectors drift
+   apart. Verified by diffing computed styles across 20 configurations and 14
+   selectors, captured before and after: the only differences are 260 inherited
+   `--chat-gigantified-emote-width` readings with **zero** on the element that
+   consumes it, 17 readings of an artificial `.emoji` probe (real `.emoji` images
+   measure 22px with a matching inline size, since the renderer sets that size
+   itself), and one container height inside the measured noise floor — two runs of
+   the same code differ by a row height there.
 4. Convert the two boolean generated rules `.user_info { display: none }`
    (`chatStyles.ts:181-183`) and `.message::before { content }` (`:189-192`)
-   into static rules keyed on a class or attribute.
+   into static rules keyed on a class or attribute. **Done** — they are keyed on
+   `:root[data-hide-names]` and `:root[data-nl-after-name]`, set by the overlay
+   style manager and covered by the same stylesheet test.
 5. Keep genuinely runtime values dynamic: user-selected colors, emote geometry,
    measured layout shifts, 7TV paint, provider cosmetics.
 

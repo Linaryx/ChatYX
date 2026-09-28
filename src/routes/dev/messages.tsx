@@ -14,10 +14,9 @@ import {
   type ChatConfig,
 } from "~/config/chatUrlParams";
 import {
-  generateShadowStyles,
-  generateSizeStyles,
-  generateStrokeStyles,
-  generateVariantStyles,
+  getOverlayStyleVariables,
+  OVERLAY_ATTRIBUTES,
+  OVERLAY_STYLE_PROPERTIES,
 } from "~/styles/chatStyles";
 import "~/styles/chat.css";
 import "./messages.css";
@@ -28,7 +27,6 @@ type DevCase = {
   companionMessage?: TwitchMessage;
 };
 
-const DEV_STYLE_ID = "chat-dev-message-style-overrides";
 const DEV_SCROLL_CLASS = "message-style-dev-scroll";
 const DEV_THEME_CLASS = "dark";
 const DEV_EMOTE_URL =
@@ -348,19 +346,32 @@ function createDevCases(): DevCase[] {
 }
 
 function installDevChatStyles(config: ChatConfig) {
-  let styleEl = document.getElementById(DEV_STYLE_ID) as HTMLStyleElement | null;
-  if (!styleEl) {
-    styleEl = document.createElement("style");
-    styleEl.id = DEV_STYLE_ID;
-    document.head.appendChild(styleEl);
+  // The dev fixture publishes the same custom properties the overlay does, so the
+  // shared stylesheet renders it; it deliberately does not touch the animation
+  // styles, which this page never generated.
+  const root = document.documentElement;
+  for (const name of OVERLAY_STYLE_PROPERTIES) {
+    root.style.removeProperty(name);
   }
+  for (const [name, value] of Object.entries(getOverlayStyleVariables(config))) {
+    root.style.setProperty(name, value);
+  }
+  for (const [attribute, enabled] of [
+    [OVERLAY_ATTRIBUTES.hideNames, config.hideNames],
+    [OVERLAY_ATTRIBUTES.nlAfterName, config.nlAfterName],
+  ] as const) {
+    if (enabled) root.setAttribute(attribute, "");
+    else root.removeAttribute(attribute);
+  }
+}
 
-  styleEl.textContent = [
-    generateSizeStyles(config.size as 1 | 2 | 3, config.lineHeight),
-    config.shadow ? generateShadowStyles(config.shadow as 1 | 2 | 3) : "",
-    config.stroke ? generateStrokeStyles(config.stroke as 1 | 2 | 3 | 4) : "",
-    generateVariantStyles(config),
-  ].join("\n");
+function clearDevChatStyles() {
+  const root = document.documentElement;
+  for (const name of OVERLAY_STYLE_PROPERTIES) {
+    root.style.removeProperty(name);
+  }
+  root.removeAttribute(OVERLAY_ATTRIBUTES.hideNames);
+  root.removeAttribute(OVERLAY_ATTRIBUTES.nlAfterName);
 }
 
 export default function MessageStylesDevPage() {
@@ -418,7 +429,7 @@ export default function MessageStylesDevPage() {
     document.documentElement.classList.remove(DEV_SCROLL_CLASS);
     document.body.classList.remove(DEV_SCROLL_CLASS);
     if (!hadThemeClass) document.documentElement.classList.remove(DEV_THEME_CLASS);
-    document.getElementById(DEV_STYLE_ID)?.remove();
+    clearDevChatStyles();
     void service.cleanup();
   });
 
