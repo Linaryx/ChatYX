@@ -5,66 +5,29 @@
  * scrolling, and it pauses the demo when the user prefers reduced motion. Both
  * are concerns of the document rather than of a component, so they live here and
  * the route only wires the results into its signals.
+ *
+ * The lock is a state marker, not a style: it puts `data-setup-document` on the
+ * root and the setup stylesheet owns what that means. The workspace paints its
+ * own surface on `.setup-root`, and the app keeps the document background
+ * transparent for OBS, so this module owns no colour at all.
  */
 
-/** The document surface setup paints behind its columns. */
-const SETUP_BACKGROUND = "#09090b";
-
-type DocumentStyleSnapshot = {
-  htmlBackground: string;
-  htmlOverflow: string;
-  bodyBackground: string;
-  bodyOverflow: string;
-  bodyHeight: string;
-  rootOverflow: string;
-  rootHeight: string;
-};
-
-function captureDocumentStyles(root: HTMLElement | null): DocumentStyleSnapshot {
-  const html = document.documentElement;
-  const body = document.body;
-  return {
-    htmlBackground: html.style.background,
-    htmlOverflow: html.style.overflow,
-    bodyBackground: body.style.background,
-    bodyOverflow: body.style.overflow,
-    bodyHeight: body.style.height,
-    rootOverflow: root?.style.overflow ?? "",
-    rootHeight: root?.style.height ?? "",
-  };
-}
+/** Marks the setup document lock; the setup stylesheet owns the rules. */
+const SETUP_DOCUMENT_ATTRIBUTE = "data-setup-document";
 
 /**
- * Paints the setup background on the document and disables document scrolling,
- * because setup scrolls inside its own columns. Returns the release function,
- * which restores exactly the values that were in place before the lock.
+ * Locks document scrolling while the setup workspace is mounted. Returns the
+ * release function, which restores exactly the attribute state that was in place
+ * before the lock.
  */
 export function lockSetupDocument(): () => void {
-  const html = document.documentElement;
-  const body = document.body;
-  const root = document.getElementById("root");
-  const previous = captureDocumentStyles(root);
-
-  html.style.background = SETUP_BACKGROUND;
-  html.style.overflow = "hidden";
-  body.style.background = SETUP_BACKGROUND;
-  body.style.overflow = "hidden";
-  body.style.height = "100%";
-  if (root) {
-    root.style.overflow = "hidden";
-    root.style.height = "100%";
-  }
+  const root = document.documentElement;
+  const previous = root.getAttribute(SETUP_DOCUMENT_ATTRIBUTE);
+  root.setAttribute(SETUP_DOCUMENT_ATTRIBUTE, "");
 
   return () => {
-    html.style.background = previous.htmlBackground;
-    html.style.overflow = previous.htmlOverflow;
-    body.style.background = previous.bodyBackground;
-    body.style.overflow = previous.bodyOverflow;
-    body.style.height = previous.bodyHeight;
-    if (root) {
-      root.style.overflow = previous.rootOverflow;
-      root.style.height = previous.rootHeight;
-    }
+    if (previous === null) root.removeAttribute(SETUP_DOCUMENT_ATTRIBUTE);
+    else root.setAttribute(SETUP_DOCUMENT_ATTRIBUTE, previous);
   };
 }
 

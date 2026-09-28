@@ -1,8 +1,28 @@
 /*
- * Setup workspace chrome — toolbar, nav sidebar, cards, preview column.
+ * Setup workspace chrome - toolbar, nav sidebar, cards, preview column.
  * Layout pivots at 1100px: sidebar layout above, view switch below.
  * Colors come from solidcn theme variables in app.css (dark workbench).
  */
+
+/*
+ * The document lock `lockSetupDocument()` applies while setup is mounted: the
+ * workspace scrolls inside its own columns, so the document must not scroll.
+ * The surface lives on `.setup-root`, and the document background stays
+ * transparent because `app.css` forces that for OBS.
+ */
+:root[data-setup-document],
+:root[data-setup-document] body {
+  overflow: hidden;
+}
+
+:root[data-setup-document] body,
+:root[data-setup-document] #root {
+  height: 100%;
+}
+
+:root[data-setup-document] #root {
+  overflow: hidden;
+}
 
 /* Outer scroll wrapper */
 .setup-shell {
