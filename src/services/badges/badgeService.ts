@@ -324,6 +324,24 @@ class BadgeService {
     seventvBadges: {},
   };
 
+  /**
+   * Snapshot of the state a fresh service starts from. `reset()` restores this
+   * rather than repeating the fallback literal above, which would be free to
+   * drift from it.
+   */
+  private readonly initialBadgeData = structuredClone(this.badgeData);
+
+  /**
+   * Drops the channel-scoped badge state, so the next runtime loads badges for
+   * its own channel instead of inheriting the previous one's.
+   */
+  reset(): void {
+    this.currentChannelId = "";
+    this.thirdPartyBadgesReady = null;
+    this.thirdPartyBadgeIndex = { byUserId: new Map(), byUsername: new Map() };
+    this.badgeData = structuredClone(this.initialBadgeData);
+  }
+
   async loadBadges(channel: string, channelId: string): Promise<void> {
     this.currentChannelId = channelId;
 

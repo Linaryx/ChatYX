@@ -65,6 +65,13 @@ export class OverlayStyleManager {
   }
 
   cleanup() {
-    STYLE_ELEMENT_IDS.forEach((id) => document.getElementById(id)?.remove());
+    // Every match, not just the first: a module that appended unconditionally
+    // could leave a second element with the same id, and removing one of them
+    // would leave the overlay styled after teardown.
+    for (const id of STYLE_ELEMENT_IDS) {
+      document
+        .querySelectorAll(`style[id="${id}"]`)
+        .forEach((element) => element.remove());
+    }
   }
 }

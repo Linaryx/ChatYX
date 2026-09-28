@@ -8,6 +8,7 @@ import {
   createChatPresentationConfig,
 } from "~/services/chat/chatPresentationService";
 import { emoteService } from "~/services/chat/assets/emoteService";
+import { badgeService } from "~/services/badges/badgeService";
 import { mentionStyleService } from "~/services/chat/mentionStyleService";
 import { chatFeatureIntegration } from "~/services/chat/chatFeatureIntegration";
 import type { TwitchMessage } from "~/services/chat/twitch/twitchService";
@@ -318,6 +319,12 @@ export class LiveChatRuntime {
     chatFeatureIntegration.destroy();
     this.chatService?.cleanup();
     this.chatService = null;
+    // Teardown owns everything it installed: the generated style elements, the
+    // shared proxy flag and the channel-scoped asset caches.
+    this.styleManager.cleanup();
+    setRteProxyEnabled(false);
+    badgeService.reset();
+    emoteService.reset();
     this.initialized = false;
   }
 

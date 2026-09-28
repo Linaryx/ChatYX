@@ -48,6 +48,23 @@ class EmoteService {
   private show7tvUnlisted = true;
   private loaded7tvVisibility: boolean | null = null;
 
+  /**
+   * Drops every cached emote and the load bookkeeping, so a runtime that starts
+   * after this one refetches instead of serving the previous channel's emotes.
+   * The global caches are deliberately included: keeping them is exactly what
+   * lets a stale channel survive a restart.
+   */
+  reset(): void {
+    this.emoteData = { emotes: {}, channelEmotes: {}, personalEmotes: {} };
+    this.currentChannelId = "";
+    this.currentChannelName = "";
+    this.globalEmotesLoaded = false;
+    this.globalEmotesPromise = null;
+    this.channelLoadPromises.clear();
+    this.show7tvUnlisted = true;
+    this.loaded7tvVisibility = null;
+  }
+
   async loadEmotes(
     channelId: string,
     channelName: string,

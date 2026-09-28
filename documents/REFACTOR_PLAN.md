@@ -26,7 +26,7 @@ series) following Conventional Commits.
 | 4 | UI primitives | low | visual check, existing tests | **done** |
 | 5 | Setup decomposition | high | setup/URL/import test suites | in progress — step 1 of 9 (storage adapter) done |
 | 6 | Chat presentation cleanup | high | render and emote test suites | in progress — duplication removed; pipeline split and layer moves outstanding |
-| 7 | Dependency and dead-code cleanup | none-low | grep verification, build | in progress — dead modules and `YouTubeChatService` done; singleton lifecycle ownership outstanding |
+| 7 | Dependency and dead-code cleanup | none-low | grep verification, build | in progress — dead modules, `YouTubeChatService` and singleton lifecycle done; `!important` re-check outstanding |
 | 8 | Documentation and enforcement | low | full check | not started |
 
 Visual verification is available through a local Playwright install kept
@@ -385,8 +385,31 @@ preserved.
    `badgeService`, `emoteService` and the seven-tv services, and call them from
    the runtime that owns them. Wire `OverlayStyleManager.cleanup()` into
    `liveRuntime.destroy()`. Call `RteCosmeticsService.clear()` from the RTE
-   runtime's teardown.
-4. Reset the global `rteProxyEnabled` flag on teardown.
+   runtime's teardown. **Done.**
+   - `liveRuntime.destroy()` now ends with the teardown it owns:
+     `styleManager.cleanup()`, `setRteProxyEnabled(false)`, `badgeService.reset()`
+     and `emoteService.reset()`.
+   - `badgeService.reset()` restores a snapshot taken at construction rather than
+     repeating the long fallback literal, so the fallbacks survive a reset and
+     cannot drift from a second copy.
+   - `sevenTVCosmeticsService.clearAllCaches()` is now called from
+     `chatPresentationService.cleanup()`, which already cleared the fade, paint
+     and RTE caches.
+   - Two real leaks were found while verifying, both from modules that appended
+     a style element unconditionally: `injectAnimationStyles` left **two**
+     `#chat-animations` elements in the document, so removing "the" element by id
+     removed only one, and `#chat-layout` was never removed at all.
+     `injectAnimationStyles`, `injectLayoutStyles` and `injectFadeStyles` now
+     reuse an existing element, `LayoutManager` and `MessageFadeManager` gained
+     `cleanup()`, and `OverlayStyleManager.cleanup()` removes every element
+     matching an id rather than the first. A `MutationObserver` trace across
+     overlay teardown shows all five generated stylesheets removed and none left
+     behind.
+   - `tests/serviceReset.test.ts` pins that `emoteService.reset()` clears channel
+     and personal emotes, that `badgeService.reset()` keeps the built-in
+     fallbacks, and that a second reset does not restore state from the first.
+4. Reset the global `rteProxyEnabled` flag on teardown. **Done** — folded into
+   `liveRuntime.destroy()` above, since that is the runtime that set it.
 5. Re-check `!important` usage against section 13 and document the necessary
    OBS boundary override at `app.css:87`.
 

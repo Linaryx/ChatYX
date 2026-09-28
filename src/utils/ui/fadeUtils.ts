@@ -78,6 +78,12 @@ export function getFadeStyles(options: FadeOptions): string {
  * Inject fade styles into document
  */
 export function injectFadeStyles(options: FadeOptions): HTMLStyleElement {
+  const existing = document.getElementById("chat-fade");
+  if (existing?.tagName === "STYLE") {
+    existing.textContent = getFadeStyles(options);
+    return existing as HTMLStyleElement;
+  }
+
   const styleEl = document.createElement('style');
   styleEl.id = 'chat-fade';
   styleEl.textContent = getFadeStyles(options);
@@ -89,14 +95,7 @@ export function injectFadeStyles(options: FadeOptions): HTMLStyleElement {
  * Update existing fade styles
  */
 export function updateFadeStyles(options: FadeOptions): void {
-  let styleEl = document.getElementById('chat-fade') as HTMLStyleElement;
-  
-  if (!styleEl) {
-    injectFadeStyles(options);
-    return;
-  }
-
-  styleEl.textContent = getFadeStyles(options);
+  injectFadeStyles(options);
 }
 
 /**
@@ -175,6 +174,16 @@ export class MessageFadeManager {
   updateOptions(options: Partial<FadeOptions>): void {
     this.options = { ...this.options, ...options };
     updateFadeStyles(this.options);
+  }
+
+  /**
+   * Removes the fade stylesheet this manager injected. Timers are `clear()`'s
+   * job, so a caller can stop the fades and keep the styles if it wants to.
+   */
+  cleanup(): void {
+    document
+      .querySelectorAll('style[id="chat-fade"]')
+      .forEach((element) => element.remove());
   }
 
   /**

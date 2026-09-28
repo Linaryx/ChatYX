@@ -154,11 +154,22 @@ export function applyAnimation(
 }
 
 /**
- * Create style element for animations
+ * Writes the animation styles into the document, reusing the existing element
+ * when there is one.
+ *
+ * Reuse is what keeps the element identifiable: callers that appended
+ * unconditionally left duplicate `#chat-animations` elements behind, and a
+ * teardown that removes "the" element by id can only ever remove one of them.
  */
 export function injectAnimationStyles(
   options: AnimationOptions,
 ): HTMLStyleElement {
+  const existing = document.getElementById("chat-animations");
+  if (existing?.tagName === "STYLE") {
+    existing.textContent = getAnimationStyles(options);
+    return existing as HTMLStyleElement;
+  }
+
   const styleEl = document.createElement("style");
   styleEl.id = "chat-animations";
   styleEl.textContent = getAnimationStyles(options);
@@ -170,12 +181,5 @@ export function injectAnimationStyles(
  * Update existing animation styles
  */
 export function updateAnimationStyles(options: AnimationOptions): void {
-  let styleEl = document.getElementById("chat-animations") as HTMLStyleElement;
-
-  if (!styleEl) {
-    injectAnimationStyles(options);
-    return;
-  }
-
-  styleEl.textContent = getAnimationStyles(options);
+  injectAnimationStyles(options);
 }

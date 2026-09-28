@@ -59,6 +59,12 @@ export function getLayoutStyles(options: LayoutOptions): string {
  * Inject layout styles into document
  */
 export function injectLayoutStyles(options: LayoutOptions): HTMLStyleElement {
+  const existing = document.getElementById("chat-layout");
+  if (existing?.tagName === "STYLE") {
+    existing.textContent = getLayoutStyles(options);
+    return existing as HTMLStyleElement;
+  }
+
   const styleEl = document.createElement("style");
   styleEl.id = "chat-layout";
   styleEl.textContent = getLayoutStyles(options);
@@ -70,14 +76,7 @@ export function injectLayoutStyles(options: LayoutOptions): HTMLStyleElement {
  * Update existing layout styles
  */
 export function updateLayoutStyles(options: LayoutOptions): void {
-  let styleEl = document.getElementById("chat-layout") as HTMLStyleElement;
-
-  if (!styleEl) {
-    injectLayoutStyles(options);
-    return;
-  }
-
-  styleEl.textContent = getLayoutStyles(options);
+  injectLayoutStyles(options);
 }
 
 /**
@@ -193,6 +192,16 @@ export class LayoutManager {
   updateOptions(options: Partial<LayoutOptions>): void {
     this.options = { ...this.options, ...options };
     this.applyLayout();
+  }
+
+  /**
+   * Removes the layout stylesheet this manager injected. The container classes
+   * are left alone because the container leaves with the runtime that owned it.
+   */
+  cleanup(): void {
+    document
+      .querySelectorAll('style[id="chat-layout"]')
+      .forEach((element) => element.remove());
   }
 
   /**

@@ -6,6 +6,7 @@ import { badgeService, type Badge } from "../badges/badgeService";
 import { SevenTVPaintService, type Paint } from "./seven-tv/paintService";
 import { sevenTVEventApi } from "./seven-tv/eventApi";
 import type { SevenTVEventApiService } from "./seven-tv/eventApi";
+import { sevenTVCosmeticsService } from "./seven-tv/cosmeticsService";
 import { BotFilterService } from "../../utils/botFilter";
 import {
   MessageFadeManager,
@@ -635,11 +636,16 @@ export class ChatPresentationService {
       await this.eventApiService.disconnect();
     }
 
-    // Clear fade timers
+    // Clear fade timers and the stylesheets both managers injected
     this.fadeManager.clear();
+    this.fadeManager.cleanup();
+    this.layoutManager?.cleanup();
     this.clearPaintCache();
     this.rteBadges.clear();
     this.rtePaints.clear();
+    // The 7TV cosmetics caches are keyed by channel and user and would otherwise
+    // outlive the runtime that filled them.
+    sevenTVCosmeticsService.clearAllCaches();
 
     this.initialized = false;
     log.info(LOG_CATEGORIES.INTEGRATION, "Cleanup complete");
