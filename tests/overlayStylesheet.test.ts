@@ -55,3 +55,14 @@ test("the stylesheet no longer depends on generated style elements", () => {
     expect(chatCss.includes(id)).toBe(false);
   }
 });
+
+test("prediction bars reserve space above the message container", () => {
+  expect(chatCss).toContain("#chat_chrome.has-prediction #chat_container");
+  expect(chatCss).toContain("58px + var(--chat-surface-padding, 10px)");
+});
+
+test("event labels and icons keep the opaque event color", () => {
+  expect(chatCss).toContain(".chat-event-fact {\n  min-inline-size: 0;\n  color: var(--chat-event-color, #9146ff);");
+  expect(chatCss).toContain(".chat-event-icon {\n  inline-size: 0.78em;");
+  expect(chatCss).toContain("fill: var(--chat-event-color, #9146ff);");
+});

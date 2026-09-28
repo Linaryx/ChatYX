@@ -7,7 +7,7 @@ body {
   -webkit-user-select: text;
 }
 
-/* Prediction sits above messages; layout of chat is unchanged */
+/* Prediction reserves its own vertical lane so messages cannot render behind it. */
 .chat-prediction-slot {
   position: absolute;
   top: 0;
@@ -22,6 +22,9 @@ body {
 }
 
 #chat_chrome.has-prediction #chat_container {
+  top: calc(
+    58px + var(--chat-surface-padding, 10px) + var(--chat-surface-padding, 10px)
+  );
   position: relative;
   z-index: 1;
 }
@@ -143,7 +146,7 @@ body {
 
 .chat-event-fact {
   min-inline-size: 0;
-  color: var(--chat-event-accent);
+  color: var(--chat-event-color, #9146ff);
   font-size: 0.78em;
   font-weight: inherit;
   overflow-wrap: break-word;
@@ -168,11 +171,11 @@ body {
   block-size: 0.78em;
   flex: 0 0 auto;
   align-self: center;
-  fill: var(--chat-event-accent);
+  fill: var(--chat-event-color, #9146ff);
 }
 
 .chat-event-subscription .chat-event-star {
-  fill: var(--chat-event-accent);
+  fill: var(--chat-event-color, #9146ff);
 }
 
 .chat-subscription-months {
@@ -239,7 +242,7 @@ body {
 }
 
 .chat-watch-streak-gem {
-  fill: var(--chat-event-accent);
+  fill: var(--chat-event-color, #9146ff);
 }
 
 .chat-watch-streak-copy {
