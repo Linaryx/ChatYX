@@ -21,13 +21,18 @@ series) following Conventional Commits.
 | Phase | Focus | Risk | Primary protection | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Guard rails | low | new characterization tests | in progress — `ChatBadges` reactivity fixed; remaining characterization tests outstanding |
-| 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | not started |
+| 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | in progress — dead tokens and the `--border` collision done; `chatStyles.ts` preset conversion outstanding |
 | 3 | Icon normalization | low | 1:1 glyph mapping, visual check | **done** |
 | 4 | UI primitives | low | visual check, existing tests | not started |
 | 5 | Setup decomposition | high | setup/URL/import test suites | not started |
 | 6 | Chat presentation cleanup | high | render and emote test suites | not started |
-| 7 | Dependency and dead-code cleanup | none-low | grep verification, build | not started |
+| 7 | Dependency and dead-code cleanup | none-low | grep verification, build | in progress — dead modules and `YouTubeChatService` done; singleton lifecycle ownership outstanding |
 | 8 | Documentation and enforcement | low | full check | not started |
+
+Visual verification is available through a local Playwright install kept
+outside the repository (`%TEMP%\opencode\pw`), which captures the setup page and
+the overlay preview and reports console errors. This replaced the unavailable
+desktop browser connection.
 
 ---
 
@@ -84,6 +89,12 @@ and `bun run check` passes.
 custom properties, `tests/chatEventStyles.test.ts` and
 `tests/renderMessageContent.test.ts` pass, and the overlay renders identically
 in a visual check.
+
+**Outcome so far:** the dead legacy tokens and the `--border` collision are
+resolved. Verified by computed style rather than by screenshot: `body` colour is
+still `rgb(255, 255, 255)` and `--border` now resolves from `app.css` alone. The
+`chatStyles.ts` preset conversion is still open and is the riskier half of this
+phase.
 
 **Commit:** `refactor(styles): consolidate semantic design tokens`
 
@@ -250,12 +261,16 @@ preserved.
 
 **Steps:**
 
-1. Delete the eight dead modules listed in the audit §2.5.
-2. Delete `YouTubeChatService` and `RteCosmeticsService.clear()`.
-3. Give the remaining singleton caches a real owner: add `reset()` to
+1. Delete the eight dead modules listed in the audit §2.5, plus
+   `YouTubeChatService` and the orphaned `types/userNotice.ts`. **Do not**
+   delete `RteCosmeticsService.clear()`: the audit calls for that cleanup to be
+   invoked by the runtime that owns the cache, so removing it would delete a
+   fix rather than apply one.
+2. Give the remaining singleton caches a real owner: add `reset()` to
    `badgeService`, `emoteService` and the seven-tv services, and call them from
    the runtime that owns them. Wire `OverlayStyleManager.cleanup()` into
-   `liveRuntime.destroy()`.
+   `liveRuntime.destroy()`. Call `RteCosmeticsService.clear()` from the RTE
+   runtime's teardown.
 4. Reset the global `rteProxyEnabled` flag on teardown.
 5. Re-check `!important` usage against section 13 and document the necessary
    OBS boundary override at `app.css:87`.
