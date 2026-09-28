@@ -3,7 +3,7 @@ import type { ChatConfig } from "~/config/chatUrlParams";
 import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { bitsService } from "~/services/chat";
 import { mentionStyleService } from "~/services/chat";
-import { networkClient } from "~/services/network/networkClient";
+import type { NetworkRoute } from "~/services/network/networkClient";
 import {
   createMessageTokenSnapshot,
   parseGoogleEmoji,
@@ -162,14 +162,27 @@ function twitchGifUrl(rawUrl: string): string {
 }
 
 /**
+ * Resolves an asset URL for the renderer. Injected rather than imported so this
+ * module owns no network policy and a caller can render without infrastructure.
+ */
+export type MessageUrlResolver = (url: string, route?: NetworkRoute) => string;
+
+export type RenderMessageOptions = {
+  /** Text to render instead of `message.message`, used when a reply mention is hidden. */
+  displayText?: string;
+  resolveUrl: MessageUrlResolver;
+};
+
+/**
  * Render message content with emotes/emoji/cheers to JSX (innerHTML)
  */
 export function renderMessageWithEmotes(
   message: TwitchMessage,
   config: ChatConfig,
   service: ChatPresentationService,
-  displayText: string = message.message,
+  options: RenderMessageOptions,
 ): JSX.Element {
+  const { resolveUrl, displayText = message.message } = options;
   const size =
     SIZE_CONFIGS[config.size as keyof typeof SIZE_CONFIGS] || SIZE_CONFIGS[2];
   const rawMessage = displayText;
@@ -197,7 +210,7 @@ export function renderMessageWithEmotes(
       const token = message.message.substring(start, end);
       const url = twitchGifUrl(gif.url);
       if (!token || !url) continue;
-      const resolvedUrl = networkClient.resolveHttpUrl(url, "rte");
+      const resolvedUrl = resolveUrl(url, "rte");
       replacements[token] = {
         kind: "html",
         html: `<span class="gif-container"><img class="chat-gif" src="${escapeAttr(resolvedUrl)}" alt="GIF" title="GIF" style="max-height: ${Math.round(size.emoteMaxHeight * 5 * gifScale)}px;" /></span>`,
@@ -224,7 +237,7 @@ export function renderMessageWithEmotes(
 
           replacements[emoteCode] = {
             kind: "html",
-            html: `<span class="emote-container"><img class="emote" src="${networkClient.resolveHttpUrl(`https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0`, "rte")}" alt="" title="${escapeAttr(emoteCode)}"${twitchEmoteImageAttrs(config, size)} /></span>`,
+            html: `<span class="emote-container"><img class="emote" src="${resolveUrl(`https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emoteId)}/default/dark/3.0`, "rte")}" alt="" title="${escapeAttr(emoteCode)}"${twitchEmoteImageAttrs(config, size)} /></span>`,
             isOverlayTarget: true,
           };
         });

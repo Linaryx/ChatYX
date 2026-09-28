@@ -366,9 +366,20 @@ round-trips a config through export, import and preview unchanged.
    both unchanged and passing.
 2. Split `renderMessageContent.ts` into tokenize, assemble and DOM-bind stages,
    injecting URL resolution rather than importing the network client, so the
-   renderer becomes testable without infrastructure. **Outstanding** — this is
-   the risky half, because emotes, cheers, mentions, 7TV paint and gigantified
-   lines all flow through this file.
+   renderer becomes testable without infrastructure. **URL injection done.** The
+   module no longer imports `networkClient`: `renderMessageWithEmotes` takes a
+   `RenderMessageOptions` object with a `resolveUrl` callback, and `ChatText`
+   passes the real resolver, so the component layer owns the network policy and
+   the renderer owns none. Two tests cover the seam — every asset URL goes
+   through the injected resolver, and a message with nothing to resolve calls it
+   zero times — while the existing suite still passes the real resolver, which
+   keeps its RTE-rewrite coverage. Verified in a browser: the dev fixture renders
+   4 emotes and 2 emoji, all with resolved CDN URLs, and 24 messages with no
+   console error. **Outstanding:** the physical module split into tokenize,
+   assemble and DOM-bind files. The function already builds a token array
+   internally, so the seam exists in the code; moving it into separate modules is
+   a wide mechanical change to a file that two suites protect, and it buys
+   organisation rather than testability now that the injection is in place.
 3. Move `LayoutManager` (`utils/ui/layoutUtils.ts:164`) and the fade manager
    (`utils/ui/fadeUtils.ts:105-186`) into the chat-overlay layer that owns their
    lifecycle, and resolve the two-classes-one-name problem.

@@ -5,6 +5,7 @@ import type { ChatPresentationService } from "../src/services/chat/chatPresentat
 import { mentionStyleService } from "../src/services/chat";
 import type { TwitchMessage } from "../src/services/chat/twitch/twitchService";
 import { createMessageTokenSnapshot } from "../src/utils/chat/emojiUtils";
+import { networkClient } from "../src/services/network/networkClient";
 import { setRteProxyEnabled } from "../src/services/network/rteProxyTransport";
 
 function message(text: string, positions: string[]): TwitchMessage {
@@ -28,6 +29,7 @@ function render(
   message: TwitchMessage,
   displayText?: string,
   config = DEFAULT_CHAT_CONFIG,
+  resolveUrl = networkClient.resolveHttpUrl,
 ): string {
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
   const element = {
@@ -50,9 +52,12 @@ function render(
         },
       },
     });
-    const rendered = displayText === undefined
-      ? renderMessageWithEmotes(message, config, service)
-      : renderMessageWithEmotes(message, config, service, displayText);
+    const rendered = renderMessageWithEmotes(message, config, service, {
+      displayText,
+      // The renderer no longer imports a network client, so the test passes the
+      // real resolver explicitly and keeps exercising the RTE rewrite.
+      resolveUrl,
+    });
     expect(rendered).toBe(element);
     return element.innerHTML;
   } finally {
@@ -245,5 +250,31 @@ describe("renderMessageWithEmotes display text", () => {
 
     expect(html).not.toContain("mention");
     expect(html).toContain("@viewer");
+  });
+});
+
+describe("renderMessageWithEmotes url resolution", () => {
+  test("routes every asset url through the injected resolver", () => {
+    const seen: string[] = [];
+    const html = render(message(":D", ["0-1"]), undefined, DEFAULT_CHAT_CONFIG, (url) => {
+      seen.push(url);
+      return `https://stub.test/${seen.length}`;
+    });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toContain("/emoticons/v2/25/");
+    expect(html).toContain("https://stub.test/1");
+    expect(html).not.toContain("static-cdn.jtvnw.net");
+  });
+
+  test("renders without any resolver side effects when nothing needs resolving", () => {
+    const calls: string[] = [];
+    const html = render(message("plain text", []), undefined, DEFAULT_CHAT_CONFIG, (url) => {
+      calls.push(url);
+      return url;
+    });
+
+    expect(calls).toEqual([]);
+    expect(html).toContain("plain text");
   });
 });
