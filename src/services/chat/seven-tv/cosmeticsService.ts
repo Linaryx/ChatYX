@@ -75,12 +75,26 @@ export class SevenTVCosmeticsService {
     private paintStylesheet: CSSStyleSheet | null = null;
     private channelCache: Set<string> = new Set(); // Кэш загруженных каналов
 
+    /**
+     * Bumped by `clearAllCaches()`. A load captures it on entry and skips its
+     * commit when the caches were cleared while it was in flight, so a response
+     * that arrives after its runtime was torn down cannot re-add the channel to
+     * the cache or assign paints to a user nobody is watching any more.
+     */
+    private generation = 0;
+
+    private isCurrentGeneration(generation: number): boolean {
+        return generation === this.generation;
+    }
+
     async loadCosmetics(channelId: string): Promise<void> {
         // Избегаем повторной загрузки
         if (this.channelCache.has(channelId)) return;
-        
+        const generation = this.generation;
+
         try {
             await this.loadChannelUserPaints(channelId);
+            if (!this.isCurrentGeneration(generation)) return;
             this.channelCache.add(channelId);
         } catch (error) {
             log.error(LOG_CATEGORIES.PAINTS, "Failed to load cosmetics", error);
@@ -88,12 +102,14 @@ export class SevenTVCosmeticsService {
     }
 
     private async loadChannelUserPaints(channelId: string): Promise<void> {
+        const generation = this.generation;
         try {
             const response = await networkClient.request(`https://7tv.io/v3/users/twitch/${channelId}`, { route: "rte" });
-            
+
             if (response.ok) {
                 const data = await response.json();
-                
+                if (!this.isCurrentGeneration(generation)) return;
+
                 // Проверяем style.paint_id для канала
                 if (data.user?.style?.paint_id) {
                     const channelUsername = data.username || data.display_name;
@@ -133,13 +149,15 @@ export class SevenTVCosmeticsService {
     async loadUserPaints(username: string, userId?: string): Promise<void> {
         if (!userId) return;
         username = username.toLowerCase();
-        
+        const generation = this.generation;
+
         try {
             const response = await networkClient.request(`https://7tv.io/v3/users/twitch/${userId}`, { route: "rte" });
-            
+
             if (response.ok) {
                 const data = await response.json();
-                
+                if (!this.isCurrentGeneration(generation)) return;
+
                 if (data.user?.style?.paint_id) {
                     this.addUserCosmetic(username, data.user.style.paint_id);
                 } else if (data.cosmetics?.length) {
@@ -179,6 +197,7 @@ export class SevenTVCosmeticsService {
     }
 
     private async loadPaintCatalog(): Promise<void> {
+        const generation = this.generation;
         const response = await networkClient.request("https://7tv.io/v3/gql", {
             route: "rte",
             init: {
@@ -211,6 +230,7 @@ export class SevenTVCosmeticsService {
         }
 
         const payload = await response.json();
+        if (!this.isCurrentGeneration(generation)) return;
         const paints = payload.data?.cosmetics?.paints;
         if (!Array.isArray(paints)) {
             throw new Error("7TV paint catalog response is invalid");
@@ -472,8 +492,11 @@ export class SevenTVCosmeticsService {
         return this.getCSSColorFromInt(paint.color);
     }
 
-    // Очистка всех кэшей
+    // Очистка всех кэшей, привязанных к каналу или пользователю. `reloadCosmetics`
+    // also calls this before it re-fetches, so the bump happens first and the
+    // reload's own loads capture the new generation.
     clearAllCaches(): void {
+        this.generation += 1;
         this.paintCSSCache.clear();
         this.channelCache.clear();
     }

@@ -55,6 +55,12 @@ export class ChatFeatureIntegrationService {
   private options: ChatFeatureIntegrationOptions;
   private initialized: boolean = false;
   private sevenTvRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Bumped by `destroy()`. Initialization captures it on entry and stops after
+   * its awaits when the service was destroyed in the meantime, so a torn-down
+   * integration cannot mark itself initialized and block the next runtime.
+   */
+  private generation = 0;
 
   constructor(options: Partial<ChatFeatureIntegrationOptions> = {}) {
     this.options = {
@@ -83,6 +89,7 @@ export class ChatFeatureIntegrationService {
 
     log.info(LOG_CATEGORIES.INTEGRATION, "Initializing Chat feature integration...");
 
+    const generation = this.generation;
     try {
       await Promise.all([
         this.options.showFFZAPBadges
@@ -110,11 +117,13 @@ export class ChatFeatureIntegrationService {
             log.error(LOG_CATEGORIES.INTEGRATION, "Failed to load bits service", err),
           );
       }
+      if (!this.isCurrentGeneration(generation)) return;
 
       if (this.options.enable7TVEventAPI) {
         await this.connect7TVEventAPI(channelId, onSevenTvEvent, {
           scheduleRetry: true,
         });
+        if (!this.isCurrentGeneration(generation)) return;
       }
 
       layoutManager.setOptions({
@@ -197,6 +206,10 @@ export class ChatFeatureIntegrationService {
     this.sevenTvRetryTimer = null;
   }
 
+  private isCurrentGeneration(generation: number): boolean {
+    return generation === this.generation;
+  }
+
   setOptions(options: Partial<ChatFeatureIntegrationOptions>): void {
     this.options = { ...this.options, ...options };
 
@@ -207,6 +220,7 @@ export class ChatFeatureIntegrationService {
   }
 
   destroy(): void {
+    this.generation += 1;
     this.clearSevenTvRetryTimer();
     sevenTVEventApi.disconnect();
     this.initialized = false;
