@@ -21,6 +21,7 @@ export {
 } from "./layout";
 
 export {
+  escapeAttr,
   getRenderedImageSize,
   insertZeroWidthOverlays,
   wrapEmoteModifierContent,

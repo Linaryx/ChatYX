@@ -8,25 +8,21 @@ import {
   onMount,
   Show,
 } from "solid-js";
+import type { IconSvgObject } from "@hugeicons/core-free-icons/types";
+import ArrowUpRightStackIcon from "@hugeicons/core-free-icons/ArrowUpRightStackIcon";
+import Blockchain05Icon from "@hugeicons/core-free-icons/Blockchain05Icon";
+import BotMessageSquareIcon from "@hugeicons/core-free-icons/BotMessageSquareIcon";
+import ColorsIcon from "@hugeicons/core-free-icons/ColorsIcon";
+import DashboardSquare03Icon from "@hugeicons/core-free-icons/DashboardSquare03Icon";
+import DatabaseImportIcon from "@hugeicons/core-free-icons/DatabaseImportIcon";
+import TextIcon from "@hugeicons/core-free-icons/TextIcon";
+import VoiceCommentIcon from "@hugeicons/core-free-icons/VoiceCommentIcon";
 import { cn } from "~/lib/utils";
 import { t } from "~/i18n";
+import { Icon } from "~/components/ui/icon";
+import type { SetupSectionId } from "~/features/setup/model/setupSections";
+import { resolveSetupText, type SetupText } from "./setupText";
 import { SetupSwitch } from "./SetupSwitch";
-
-export type SetupSectionId =
-  | "import"
-  | "appearance"
-  | "styling"
-  | "behavior"
-  | "content"
-  | "bots"
-  | "tts"
-  | "rte";
-
-export type SetupText = string | (() => string);
-
-export function resolveSetupText(value: SetupText): string {
-  return typeof value === "function" ? value() : value;
-}
 
 export type ControlRow = {
   label: SetupText;
@@ -46,55 +42,55 @@ export const SETUP_NAV: {
   id: SetupSectionId;
   labelKey: "navigation.import.label" | "navigation.appearance.label" | "navigation.styling.label" | "navigation.behavior.label" | "navigation.content.label" | "navigation.bots.label" | "navigation.tts.label" | "navigation.rte.label";
   descriptionKey: "navigation.import.description" | "navigation.appearance.description" | "navigation.styling.description" | "navigation.behavior.description" | "navigation.content.description" | "navigation.bots.description" | "navigation.tts.description" | "navigation.rte.description";
-  icon: string;
+  icon: IconSvgObject;
 }[] = [
   {
     id: "import",
     labelKey: "navigation.import.label",
     descriptionKey: "navigation.import.description",
-    icon: "hgi-database-import",
+    icon: DatabaseImportIcon,
   },
   {
     id: "appearance",
     labelKey: "navigation.appearance.label",
     descriptionKey: "navigation.appearance.description",
-    icon: "hgi-text",
+    icon: TextIcon,
   },
   {
     id: "styling",
     labelKey: "navigation.styling.label",
     descriptionKey: "navigation.styling.description",
-    icon: "hgi-colors",
+    icon: ColorsIcon,
   },
   {
     id: "behavior",
     labelKey: "navigation.behavior.label",
     descriptionKey: "navigation.behavior.description",
-    icon: "hgi-arrow-up-right-stack",
+    icon: ArrowUpRightStackIcon,
   },
   {
     id: "content",
     labelKey: "navigation.content.label",
     descriptionKey: "navigation.content.description",
-    icon: "hgi-dashboard-square-03",
+    icon: DashboardSquare03Icon,
   },
   {
     id: "bots",
     labelKey: "navigation.bots.label",
     descriptionKey: "navigation.bots.description",
-    icon: "hgi-bot-message-square",
+    icon: BotMessageSquareIcon,
   },
   {
     id: "tts",
     labelKey: "navigation.tts.label",
     descriptionKey: "navigation.tts.description",
-    icon: "hgi-voice-comment",
+    icon: VoiceCommentIcon,
   },
   {
     id: "rte",
     labelKey: "navigation.rte.label",
     descriptionKey: "navigation.rte.description",
-    icon: "hgi-blockchain-05",
+    icon: Blockchain05Icon,
   },
 ];
 
@@ -146,7 +142,7 @@ export function ToggleRows(props: { rows: ToggleRow[] }) {
 export function SectionCard(props: {
   title: string;
   description?: string;
-  icon?: string;
+  icon?: IconSvgObject;
   children: JSX.Element;
   class?: string;
   id?: string;
@@ -164,8 +160,9 @@ export function SectionCard(props: {
       <header class="setup-section-heading">
         <Show when={props.icon}>
           {(icon) => (
-            <span
-              class={cn("hgi-stroke", "setup-section-heading-icon", icon())}
+            <Icon
+              icon={icon()}
+              class="setup-section-heading-icon"
               aria-hidden="true"
             />
           )}
@@ -238,7 +235,7 @@ export function SetupNav(props: {
               aria-controls={`setup-section-${item.id}`}
               aria-current={active() ? "location" : undefined}
             >
-              <span class="hgi-stroke setup-nav-icon" classList={{ [item.icon]: true }} aria-hidden="true" />
+              <Icon icon={item.icon} class="setup-nav-icon" aria-hidden="true" />
               <span class="min-w-0 flex-1">
                 <span class="block text-xs font-medium leading-tight xl:text-sm">
                   {t(item.labelKey)}

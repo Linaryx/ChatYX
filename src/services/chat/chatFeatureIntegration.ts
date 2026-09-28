@@ -13,7 +13,6 @@ import { chatterinoBadgeService } from "../badges/chatterinoBadgeService";
 import { chatisBadgeService } from "../badges/chatisBadgeService";
 import { sevenTVEventApi } from "./seven-tv/eventApi";
 
-import { layoutManager } from "../../utils/ui/layoutManager";
 import type { SevenTVEventDispatch } from "./seven-tv/eventApi";
 
 const SEVENTV_RETRY_DELAY_MS = 5 * 60 * 1000;
@@ -43,10 +42,6 @@ export interface ChatFeatureIntegrationOptions {
 
   enableBits: boolean;
 
-  // Layout options
-  reverseLineOrder: boolean;
-  singleChatter?: string;
-
   // 7TV EventAPI
   enable7TVEventAPI: boolean;
 }
@@ -55,6 +50,12 @@ export class ChatFeatureIntegrationService {
   private options: ChatFeatureIntegrationOptions;
   private initialized: boolean = false;
   private sevenTvRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Bumped by `destroy()`. Initialization captures it on entry and stops after
+   * its awaits when the service was destroyed in the meantime, so a torn-down
+   * integration cannot mark itself initialized and block the next runtime.
+   */
+  private generation = 0;
 
   constructor(options: Partial<ChatFeatureIntegrationOptions> = {}) {
     this.options = {
@@ -63,7 +64,6 @@ export class ChatFeatureIntegrationService {
       showChatterinoBadges: true,
       showChatisBadges: true,
       enableBits: true,
-      reverseLineOrder: false,
       enable7TVEventAPI: true,
       ...options,
     };
@@ -83,6 +83,7 @@ export class ChatFeatureIntegrationService {
 
     log.info(LOG_CATEGORIES.INTEGRATION, "Initializing Chat feature integration...");
 
+    const generation = this.generation;
     try {
       await Promise.all([
         this.options.showFFZAPBadges
@@ -110,17 +111,14 @@ export class ChatFeatureIntegrationService {
             log.error(LOG_CATEGORIES.INTEGRATION, "Failed to load bits service", err),
           );
       }
+      if (!this.isCurrentGeneration(generation)) return;
 
       if (this.options.enable7TVEventAPI) {
         await this.connect7TVEventAPI(channelId, onSevenTvEvent, {
           scheduleRetry: true,
         });
+        if (!this.isCurrentGeneration(generation)) return;
       }
-
-      layoutManager.setOptions({
-        reverseLineOrder: this.options.reverseLineOrder,
-        singleChatter: this.options.singleChatter,
-      });
 
       this.initialized = true;
       log.info(
@@ -197,16 +195,16 @@ export class ChatFeatureIntegrationService {
     this.sevenTvRetryTimer = null;
   }
 
+  private isCurrentGeneration(generation: number): boolean {
+    return generation === this.generation;
+  }
+
   setOptions(options: Partial<ChatFeatureIntegrationOptions>): void {
     this.options = { ...this.options, ...options };
-
-    layoutManager.setOptions({
-      reverseLineOrder: this.options.reverseLineOrder,
-      singleChatter: this.options.singleChatter,
-    });
   }
 
   destroy(): void {
+    this.generation += 1;
     this.clearSevenTvRetryTimer();
     sevenTVEventApi.disconnect();
     this.initialized = false;

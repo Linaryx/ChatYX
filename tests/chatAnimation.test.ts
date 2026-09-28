@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   getAnimationScrollBehavior,
-  getAnimationStyles,
   getMessageEntryAnimationDuration,
   normalizeChatAnimationMode,
-} from "../src/utils/ui/animationUtils";
+} from "../src/config/chatAnimation";
+import { getAnimationStyles } from "../src/services/chat/runtime/animationStyles";
 
 const options = {
   enabled: true,

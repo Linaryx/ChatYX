@@ -1,5 +1,5 @@
 import type { ChatConfig } from "~/config/chatUrlParams";
-import { getAnimationScrollBehavior } from "~/utils/ui/animationUtils";
+import { getAnimationScrollBehavior } from "~/config/chatAnimation";
 import type { ChatPresentationService } from "../chatPresentationService";
 import type { TwitchMessage } from "../twitch/twitchService";
 

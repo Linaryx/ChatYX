@@ -12,6 +12,75 @@ Setup is a compact operational interface for producing an OBS overlay URL. It pr
 - The RTE proxy routes only allowlisted public emote and badge hosts; Twitch authentication and user URLs are never routed through it.
 - Reyohoho badges and RTE paints are soft optional cosmetics; unavailable data leaves the existing chat rendering unchanged.
 
+## Token Contract
+
+Tokens are the interface between the stylesheets and the runtime. Two rules make
+that interface stable:
+
+1. `src/styles/chat.css` owns the rules. A rule's shape is fixed at build time.
+2. The runtime writes only custom properties. `overlayStyleManager` sets values
+   on the document; it does not emit a stylesheet whose shape depends on which
+   preset the user picked.
+
+A value that changes while the overlay runs — a user-selected color, emote
+geometry, a measured layout shift, 7TV paint, provider cosmetics — is passed as a
+custom property. A value that is a reusable design decision belongs in the
+stylesheet.
+
+`SIZE_CONFIGS` in `src/styles/chatStyles.ts` stays the single source of truth for
+message size, weight, line height and the emote scale, because
+`renderMessageContent.ts` reads the same table for emote geometry. The runtime
+publishes it through `getOverlayStyleVariables()` instead of generating rules, so
+the table drives custom properties rather than rule text. `OVERLAY_STYLE_PROPERTIES`
+and `OVERLAY_ATTRIBUTES` list exactly what the manager may write; the boolean
+variants (`.user_info`, the name separator) are keyed on
+`:root[data-hide-names]` and `:root[data-nl-after-name]`.
+
+Two boundaries are allowed to generate CSS, because there the rule shape is data
+supplied from outside rather than a design decision:
+
+- provider cosmetics (7TV paint), where colors and gradients arrive as protocol
+  data;
+- emote modifiers, where geometry depends on the emote's own dimensions.
+
+The setup page's document lock follows the same rule in the other direction: the
+lifecycle helper sets `data-setup-document` on the root and the setup stylesheet
+owns the scrolling and height it implies. Product colors stay in CSS.
+
+## Styling Stack
+
+```text
+Tailwind            application utility styling, as it already exists
+components/ui       reusable primitives, with CVA where a real variant contract exists
+CSS custom props    overlay runtime values and component contracts
+plain CSS           overlay, provider and browser-integration boundaries
+@hugeicons/solid-js generic UI icon rendering
+PlatformGlyph       brand-owned glyphs
+```
+
+Tailwind is not scheduled for removal and is not being extended: no new utility
+spaghetti, no new abstraction layer, no Tailwind in provider- or
+runtime-generated markup.
+
+## Iconography
+
+Generic UI icons are Hugeicons payloads rendered by the project's thin `Icon`
+wrapper over the vendor's Solid renderer. The wrapper fixes `currentColor`, the
+`1em` default size and the decorative default; the payload keeps its own stroke
+width. Icons stay hidden from assistive technology unless they carry a label, and
+icon-only controls always have an accessible name.
+
+Brand marks are not generic icons: `PlatformGlyph` is their only owner, and the
+bespoke overlay graphics — sparkline, event, reply and role artwork — stay custom
+drawings.
+
+## Surface Ownership
+
+`.setup-root` paints the setup workspace surface; the document itself stays
+transparent because `app.css` forces that for OBS. `html`, `body` and `#root`
+therefore never need a background write at runtime, and a module that needs to
+change document behaviour changes state (an attribute) rather than presentation.
+
 ## Reusable Primitives
 
 - `SetupNav`: desktop section navigation and its compact mobile equivalent.

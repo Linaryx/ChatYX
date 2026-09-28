@@ -14,6 +14,7 @@ import {
   writeUserSetupTemplates,
   type TemplateSource,
 } from "~/config/setupTemplates";
+import DatabaseImportIcon from "@hugeicons/core-free-icons/DatabaseImportIcon";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -172,7 +173,7 @@ export function SetupImportCard(props: SetupImportCardProps) {
       id="setup-section-import"
       title={t("setup.import.title")}
       description={t("setup.import.description")}
-      icon="hgi-database-import"
+      icon={DatabaseImportIcon}
       hidden={props.hidden}
     >
       <div class="flex flex-col gap-5">

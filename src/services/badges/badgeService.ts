@@ -324,6 +324,36 @@ class BadgeService {
     seventvBadges: {},
   };
 
+  /**
+   * Snapshot of the state a fresh service starts from. `reset()` restores this
+   * rather than repeating the fallback literal above, which would be free to
+   * drift from it.
+   */
+  private readonly initialBadgeData = structuredClone(this.badgeData);
+
+  /**
+   * Bumped by `reset()`. A load captures it on entry and skips its commit when
+   * the store moved on, so a badge response that arrives after the owning
+   * runtime was destroyed cannot repopulate the next runtime's store.
+   */
+  private generation = 0;
+
+  /**
+   * Drops the channel-scoped badge state, so the next runtime loads badges for
+   * its own channel instead of inheriting the previous one's.
+   */
+  reset(): void {
+    this.generation += 1;
+    this.currentChannelId = "";
+    this.thirdPartyBadgesReady = null;
+    this.thirdPartyBadgeIndex = { byUserId: new Map(), byUsername: new Map() };
+    this.badgeData = structuredClone(this.initialBadgeData);
+  }
+
+  private isCurrentGeneration(generation: number): boolean {
+    return generation === this.generation;
+  }
+
   async loadBadges(channel: string, channelId: string): Promise<void> {
     this.currentChannelId = channelId;
 
@@ -345,15 +375,18 @@ class BadgeService {
     channelId: string,
     channelName: string,
   ): Promise<void> {
+    const generation = this.generation;
     try {
       // Глобальные баджи с автоматическим fallback
       const globalResponse = await fetchWithFallback(
         `${TWITCH_CONFIG.API_BASE_URL}/badges/global`,
         FALLBACK_APIS.badges_global,
       );
+      if (!this.isCurrentGeneration(generation)) return;
 
       if (globalResponse.ok) {
         const globalData = await globalResponse.json();
+        if (!this.isCurrentGeneration(generation)) return;
         const badges = Array.isArray(globalData) ? globalData : globalData.data;
 
         if (Array.isArray(badges)) {
@@ -378,9 +411,11 @@ class BadgeService {
         `${TWITCH_CONFIG.API_BASE_URL}/badges/channel?broadcaster_id=${encodeURIComponent(channelId)}`,
         FALLBACK_APIS.badges_channel(channelName),
       );
+      if (!this.isCurrentGeneration(generation)) return;
 
       if (channelResponse.ok) {
         const channelData = await channelResponse.json();
+        if (!this.isCurrentGeneration(generation)) return;
         const badges = Array.isArray(channelData)
           ? channelData
           : channelData.data;
@@ -407,8 +442,10 @@ class BadgeService {
           `https://api.frankerfacez.com/v1/_room/id/${encodeURIComponent(channelId)}`,
           { route: "rte" },
         );
+        if (!this.isCurrentGeneration(generation)) return;
         if (ffzRoomResponse.ok) {
           const ffzRoomData = await ffzRoomResponse.json();
+          if (!this.isCurrentGeneration(generation)) return;
 
           if (ffzRoomData.room?.moderator_badge) {
             this.badgeData.badges["moderator:1"] =
@@ -433,6 +470,7 @@ class BadgeService {
   }
 
   private async loadThirdPartyBadges(): Promise<void> {
+    const generation = this.generation;
     // Загружаем все баджи параллельно для оптимизации
     const results = await Promise.allSettled([
       // FFZ badges (for bot/other global user badges)
@@ -464,6 +502,10 @@ class BadgeService {
         r.ok ? r.json().then((d) => d.badges || []) : [],
       ),
     ]);
+
+    // Everything below commits the fetched payload into the store, so it must
+    // not run for a store that was reset while the requests were in flight.
+    if (!this.isCurrentGeneration(generation)) return;
 
     const ffzBadgeData =
       results[0].status === "fulfilled" ? results[0].value : null;
@@ -536,6 +578,7 @@ class BadgeService {
     userId: string,
     includeTwitchSender = false,
   ): Promise<Badge[]> {
+    const generation = this.generation;
     // Проверяем кэш
     if (this.badgeData.userBadges[username]) {
       return this.badgeData.userBadges[username];
@@ -553,6 +596,7 @@ class BadgeService {
           this.currentChannelId,
           userId,
         );
+        if (!this.isCurrentGeneration(generation)) return [];
         if (gqlSender) {
           this.applyGqlBadgesToCache(gqlSender.displayBadges);
         }
@@ -625,7 +669,9 @@ class BadgeService {
       );
     }
 
-    this.badgeData.userBadges[username] = userBadges;
+    if (this.isCurrentGeneration(generation)) {
+      this.badgeData.userBadges[username] = userBadges;
+    }
     return userBadges;
   }
 
@@ -640,7 +686,9 @@ class BadgeService {
   }
 
   private async loadTwitchGqlBadgeSets(channelId: string): Promise<void> {
+    const generation = this.generation;
     const badges = await twitchGqlService.loadBadgeSets(channelId);
+    if (!this.isCurrentGeneration(generation)) return;
     this.applyGqlBadgesToCache(badges);
   }
 
@@ -687,6 +735,7 @@ class BadgeService {
   }
 
   async addUserSevenTVBadge(username: string, badgeId: string): Promise<void> {
+    const generation = this.generation;
     if (!this.badgeData.userBadges[username]) {
       this.badgeData.userBadges[username] = [];
     }
@@ -699,6 +748,7 @@ class BadgeService {
 
       // Попробуем загрузить бадж через API
       await this.loadMissingBadge(badgeId);
+      if (!this.isCurrentGeneration(generation)) return;
 
       // Проверяем еще раз после загрузки
       const newBadgeUrl = this.badgeData.badges[`7tv:${badgeId}`];
@@ -743,6 +793,7 @@ class BadgeService {
   }
 
   private async loadMissingBadge(badgeId: string): Promise<void> {
+    const generation = this.generation;
     try {
       const response = await networkClient.request("https://7tv.io/v3/gql", {
         route: "rte",
@@ -772,6 +823,7 @@ class BadgeService {
 
       if (response.ok) {
         const data = await response.json();
+        if (!this.isCurrentGeneration(generation)) return;
 
         if (data.data?.badge) {
           const badge = data.data.badge;

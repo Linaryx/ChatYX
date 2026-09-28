@@ -4,7 +4,7 @@ import { start as collectorStart, stop as collectorStop, subscribe } from "./per
 import { PerfPanel } from "./PerfPanel";
 
 export interface PerfMonitorProps {
-  /** Connection state from the chat service (optional — wired in Todo 5) */
+  /** Connection state from the chat service; omitted when the route has none. */
   readonly isConnected?: boolean;
 }
 

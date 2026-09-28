@@ -1,5 +1,5 @@
 import { createMemo, For, Show, onCleanup, onMount } from "solid-js";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { ChatMessage } from "~/components/chat/ChatMessage";
 import { installMessageImageFallback } from "~/utils/chat/messageImageFallback";

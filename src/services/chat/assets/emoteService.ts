@@ -48,6 +48,36 @@ class EmoteService {
   private show7tvUnlisted = true;
   private loaded7tvVisibility: boolean | null = null;
 
+  /**
+   * Bumped whenever the cache is dropped. An async load captures the value on
+   * entry and skips its commit when the store moved on, so a response that
+   * arrives after `reset()` (or after the 7TV visibility changed) cannot
+   * repopulate a store the next runtime owns.
+   */
+  private generation = 0;
+
+  /**
+   * Drops every cached emote and the load bookkeeping, so a runtime that starts
+   * after this one refetches instead of serving the previous channel's emotes.
+   * The global caches are deliberately included: keeping them is exactly what
+   * lets a stale channel survive a restart.
+   */
+  reset(): void {
+    this.generation += 1;
+    this.emoteData = { emotes: {}, channelEmotes: {}, personalEmotes: {} };
+    this.currentChannelId = "";
+    this.currentChannelName = "";
+    this.globalEmotesLoaded = false;
+    this.globalEmotesPromise = null;
+    this.channelLoadPromises.clear();
+    this.show7tvUnlisted = true;
+    this.loaded7tvVisibility = null;
+  }
+
+  private isCurrentGeneration(generation: number): boolean {
+    return generation === this.generation;
+  }
+
   async loadEmotes(
     channelId: string,
     channelName: string,
@@ -173,6 +203,7 @@ class EmoteService {
 
   private async loadGlobalEmotes(): Promise<void> {
     if (this.globalEmotesLoaded) return;
+    const generation = this.generation;
 
     await Promise.all([
       this.load7TVGlobalEmotes(),
@@ -180,10 +211,14 @@ class EmoteService {
       this.loadBTTVGlobalEmotes(),
     ]);
 
+    if (!this.isCurrentGeneration(generation)) return;
     this.globalEmotesLoaded = true;
   }
 
   private clearSevenTVEmotes(): void {
+    // The 7TV visibility filter changed, so responses already in flight carry
+    // the wrong filter and must not be committed.
+    this.generation += 1;
     for (const [name, emote] of Object.entries(this.emoteData.emotes)) {
       if (emote.source === "7tv") {
         delete this.emoteData.emotes[name];
@@ -215,6 +250,7 @@ class EmoteService {
     channelId: string,
     emoteSetId?: string,
   ): Promise<void> {
+    const generation = this.generation;
     try {
       // Канальные 7TV эмодзи - use specific set ID if provided to avoid race conditions
       if (emoteSetId) {
@@ -222,8 +258,10 @@ class EmoteService {
           `https://7tv.io/v3/emote-sets/${emoteSetId}`,
           { route: "rte" },
         );
+        if (!this.isCurrentGeneration(generation)) return;
         if (setResponse.ok) {
           const setData = await setResponse.json();
+          if (!this.isCurrentGeneration(generation)) return;
 
           if (setData.emotes) {
             setData.emotes.forEach((emoteWithMeta: any) => {
@@ -252,8 +290,10 @@ class EmoteService {
           `https://7tv.io/v3/users/twitch/${channelId}`,
           { route: "rte" },
         );
+        if (!this.isCurrentGeneration(generation)) return;
         if (channelResponse.ok) {
           const channelData = await channelResponse.json();
+          if (!this.isCurrentGeneration(generation)) return;
 
           if (channelData.emote_set && channelData.emote_set.emotes) {
             channelData.emote_set.emotes.forEach((emoteWithMeta: any) => {
@@ -279,10 +319,13 @@ class EmoteService {
   }
 
   private async load7TVGlobalEmotes(): Promise<void> {
+    const generation = this.generation;
     try {
       const globalResponse = await networkClient.request("https://7tv.io/v3/emote-sets/global", { route: "rte" });
+      if (!this.isCurrentGeneration(generation)) return;
       if (!globalResponse.ok) return;
       const globalData = await globalResponse.json();
+      if (!this.isCurrentGeneration(generation)) return;
 
       if (globalData.emotes) {
         globalData.emotes.forEach((emoteWithMeta: any) => {
@@ -319,13 +362,16 @@ class EmoteService {
     channelId?: string,
     isGlobal = false,
   ): Promise<void> {
+    const generation = this.generation;
     try {
       const response = await networkClient.request(
         "https://api.betterttv.net/3/cached/frankerfacez/" + endpoint,
         { route: "rte" },
       );
+      if (!this.isCurrentGeneration(generation)) return;
       if (!response.ok) return;
       const data = await response.json();
+      if (!this.isCurrentGeneration(generation)) return;
 
       data.forEach((emote: any) => {
         const imageUrl =
@@ -381,13 +427,16 @@ class EmoteService {
     channelId?: string,
     isGlobal = false,
   ): Promise<void> {
+    const generation = this.generation;
     try {
       const response = await networkClient.request(
         "https://api.betterttv.net/3/cached/" + endpoint,
         { route: "rte" },
       );
+      if (!this.isCurrentGeneration(generation)) return;
       if (!response.ok) return;
       let data = await response.json();
+      if (!this.isCurrentGeneration(generation)) return;
 
       if (!Array.isArray(data)) {
         data = data.channelEmotes.concat(data.sharedEmotes);
@@ -451,15 +500,18 @@ class EmoteService {
   }
 
   private async loadCheerEmotes(channelId: string): Promise<void> {
+    const generation = this.generation;
     try {
       // Cheermotes доступны только через локальный API (требуется OAuth)
       const response = await fetchWithFallback(
         `${TWITCH_CONFIG.API_BASE_URL}/bits/cheermotes?broadcaster_id=${encodeURIComponent(channelId)}`,
         FALLBACK_APIS.cheermotes, // null - нет публичного API
       );
+      if (!this.isCurrentGeneration(generation)) return;
 
       if (response.ok) {
         const data = await response.json();
+        if (!this.isCurrentGeneration(generation)) return;
 
         if (data.data) {
           data.data.forEach((action: any) => {
@@ -481,6 +533,7 @@ class EmoteService {
       }
     } catch (error) {
       log.error(LOG_CATEGORIES.EMOTES, "Failed to load cheer emotes", error);
+      if (!this.isCurrentGeneration(generation)) return;
       // Fallback: добавляем несколько базовых Cheer эмоутов для тестирования
       const fallbackEmotes = [
         {

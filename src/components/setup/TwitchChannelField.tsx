@@ -7,7 +7,18 @@ import {
   type JSX,
 } from "solid-js";
 import { networkClient } from "~/services/network/networkClient";
+import { TWITCH_GQL_ENDPOINT, TWITCH_WEB_CLIENT_ID } from "~/config/twitch";
+import { fetchJsonWithTimeout } from "~/services/network/fetchJsonWithTimeout";
 import { locale, t } from "~/i18n";
+import XIcon from "@hugeicons/core-free-icons/XIcon";
+import { PlatformGlyph } from "~/components/brand/PlatformGlyph";
+import { Icon } from "~/components/ui/icon";
+import { loginFallbackName, normalizeLogin } from "~/services/setup/logins";
+import {
+  searchKickChannels,
+  searchTwitchChannels,
+  type ChannelSuggestion,
+} from "~/services/setup/channelSearch";
 import "./TwitchChannelField.css";
 
 type TwitchChannelFieldProps = {
@@ -50,17 +61,7 @@ type Metric = {
   icon: "twitch" | "sevenTv" | "bttv" | "ffz" | "vip" | "mod" | "founder" | "lead";
 };
 
-type ChannelSuggestion = {
-  login: string;
-  displayName: string;
-  avatarUrl: string;
-};
-
-const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
-const TWITCH_WEB_CLIENT_ID =
-  import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
 const SUMMARY_TIMEOUT_MS = 10000;
-const KICK_SEARCH_ENDPOINT = "https://ytwss.ruina.team/api/kick/channels";
 const KICK_SEARCH_DELAY_MS = 220;
 const METRIC_IMAGE_ICON_URLS: Partial<Record<Metric["icon"], string>> = {
   bttv: "https://betterttv.com/favicon.png",
@@ -69,107 +70,6 @@ const METRIC_IMAGE_ICON_URLS: Partial<Record<Metric["icon"], string>> = {
   vip: "https://static-cdn.jtvnw.net/badges/v1/b817aba4-fad8-49e2-b88a-7cc744dfa6ec/3",
   founder: "https://static-cdn.jtvnw.net/badges/v1/511b78a9-ab37-472f-9569-457753bbe7d3/3",
 };
-
-function normalizeLogin(raw: string): string {
-  return raw.trim().replace(/^@/, "").toLowerCase();
-}
-
-function fallbackName(login: string): string {
-  return login.slice(0, 1).toUpperCase();
-}
-
-function isSafeHttpsUrl(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  try {
-    return new URL(value).protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function normalizeKickSuggestions(value: unknown): ChannelSuggestion[] {
-  const channels = (value as { channels?: unknown })?.channels;
-  if (!Array.isArray(channels)) return [];
-
-  return channels.flatMap((channel) => {
-    if (!channel || typeof channel !== "object") return [];
-    const entry = channel as Record<string, unknown>;
-    const login = normalizeLogin(String(entry.slug || ""));
-    const displayName = String(entry.username || "").trim();
-    const avatarUrl = isSafeHttpsUrl(entry.avatarUrl) ? entry.avatarUrl : "";
-    return /^[a-z0-9_-]{1,64}$/i.test(login) && displayName
-      ? [{ login, displayName: displayName.slice(0, 64), avatarUrl }]
-      : [];
-  }).slice(0, 8);
-}
-
-async function searchKickChannels(
-  query: string,
-  signal: AbortSignal,
-): Promise<ChannelSuggestion[]> {
-  const url = new URL(KICK_SEARCH_ENDPOINT);
-  url.searchParams.set("query", query);
-  const response = await fetch(url, { signal });
-  if (!response.ok) throw new Error(`Kick search failed (${response.status})`);
-  return normalizeKickSuggestions(await response.json());
-}
-
-export function normalizeTwitchSearchSuggestions(
-  value: unknown,
-): ChannelSuggestion[] {
-  const payload = Array.isArray(value) ? value[0] : null;
-  const edges = (payload as {
-    data?: { searchSuggestions?: { edges?: unknown } };
-  })?.data?.searchSuggestions?.edges;
-  if (!Array.isArray(edges)) return [];
-
-  return edges.flatMap((edge) => {
-    if (!edge || typeof edge !== "object") return [];
-    const entry = edge as Record<string, unknown>;
-    const content = (entry.node as { content?: unknown } | undefined)?.content;
-    if (!content || typeof content !== "object") return [];
-    const channel = content as Record<string, unknown>;
-    const login = normalizeLogin(String(channel.login || ""));
-    const displayName = String(entry.text || login).trim();
-    const avatarUrl = isSafeHttpsUrl(channel.profileImageURL)
-      ? channel.profileImageURL
-      : "";
-    return channel.__typename === "SearchSuggestionChannel" && login
-      ? [{ login, displayName: displayName.slice(0, 64), avatarUrl }]
-      : [];
-  }).slice(0, 8);
-}
-
-async function searchTwitchChannels(
-  query: string,
-  signal: AbortSignal,
-): Promise<ChannelSuggestion[]> {
-  const payload = [{
-    operationName: "SearchTray_SearchSuggestions",
-    variables: {
-      requestID: crypto.randomUUID(),
-      queryFragment: query,
-      withOfflineChannelContent: true,
-    },
-    extensions: {
-      persistedQuery: {
-        version: 1,
-        sha256Hash: "1d2cd6ae289d7baa682ef4437ab010c8ea42749ebb81c052f87a8a857ea93378",
-      },
-    },
-  }];
-  const response = await fetch(TWITCH_GQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Client-ID": TWITCH_WEB_CLIENT_ID,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-    signal,
-  });
-  if (!response.ok) throw new Error(`Twitch search failed (${response.status})`);
-  return normalizeTwitchSearchSuggestions(await response.json());
-}
 
 function compactNumber(value: number, localeName: string): string {
   return new Intl.NumberFormat(localeName, {
@@ -186,36 +86,23 @@ function uniqueCount(values: Array<string | number | undefined | null>): number 
   return new Set(values.filter((value) => value !== undefined && value !== null)).size;
 }
 
-async function fetchJsonWithTimeout(
-  url: string,
-  init?: RequestInit,
-  timeoutMs = SUMMARY_TIMEOUT_MS,
-): Promise<unknown> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
-
 async function fetchTwitchGql(query: string, variables: Record<string, unknown>) {
-  const payload = await fetchJsonWithTimeout(TWITCH_GQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Client-ID": TWITCH_WEB_CLIENT_ID,
-      "Content-Type": "application/json",
+  const payload = await fetchJsonWithTimeout(
+    TWITCH_GQL_ENDPOINT,
+    {
+      method: "POST",
+      headers: {
+        "Client-ID": TWITCH_WEB_CLIENT_ID,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        operationName: "ChatYXSetupChannelSummary",
+        query,
+        variables,
+      }),
     },
-    body: JSON.stringify({
-      operationName: "ChatYXSetupChannelSummary",
-      query,
-      variables,
-    }),
-  });
+    SUMMARY_TIMEOUT_MS,
+  );
 
   return (payload as { data?: unknown })?.data;
 }
@@ -452,19 +339,9 @@ function metricIcon(type: Metric["icon"]): JSX.Element {
 
   switch (type) {
     case "twitch":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0 1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
-        </svg>
-      );
+      return <PlatformGlyph name="twitch" />;
     case "sevenTv":
-      return (
-        <svg viewBox="0 0 28 20" aria-hidden="true">
-          <path d="M20.7465 5.48825 21.9799 3.33745 22.646 2.20024 21.4125 0.0494437V0H14.8259L17.2928 4.3016 17.9836 5.48825H20.7465Z" />
-          <path d="M7.15395 19.9258 14.5546 7.02104 15.4673 5.43884 13.0004 1.13724 12.3097 0.0247596H1.8995L0.666057 2.17556 0 3.31276 1.23344 5.46356V5.51301H9.12745L2.96025 16.267 2.09685 17.7998 3.33029 19.9506V20H7.15395" />
-          <path d="M17.4655 19.9257H21.2398L26.1736 11.3225 27.037 9.83924 25.8036 7.68844V7.63899H22.0046L19.5377 11.9406 19.365 12.262 16.8981 7.96038 16.7255 7.63899 14.2586 11.9406 13.5679 13.1272 17.2682 19.5796 17.4655 19.9257Z" />
-        </svg>
-      );
+      return <PlatformGlyph name="seven-tv" />;
     case "bttv":
     case "ffz":
     case "vip":
@@ -690,7 +567,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
             />
           ) : (
             <span class="twitch-channel-avatar-fallback">
-              {fallbackName(login())}
+              {loginFallbackName(login())}
             </span>
           )}
             <span
@@ -724,19 +601,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
             onClick={clearChannel}
             aria-label={t("setup.channel.remove", { platform: props.platformName ?? "Twitch" })}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <Icon icon={XIcon} size={16} aria-hidden="true" />
           </button>
         </div>
       ) : (
@@ -820,7 +685,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
                       <img src={suggestion.avatarUrl} alt="" loading="lazy" />
                     ) : (
                       <span class="channel-suggestion-avatar-fallback">
-                        {fallbackName(suggestion.login)}
+                        {loginFallbackName(suggestion.login)}
                       </span>
                     )}
                     <span class="channel-suggestion-copy">

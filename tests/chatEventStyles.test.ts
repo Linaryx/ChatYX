@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { getChatEventStyleVariables } from "../src/styles/chatEventStyles";
-import { generateSizeStyles, SIZE_CONFIGS } from "../src/styles/chatStyles";
+import { getOverlayStyleVariables, SIZE_CONFIGS } from "../src/styles/chatStyles";
+import { DEFAULT_CHAT_CONFIG } from "../src/config/chatUrlParams";
 import { DEFAULT_EVENT_COLORS } from "../src/config/eventColors";
 
 describe("chat event style variables", () => {
@@ -37,13 +38,65 @@ describe("chat event style variables", () => {
 
   test("publishes the configured gigantified emote width for every size preset", () => {
     for (const size of [1, 2, 3] as const) {
-      expect(generateSizeStyles(size)).toContain(
-        `--gigantified-emote-width: ${SIZE_CONFIGS[size].gigantifiedEmoteWidth}`,
+      const variables = getOverlayStyleVariables({ ...DEFAULT_CHAT_CONFIG, size });
+      expect(variables["--chat-gigantified-emote-width"]).toBe(
+        SIZE_CONFIGS[size].gigantifiedEmoteWidth,
       );
     }
   });
 
   test("scales the message line height", () => {
-    expect(generateSizeStyles(1, 150)).toContain("line-height: 45px");
+    const variables = getOverlayStyleVariables({
+      ...DEFAULT_CHAT_CONFIG,
+      size: 1,
+      lineHeight: 150,
+    });
+    expect(variables["--chat-line-height"]).toBe("45px");
+  });
+
+  test("clamps the line height percentage", () => {
+    expect(
+      getOverlayStyleVariables({ ...DEFAULT_CHAT_CONFIG, size: 1, lineHeight: 900 })[
+        "--chat-line-height"
+      ],
+    ).toBe("60px");
+    expect(
+      getOverlayStyleVariables({ ...DEFAULT_CHAT_CONFIG, size: 1, lineHeight: 0 })[
+        "--chat-line-height"
+      ],
+    ).toBe("24px");
+  });
+
+  test("folds the emote scale into the emote and emoji sizes", () => {
+    const scaled = getOverlayStyleVariables({
+      ...DEFAULT_CHAT_CONFIG,
+      size: 2,
+      emoteScale: 1.5,
+    });
+    expect(scaled["--chat-emote-max-width"]).toBe("192px");
+    expect(scaled["--chat-emote-max-height"]).toBe("63px");
+    expect(scaled["--chat-emoji-size"]).toBe("58.5px");
+  });
+
+  test("omits the shadow and stroke properties when they are switched off", () => {
+    const off = getOverlayStyleVariables({
+      ...DEFAULT_CHAT_CONFIG,
+      shadow: false,
+      stroke: false,
+    });
+    expect(off["--chat-shadow-filter"]).toBeUndefined();
+    expect(off["--chat-stroke"]).toBeUndefined();
+    expect(off["--chat-paint-order"]).toBeUndefined();
+  });
+
+  test("publishes the shadow and stroke properties when they are on", () => {
+    const on = getOverlayStyleVariables({
+      ...DEFAULT_CHAT_CONFIG,
+      shadow: 3,
+      stroke: 4,
+    });
+    expect(on["--chat-shadow-filter"]).toBe("drop-shadow(2px 2px 0.5rem black)");
+    expect(on["--chat-stroke"]).toBe("4px black");
+    expect(on["--chat-paint-order"]).toBe("stroke fill");
   });
 });

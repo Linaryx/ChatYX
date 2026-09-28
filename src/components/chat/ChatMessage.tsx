@@ -7,7 +7,7 @@ import {
   Switch,
   type JSX,
 } from "solid-js";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import { hasMultipleChatSources, normalizeFontWeight } from "~/config/chatUrlParams";
 import {
   sevenTVCosmeticsService,
@@ -17,7 +17,7 @@ import {
 import { getFontFamily } from "~/styles/chatStyles";
 import { getChatEventStyleVariables } from "~/styles/chatEventStyles";
 import { networkClient } from "~/services/network/networkClient";
-import { hasMessageEntryAnimation } from "~/utils/ui/animationUtils";
+import { hasMessageEntryAnimation } from "~/config/chatAnimation";
 import { ChatBadges } from "~/components/chat/ChatBadges";
 import { ChatNick } from "~/components/chat/ChatNick";
 import { ChatText } from "~/components/chat/ChatText";
@@ -352,31 +352,20 @@ export const ChatMessage = (props: ChatMessageProps) => {
         // Smooth "throw from bottom": a CSS @keyframes animation (chatFlowEnter)
         // slides the new row up from one row-height below its natural position.
         // Measure synchronously (forces layout) so the animation starts with the
-        // correct shift and never jumps; animationend/timer clean up the class.
+        // correct shift and never jumps.
         const height = rootRef.getBoundingClientRect().height || 18;
         rootRef.style.setProperty("--chat-flow-entry-shift", `${height}px`);
-        const clearEntryAnimation = () => {
-          const r = rootRef;
-          if (!r) return;
-          r.classList.remove("message-enter");
-          r.style.removeProperty("--chat-flow-entry-shift");
-          rootRef?.removeEventListener("animationend", onEntryAnimationEnd!);
-          animationTimer = undefined;
-        };
-        onEntryAnimationEnd = (event) => {
-          if (event.target === rootRef) clearEntryAnimation();
-        };
-        rootRef.addEventListener("animationend", onEntryAnimationEnd);
-        animationTimer = window.setTimeout(
-          clearEntryAnimation,
-          props.animationDurationMs + 100,
-        );
-        return;
       }
 
+      // One cleanup for both entry animations. Only the flow variant sets the
+      // shift property, and removing a property that was never set is a no-op,
+      // so the two branches do not need their own copies of this.
       const clearEntryAnimation = () => {
-        rootRef?.classList.remove("message-enter");
-        rootRef?.removeEventListener("animationend", onEntryAnimationEnd!);
+        const element = rootRef;
+        if (!element) return;
+        element.classList.remove("message-enter");
+        element.style.removeProperty("--chat-flow-entry-shift");
+        element.removeEventListener("animationend", onEntryAnimationEnd!);
         animationTimer = undefined;
       };
       onEntryAnimationEnd = (event) => {

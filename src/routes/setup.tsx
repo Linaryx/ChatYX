@@ -9,7 +9,8 @@ import {
   type JSX,
 } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { ColorPickerField } from "~/components/ColorPickerField";
+import { PlatformGlyph } from "~/components/brand/PlatformGlyph";
+import { ColorPickerField } from "~/components/setup/ColorPickerField";
 import { LanguageSwitcher } from "~/components/setup/LanguageSwitcher";
 import { locale, t } from "~/i18n";
 import {
@@ -19,19 +20,56 @@ import {
   SetupNav,
   ToggleRows,
   type ControlRow,
-  type SetupSectionId,
   type ToggleRow,
 } from "~/components/setup/SetupLayout";
+import type { SetupSectionId } from "~/features/setup/model/setupSections";
 import { VoiceCatalog } from "~/components/setup/VoiceCatalog";
 import { SetupImportCard } from "~/components/setup/SetupImportCard";
+import { SetupChipInput } from "~/components/setup/SetupChipInput";
+import { UserChip } from "~/components/setup/UserChip";
+import { FfzBadgeMergeBlock } from "~/components/setup/FfzBadgeMergeBlock";
+import { PreviewControls } from "~/components/setup/PreviewControls";
+import { createAppearanceRows } from "~/components/setup/sections/appearanceRows";
+import { createStylingRows } from "~/components/setup/sections/stylingRows";
+import {
+  createBehaviorRows,
+  createBehaviorToggles,
+} from "~/components/setup/sections/behaviorRows";
+import {
+  createContentToggles,
+  createRteToggles,
+  createTtsToggles,
+} from "~/components/setup/sections/toggleRows";
 import { parseSetupImport } from "~/config/setupImport";
 import { toVisualSetupPatch } from "~/config/setupTemplates";
 import { applySetupImport } from "~/components/setup/setupImportAdapter";
-import { SetupNumberField } from "~/components/setup/SetupNumberField";
+import {
+  SETUP_STORAGE_KEYS,
+  readStoredSetupValue,
+  writeStoredSetupValue,
+} from "~/services/storage/setupStorage";
+import {
+  loadKickBotProfiles,
+  loadTwitchBotProfiles,
+  type BotProfile,
+} from "~/services/setup/botProfiles";
+import { mergeUniqueLogins } from "~/services/setup/logins";
+import {
+  detectLocalFontBrowser,
+  loadLocalFontOptions,
+  type LocalFontOption,
+} from "~/services/setup/localFonts";
+import { toClampedInt, toInt } from "~/config/formValues";
+import {
+  buildOverlayUrl,
+  buildSetupConfig,
+  type SetupFormState,
+} from "~/config/setupConfig";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
 import { TwitchChannelField } from "~/components/setup/TwitchChannelField";
 import { Button } from "~/components/ui/button";
+import { Icon } from "~/components/ui/icon";
 import { Input } from "~/components/ui/input";
 import { Slider } from "~/components/ui/slider";
 import {
@@ -43,28 +81,50 @@ import {
 import {
   DEFAULT_CHAT_CONFIG,
   chatConfigToSearchParams,
-  normalizeBotNames,
   parseBotNames,
   type ChatAnimationMode,
-  type ChatConfig,
   type LinkDisplayMode,
   type PlatformMarkerMode,
 } from "~/config/chatUrlParams";
-import { getAppBaseUrl, getPublicAssetUrl } from "~/utils/appBase";
+import { getPublicAssetUrl } from "~/utils/appBase";
 import {
   MAX_MESSAGE_SPEED,
   MIN_MESSAGE_SPEED,
   messageSpeedToIntervalMs,
-} from "~/utils/ui/animationUtils";
+} from "~/config/chatAnimation";
+import { getChatPreviewSessionKey } from "~/services/chat/preview";
+import { createPreviewSynchronizer } from "~/features/setup/previewSync";
 import {
-  createChatPreviewConfigMessage,
-  getChatPreviewSessionKey,
-} from "~/services/chat/preview";
+  lockSetupDocument,
+  watchReducedMotion,
+} from "~/features/setup/setupDocument";
 import { cn } from "~/lib/utils";
-import { isSetupSearchMatch } from "~/utils/setupSearch";
-import Monitor from "lucide-solid/icons/monitor";
-import Pause from "lucide-solid/icons/pause";
-import Play from "lucide-solid/icons/play";
+import {
+  collectSetupSearchHits,
+  formatSetupSearchCounter,
+  highlightSetupSearchHits,
+  revealSetupSearchHit,
+  MIN_SETUP_SEARCH_LENGTH,
+  type SetupSearchHit,
+} from "~/features/setup/settingsSearch";
+import Alert02Icon from "@hugeicons/core-free-icons/Alert02Icon";
+import ArrowLeft01Icon from "@hugeicons/core-free-icons/ArrowLeft01Icon";
+import ArrowRight01Icon from "@hugeicons/core-free-icons/ArrowRight01Icon";
+import ArrowUpRightStackIcon from "@hugeicons/core-free-icons/ArrowUpRightStackIcon";
+import Blockchain05Icon from "@hugeicons/core-free-icons/Blockchain05Icon";
+import BotMessageSquareIcon from "@hugeicons/core-free-icons/BotMessageSquareIcon";
+import ColorsIcon from "@hugeicons/core-free-icons/ColorsIcon";
+import Copy01Icon from "@hugeicons/core-free-icons/Copy01Icon";
+import DashboardSquare03Icon from "@hugeicons/core-free-icons/DashboardSquare03Icon";
+import GithubIcon from "@hugeicons/core-free-icons/GithubIcon";
+import LinkSquare01Icon from "@hugeicons/core-free-icons/LinkSquare01Icon";
+import MonitorIcon from "@hugeicons/core-free-icons/MonitorIcon";
+import SearchingIcon from "@hugeicons/core-free-icons/SearchingIcon";
+import SlidersHorizontalIcon from "@hugeicons/core-free-icons/SlidersHorizontalIcon";
+import TextIcon from "@hugeicons/core-free-icons/TextIcon";
+import TrashIcon from "@hugeicons/core-free-icons/TrashIcon";
+import VoiceCommentIcon from "@hugeicons/core-free-icons/VoiceCommentIcon";
+import XIcon from "@hugeicons/core-free-icons/XIcon";
 
 const eventColorPalette: ReadonlyArray<{
   readonly field: EventColorField;
@@ -85,31 +145,7 @@ const eventColorPalette: ReadonlyArray<{
   { field: "eventColorAnnOrange", label: () => t("setup.eventColorAnnOrange") },
 ];
 
-import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
-import X from "lucide-solid/icons/x";
 import "~/components/setup/SetupWorkspace.css";
-
-type BotProfile = {
-  login: string;
-  displayName: string;
-  avatarUrl: string;
-};
-
-type LocalFontData = {
-  family: string;
-  fullName?: string;
-  postscriptName?: string;
-  style?: string;
-};
-
-type LocalFontOption = {
-  family: string;
-  styles: string[];
-};
-
-type LocalFontWindow = Window & {
-  queryLocalFonts?: () => Promise<LocalFontData[]>;
-};
 
 type LocalFontStatus =
   | { kind: "idle" }
@@ -120,218 +156,8 @@ type LocalFontStatus =
   | { kind: "empty" }
   | { kind: "error" };
 
-const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
-const TWITCH_WEB_CLIENT_ID =
-  import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
-const SETUP_STORAGE_KEYS = {
-  config: "chatyx.setup.config.v1",
-  twitchChannel: "chatyx.setup.twitchChannel",
-  previewStageBackdrop: "chatyx.setup.previewStageBackdrop",
-  previewStageColor: "chatyx.setup.previewStageColor",
-} as const;
-
-function readStoredSetupValue(key: string): string {
-  if (typeof window === "undefined") return "";
-
-  try {
-    return window.localStorage.getItem(key) || "";
-  } catch {
-    return "";
-  }
-}
-
-function writeStoredSetupValue(key: string, value: string) {
-  if (typeof window === "undefined") return;
-
-  try {
-    const normalized = value.trim();
-    if (normalized) {
-      window.localStorage.setItem(key, normalized);
-    } else {
-      window.localStorage.removeItem(key);
-    }
-  } catch {
-    // Storage can be blocked in private windows; setup must still work.
-  }
-}
-
-function detectLocalFontBrowser(): string | null {
-  if (typeof window === "undefined" || typeof navigator === "undefined") {
-    return null;
-  }
-
-  const hasApi =
-    typeof (window as LocalFontWindow).queryLocalFonts === "function";
-  if (!hasApi) return null;
-
-  const ua = navigator.userAgent;
-  const vendor = navigator.vendor || "";
-
-  if (/Edg\//.test(ua)) return "Edge";
-  if (/(OPR|Opera)\//.test(ua)) return "Opera";
-  if (/Chrome\//.test(ua) && vendor.includes("Google")) return "Chrome";
-
-  return null;
-}
-
-function normalizeLocalFonts(fonts: LocalFontData[]): LocalFontOption[] {
-  const families = new Map<string, Set<string>>();
-
-  for (const font of fonts) {
-    const family = font.family?.trim();
-    if (!family) continue;
-
-    const styles = families.get(family) ?? new Set<string>();
-    if (font.style) styles.add(font.style);
-    families.set(family, styles);
-  }
-
-  return Array.from(families.entries())
-    .map(([family, styles]) => ({
-      family,
-      styles: Array.from(styles).sort((a, b) => a.localeCompare(b)),
-    }))
-    .sort((a, b) => a.family.localeCompare(b.family));
-}
-
-function normalizeBotLogin(raw: string): string {
-  return raw.trim().replace(/^@/, "").toLowerCase();
-}
-
-function splitBotLogins(raw: string): string[] {
-  return raw
-    .split(/[\s,]+/)
-    .map(normalizeBotLogin)
-    .filter(Boolean);
-}
-
-function botFallbackName(login: string): string {
-  return login.slice(0, 1).toUpperCase();
-}
-
-async function fetchJsonWithTimeout(
-  url: string,
-  init: RequestInit,
-  timeoutMs: number,
-): Promise<unknown> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
-
-async function loadBotProfiles(logins: string[]): Promise<BotProfile[]> {
-  if (logins.length === 0) return [];
-
-  try {
-    const payload = await fetchJsonWithTimeout(
-      TWITCH_GQL_ENDPOINT,
-      {
-        method: "POST",
-        headers: {
-          "Client-ID": TWITCH_WEB_CLIENT_ID,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          operationName: "ChatYXSetupBotProfiles",
-          query: `
-            query ChatYXSetupBotProfiles($logins: [String!]!) {
-              users(logins: $logins) {
-                login
-                displayName
-                profileImageURL(width: 70)
-              }
-            }
-          `,
-          variables: { logins },
-        }),
-      },
-      3500,
-    );
-
-    const users = (payload as { data?: { users?: unknown[] } })?.data?.users;
-    if (!Array.isArray(users)) return [];
-
-    return users
-      .map((user) => {
-        if (!user || typeof user !== "object") return null;
-
-        const entry = user as {
-          login?: unknown;
-          displayName?: unknown;
-          profileImageURL?: unknown;
-        };
-        const login = String(entry.login || "").toLowerCase();
-        if (!login) return null;
-
-        return {
-          login,
-          displayName: String(entry.displayName || entry.login || login),
-          avatarUrl: String(entry.profileImageURL || ""),
-        };
-      })
-      .filter((profile): profile is BotProfile => profile !== null);
-  } catch {
-    return [];
-  }
-}
-
-async function loadKickBotProfiles(logins: string[]): Promise<BotProfile[]> {
-  const profiles = await Promise.all(
-    logins.map(async (login) => {
-      try {
-        const payload = await fetchJsonWithTimeout(
-          `https://kick.com/api/v2/channels/${encodeURIComponent(login)}/info`,
-          {},
-          3500,
-        );
-        const channel = payload as {
-          slug?: unknown;
-          user?: { username?: unknown; profile_pic?: unknown };
-        };
-        if (typeof channel.slug !== "string") return null;
-        const avatarUrl = channel.user?.profile_pic;
-
-        return {
-          login: channel.slug.toLowerCase(),
-          displayName:
-            typeof channel.user?.username === "string" && channel.user.username.trim()
-              ? channel.user.username.trim()
-              : channel.slug,
-          avatarUrl:
-            typeof avatarUrl === "string" && avatarUrl.startsWith("https://")
-              ? avatarUrl
-              : "",
-        };
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return profiles.filter((profile): profile is BotProfile => profile !== null);
-}
-
-function mergeUniqueLogins(current: string[], raw: string): string[] {
-  const nextLogins = splitBotLogins(raw);
-  if (nextLogins.length === 0) return current;
-
-  const seen = new Set(current);
-  const merged = [...current];
-
-  for (const login of nextLogins) {
-    if (seen.has(login)) continue;
-    seen.add(login);
-    merged.push(login);
-  }
-
-  return merged;
-}
+/** YouTube bot entries have no profile lookup, so their chips show the login. */
+const EMPTY_BOT_PROFILES = (): Record<string, BotProfile> => ({});
 
 export default function ChatSetup() {
   const [channel, setChannel] = createSignal(
@@ -436,17 +262,6 @@ export default function ChatSetup() {
   const [previewDemoKind, setPreviewDemoKind] = createSignal<
     "pasta" | "emote"
   >("pasta");
-  const [previewModeThumbStyle, setPreviewModeThumbStyle] =
-    createSignal<JSX.CSSProperties>({ opacity: "0" });
-  const [previewDemoThumbStyle, setPreviewDemoThumbStyle] =
-    createSignal<JSX.CSSProperties>({ opacity: "0" });
-  let previewControlsRef: HTMLDivElement | undefined;
-  let previewModeSelectorRef: HTMLDivElement | undefined;
-  let previewLiveOptionRef: HTMLButtonElement | undefined;
-  let previewDemoOptionRef: HTMLButtonElement | undefined;
-  let previewDemoSelectorRef: HTMLDivElement | undefined;
-  let previewPastaOptionRef: HTMLButtonElement | undefined;
-  let previewEmoteOptionRef: HTMLButtonElement | undefined;
   const [showHomies, setShowHomies] = createSignal(
     DEFAULT_CHAT_CONFIG.showHomies,
   );
@@ -620,66 +435,30 @@ export default function ChatSetup() {
   let bodyScrollRef: HTMLDivElement | undefined;
   const sectionScrollPositions = new Map<SetupSectionId, number>();
   const viewScrollPositions = { settings: 0, preview: 0 };
-  let activePreviewSessionKey = "";
-  let previewNavigationTimer: number | undefined;
   let copyResetTimer: number | undefined;
 
-  const postPreviewConfig = (config = previewConfig()) => {
-    iframeRef?.contentWindow?.postMessage(
-      createChatPreviewConfigMessage(config),
-      window.location.origin,
-    );
-  };
+  const previewSync = createPreviewSynchronizer({
+    getIframe: () => iframeRef,
+    setFallbackUrl: setPreviewUrl,
+  });
 
   onMount(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById("root");
-    const prev = {
-      htmlBg: html.style.background,
-      bodyBg: body.style.background,
-      htmlOverflow: html.style.overflow,
-      bodyOverflow: body.style.overflow,
-      bodyHeight: body.style.height,
-      rootOverflow: root?.style.overflow ?? "",
-      rootHeight: root?.style.height ?? "",
-    };
+    const releaseDocumentLock = lockSetupDocument();
+    const stopMotionWatch = watchReducedMotion((matches) => {
+      setReducedMotion(matches);
+      if (matches) setDemoPaused(true);
+    });
+
     const supportedBrowser = detectLocalFontBrowser();
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const syncMotionPreference = () => {
-      setReducedMotion(motionQuery.matches);
-      if (motionQuery.matches) setDemoPaused(true);
-    };
-    syncMotionPreference();
-    motionQuery.addEventListener("change", syncMotionPreference);
-
-    // Lock document scroll — setup owns scrolling in fixed columns
-    html.style.background = "#09090b";
-    html.style.overflow = "hidden";
-    body.style.background = "#09090b";
-    body.style.overflow = "hidden";
-    body.style.height = "100%";
-    if (root) {
-      root.style.overflow = "hidden";
-      root.style.height = "100%";
-    }
-
     if (supportedBrowser) {
       setLocalFontBrowser(supportedBrowser);
       setLocalFontStatus({ kind: "available", browser: supportedBrowser });
     }
 
     onCleanup(() => {
-      motionQuery.removeEventListener("change", syncMotionPreference);
-      html.style.background = prev.htmlBg;
-      html.style.overflow = prev.htmlOverflow;
-      body.style.background = prev.bodyBg;
-      body.style.overflow = prev.bodyOverflow;
-      body.style.height = prev.bodyHeight;
-      if (root) {
-        root.style.overflow = prev.rootOverflow;
-        root.style.height = prev.rootHeight;
-      }
+      previewSync.dispose();
+      stopMotionWatch();
+      releaseDocumentLock();
     });
   });
 
@@ -688,46 +467,33 @@ const [activeSection, setActiveSection] =
   const [setupSearch, setSetupSearch] = createSignal("");
   const [setupSearchIndex, setSetupSearchIndex] = createSignal(0);
   const setupSearchQuery = createMemo(() => setupSearch().trim());
-  const setupSearchResults = createMemo(() => {
+  const setupSearchHits = createMemo(() => {
     const query = setupSearchQuery();
-    if (query.length < 3 || typeof document === "undefined") return [] as HTMLElement[];
-    return Array.from(document.querySelectorAll<HTMLElement>(
-      ".setup-section .setup-control-row, .setup-section .setup-switch-row, .setup-section .setup-field-group > h3",
-    )).filter((element) => isSetupSearchMatch(query, element.textContent ?? ""));
+    if (query.length < MIN_SETUP_SEARCH_LENGTH) return [] as SetupSearchHit[];
+    return collectSetupSearchHits(query);
   });
   const matchedSearchSections = createMemo(() => new Set(
-    setupSearchResults().flatMap((element) => {
-      const id = element.closest<HTMLElement>(".setup-section")?.id.replace("setup-section-", "") as SetupSectionId | undefined;
-      return id ? [id] : [];
-    }),
+    setupSearchHits().flatMap((hit) => (hit.sectionId ? [hit.sectionId] : [])),
   ));
-  const setupSearchCounter = createMemo(() => {
-    const total = setupSearchResults().length;
-    if (total === 0) return "0";
-    return `${Math.min(setupSearchIndex(), total - 1) + 1} / ${total}`;
-  });
+  const setupSearchCounter = createMemo(() =>
+    formatSetupSearchCounter(setupSearchIndex(), setupSearchHits().length),
+  );
   const focusSearchResult = (index: number) => {
-    const results = setupSearchResults();
-    if (results.length === 0) return;
-    const next = (index + results.length) % results.length;
+    const hits = setupSearchHits();
+    if (hits.length === 0) return;
+    const next = (index + hits.length) % hits.length;
     setSetupSearchIndex(next);
-    const target = results[next]!;
-    const section = target.closest<HTMLElement>(".setup-section")?.id.replace("setup-section-", "") as SetupSectionId | undefined;
-    if (section) scrollToSection(section);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }));
+    revealSetupSearchHit(hits[next]!, scrollToSection);
   };
   let previousSearchQuery = "";
   createEffect(() => {
-    document.querySelectorAll(".setup-search-match").forEach((element) => element.classList.remove("setup-search-match"));
-    const results = setupSearchResults();
-    results.forEach((element) => element.classList.add("setup-search-match"));
+    const hits = setupSearchHits();
+    highlightSetupSearchHits(hits);
     const query = setupSearchQuery();
     if (query === previousSearchQuery) return;
     previousSearchQuery = query;
     setSetupSearchIndex(0);
-    if (results.length > 0) focusSearchResult(0);
+    if (hits.length > 0) focusSearchResult(0);
   });
 
   const importSettings = (patch: Parameters<typeof applySetupImport>[0]) => {
@@ -834,39 +600,6 @@ const [activeSection, setActiveSection] =
     if (bodyScrollRef) bodyScrollRef.scrollTop = viewScrollPositions[view];
   };
 
-  const normalizeHexColor = (raw: string, fallback: string, allowAlpha = false): string => {
-    const value = raw.trim();
-    const withHash = value.startsWith("#") ? value : `#${value}`;
-    const pattern = allowAlpha ? /^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/ : /^#[0-9a-fA-F]{6}$/;
-    return pattern.test(withHash) ? withHash : fallback;
-  };
-
-  const toIntOrFalse = (raw: string): number | false => {
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) && n > 0 ? n : false;
-  };
-
-  const toSecondsOrFalse = (raw: string): number | false => {
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) && n > 0 ? n : false;
-  };
-
-  const toInt = (raw: string, fallback: number): number => {
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) ? n : fallback;
-  };
-
-  const toClampedInt = (
-    raw: string,
-    fallback: number,
-    min: number,
-    max: number,
-  ): number => {
-    const n = Number.parseInt(raw, 10);
-    const value = Number.isFinite(n) ? n : fallback;
-    return Math.min(Math.max(value, min), max);
-  };
-
   const previewFrameStyle = createMemo(() => {
     const radius = toClampedInt(
       overlayBackgroundRadius(),
@@ -877,42 +610,20 @@ const [activeSection, setActiveSection] =
     return `${previewStageStyle()} border-radius: ${radius}px;`;
   });
 
-  const toFloat = (raw: string, fallback: number): number => {
-    const n = Number.parseFloat(raw);
-    return Number.isFinite(n) ? n : fallback;
-  };
-
-  const buildConfig = (selectedChannel: string): ChatConfig => ({
-    ...DEFAULT_CHAT_CONFIG,
-    channel: selectedChannel,
-    youtubeChannel: youtubeChannel().trim().replace(/^@/, ""),
-    kickChannel: kickChannel().trim().replace(/^@/, ""),
-    size: toInt(size(), DEFAULT_CHAT_CONFIG.size),
-    font: toInt(font(), DEFAULT_CHAT_CONFIG.font),
-    lineHeight: toClampedInt(lineHeight(), DEFAULT_CHAT_CONFIG.lineHeight, 80, 200),
-    fontWeight: toClampedInt(
-      fontWeight(),
-      DEFAULT_CHAT_CONFIG.fontWeight,
-      100,
-      1000,
-    ),
-    nickFontWeight: toClampedInt(
-      nickFontWeight(),
-      DEFAULT_CHAT_CONFIG.nickFontWeight,
-      100,
-      1000,
-    ),
+  const formState = (): SetupFormState => ({
+    youtubeChannel: youtubeChannel(),
+    kickChannel: kickChannel(),
+    size: size(),
+    font: font(),
+    lineHeight: lineHeight(),
+    fontWeight: fontWeight(),
+    nickFontWeight: nickFontWeight(),
     fontCustom: fontCustom(),
-    shadow: toIntOrFalse(shadow()),
-    stroke: toIntOrFalse(stroke()),
-    fade: toSecondsOrFalse(fade()),
+    shadow: shadow(),
+    stroke: stroke(),
+    fade: fade(),
     animation: animation(),
-    messageSpeed: toClampedInt(
-      messageSpeed(),
-      DEFAULT_CHAT_CONFIG.messageSpeed,
-      MIN_MESSAGE_SPEED,
-      MAX_MESSAGE_SPEED,
-    ),
+    messageSpeed: messageSpeed(),
     showHomies: showHomies(),
     show7tvBadges: show7tvBadges(),
     showFfzBadges: showFfzBadges(),
@@ -926,13 +637,13 @@ const [activeSection, setActiveSection] =
     bots: bots(),
     commands: commands(),
     hideAllBadges: hideAllBadges(),
-    emoteScale: toFloat(emoteScale(), DEFAULT_CHAT_CONFIG.emoteScale),
+    emoteScale: emoteScale(),
     showGifs: showGifs(),
-    gifScale: toFloat(gifScale(), DEFAULT_CHAT_CONFIG.gifScale),
-    botNames: normalizeBotNames(botNames().join(",")),
-    kickBotNames: normalizeBotNames(kickBotNames().join(",")),
-    youtubeBotNames: normalizeBotNames(youtubeBotNames().join(",")),
-    singleChatter: normalizeBotNames(allowedChatters().join(",")),
+    gifScale: gifScale(),
+    botNames: botNames(),
+    kickBotNames: kickBotNames(),
+    youtubeBotNames: youtubeBotNames(),
+    allowedChatters: allowedChatters(),
     show7tvUnlisted: show7tvUnlisted(),
     smallCaps: smallCaps(),
     nlAfterName: nlAfterName(),
@@ -940,38 +651,18 @@ const [activeSection, setActiveSection] =
     reverseLineOrder: reverseLineOrder(),
     horizontal: horizontal(),
     platformMarker: platformMarker(),
-    ffzBotMixCustom: true,
     ffzBotMixBroadcaster: ffzBotMixBroadcaster(),
     ffzBotMixModerator: ffzBotMixModerator(),
     ffzBotMixVip: ffzBotMixVip(),
-    overlayBackgroundColor: normalizeHexColor(
-      overlayBackgroundColor(),
-      DEFAULT_CHAT_CONFIG.overlayBackgroundColor,
-    ),
-    overlayBackgroundOpacity: toInt(
-      overlayBackgroundOpacity(),
-      DEFAULT_CHAT_CONFIG.overlayBackgroundOpacity,
-    ),
-    overlayBackgroundRadius: toInt(
-      overlayBackgroundRadius(),
-      DEFAULT_CHAT_CONFIG.overlayBackgroundRadius,
-    ),
-    overlayPadding: toInt(
-      overlayPadding(),
-      DEFAULT_CHAT_CONFIG.overlayPadding,
-    ),
-    overlayBorderWidth: toInt(
-      overlayBorderWidth(),
-      DEFAULT_CHAT_CONFIG.overlayBorderWidth,
-    ),
-    overlayBorderColor: normalizeHexColor(
-      overlayBorderColor(),
-      DEFAULT_CHAT_CONFIG.overlayBorderColor,
-      true,
-    ),
+    overlayBackgroundColor: overlayBackgroundColor(),
+    overlayBackgroundOpacity: overlayBackgroundOpacity(),
+    overlayBackgroundRadius: overlayBackgroundRadius(),
+    overlayPadding: overlayPadding(),
+    overlayBorderWidth: overlayBorderWidth(),
+    overlayBorderColor: overlayBorderColor(),
     highlightTwitchEvents: highlightTwitchEvents(),
-    eventColorOpacity: toInt(eventColorOpacity(), DEFAULT_CHAT_CONFIG.eventColorOpacity),
-    ...eventColors(),
+    eventColorOpacity: eventColorOpacity(),
+    eventColors: eventColors(),
     twitchEventBold: twitchEventBold(),
     twitchEventItalic: twitchEventItalic(),
     showHighlightedMessages: showHighlightedMessages(),
@@ -979,10 +670,9 @@ const [activeSection, setActiveSection] =
     showGigantifiedEmotes: showGigantifiedEmotes(),
     showPredictions: showPredictions(),
     linkMode: linkMode(),
-    linkColor: normalizeHexColor(linkColor(), DEFAULT_CHAT_CONFIG.linkColor),
-    usersColor: usersColorEnabled()
-      ? normalizeHexColor(usersColor(), "#ffffff")
-      : "",
+    linkColor: linkColor(),
+    usersColorEnabled: usersColorEnabled(),
+    usersColor: usersColor(),
     hideLinkRewards: hideLinkRewards(),
     rteProxy: rteProxy(),
     rteAzureTts: rteAzureTts(),
@@ -990,6 +680,13 @@ const [activeSection, setActiveSection] =
     rteReyohohoBadge: rteReyohohoBadge(),
     rteCustomCosmetics: rteCustomCosmetics(),
   });
+
+  /**
+   * The preview, the persisted config and the exported link all project the same
+   * form; only the channel differs between them.
+   */
+  const buildConfig = (selectedChannel: string) =>
+    buildSetupConfig(formState(), selectedChannel);
 
   let canPersistSetupConfig = false;
   onMount(() => {
@@ -1009,24 +706,6 @@ const [activeSection, setActiveSection] =
     }
   });
 
-  const buildChatUrl = (
-    cfg: ChatConfig,
-    extraParams?: Record<string, string>,
-    options?: { includeMessageSpeed?: boolean },
-  ) => {
-    const params = chatConfigToSearchParams(cfg);
-    if (options?.includeMessageSpeed === false) {
-      params.delete("ms");
-    }
-    if (extraParams) {
-      Object.entries(extraParams).forEach(([key, value]) =>
-        params.set(key, value),
-      );
-    }
-    const query = params.toString();
-    return `${getAppBaseUrl()}/chat/${query ? `?${query}` : ""}`;
-  };
-
   const hasTwitchChannel = createMemo(() => Boolean(channel().trim()));
   const hasYouTubeChannel = createMemo(() => Boolean(youtubeChannel().trim()));
   const hasKickChannel = createMemo(() => Boolean(kickChannel().trim()));
@@ -1036,44 +715,6 @@ const [activeSection, setActiveSection] =
   const hasPreviewChannel = createMemo(
     () => hasTwitchChannel() || hasYouTubeChannel() || hasKickChannel(),
   );
-  const getPreviewSelectorThumbStyle = (
-    selector: HTMLDivElement | undefined,
-    option: HTMLButtonElement | undefined,
-  ): JSX.CSSProperties => {
-    if (!selector || !option) return { opacity: "0" };
-
-    const selectorRect = selector.getBoundingClientRect();
-    const optionRect = option.getBoundingClientRect();
-    return {
-      height: `${optionRect.height}px`,
-      opacity: "1",
-      transform: `translateY(${optionRect.top - selectorRect.top}px)`,
-    };
-  };
-  const updatePreviewSelectorThumbs = () => {
-    setPreviewModeThumbStyle(
-      getPreviewSelectorThumbStyle(
-        previewModeSelectorRef,
-        previewMode() === "live" ? previewLiveOptionRef : previewDemoOptionRef,
-      ),
-    );
-    setPreviewDemoThumbStyle(
-      isExternalOnly()
-        ? { opacity: "0" }
-        : getPreviewSelectorThumbStyle(
-            previewDemoSelectorRef,
-            previewDemoKind() === "pasta"
-              ? previewPastaOptionRef
-              : previewEmoteOptionRef,
-          ),
-    );
-  };
-  createEffect(updatePreviewSelectorThumbs);
-  onMount(() => {
-    const observer = new ResizeObserver(updatePreviewSelectorThumbs);
-    if (previewControlsRef) observer.observe(previewControlsRef);
-    onCleanup(() => observer.disconnect());
-  });
   const previewChannel = createMemo(() =>
     channel().trim() || (hasYouTubeChannel() || hasKickChannel() ? "" : "chatyxpreview"),
   );
@@ -1099,7 +740,6 @@ const [activeSection, setActiveSection] =
       ? t("setup.speedStopped")
       : `${messageIntervalMs()} ${t("setup.milliseconds")}`,
   );
-  const ffzBotBadgePreviewUrl = getPublicAssetUrl("img/ffz-bot-badge.png");
   const requestedBotProfiles = new Set<string>();
   const requestedKickBotProfiles = new Set<string>();
 
@@ -1199,7 +839,7 @@ const [activeSection, setActiveSection] =
       requestedBotProfiles.add(login);
     }
 
-    void loadBotProfiles(missing).then((profiles) => {
+    void loadTwitchBotProfiles(missing).then((profiles) => {
       if (profiles.length === 0) return;
 
       setBotProfiles((current) => {
@@ -1270,7 +910,7 @@ const [activeSection, setActiveSection] =
     }
 
     setGeneratedUrl(
-      buildChatUrl(buildConfig(currentChannel), undefined, {
+      buildOverlayUrl(buildConfig(currentChannel), undefined, {
         includeMessageSpeed: false,
       }),
     );
@@ -1281,15 +921,9 @@ const [activeSection, setActiveSection] =
     const mode = previewMode();
     const demoKind = previewDemoKind();
     const sessionKey = getChatPreviewSessionKey(cfg, mode, demoKind);
-    if (sessionKey === activePreviewSessionKey) return;
 
-    activePreviewSessionKey = sessionKey;
-    if (previewNavigationTimer !== undefined) {
-      window.clearTimeout(previewNavigationTimer);
-    }
-    previewNavigationTimer = window.setTimeout(() => {
-      previewNavigationTimer = undefined;
-      const nextPreviewUrl = buildChatUrl(
+    previewSync.scheduleNavigation(sessionKey, () =>
+      buildOverlayUrl(
         cfg,
         mode === "demo"
           ? {
@@ -1299,28 +933,19 @@ const [activeSection, setActiveSection] =
           : {
               preview: "false",
             },
-      );
-
-      // Set via ref to avoid about:blank flash — just swap src directly
-      if (iframeRef) {
-        iframeRef.src = nextPreviewUrl;
-      } else {
-        setPreviewUrl(nextPreviewUrl);
-      }
-    }, 180);
+      ),
+    );
   });
 
   onCleanup(() => {
-    if (previewNavigationTimer !== undefined) {
-      window.clearTimeout(previewNavigationTimer);
-    }
+    previewSync.dispose();
     if (copyResetTimer !== undefined) {
       window.clearTimeout(copyResetTimer);
     }
   });
 
   createEffect(() => {
-    postPreviewConfig(previewConfig());
+    previewSync.postConfig(previewConfig());
   });
 
   const copyToClipboard = async () => {
@@ -1373,8 +998,7 @@ const [activeSection, setActiveSection] =
   });
 
   const loadLocalFonts = async () => {
-    const queryLocalFonts = (window as LocalFontWindow).queryLocalFonts;
-    if (!localFontBrowser() || typeof queryLocalFonts !== "function") {
+    if (!localFontBrowser()) {
       setLocalFontStatus({ kind: "unsupported" });
       return;
     }
@@ -1382,295 +1006,63 @@ const [activeSection, setActiveSection] =
     setIsLoadingLocalFonts(true);
     setLocalFontStatus({ kind: "loading" });
 
-    try {
-      const fonts = normalizeLocalFonts(await queryLocalFonts());
-      setLocalFonts(fonts);
-      setLocalFontStatus(
-        fonts.length > 0
-          ? { kind: "found", count: fonts.length }
-          : { kind: "empty" },
-      );
-    } catch {
+    const result = await loadLocalFontOptions();
+    if (result.kind === "found") {
+      setLocalFonts(result.fonts);
+      setLocalFontStatus({ kind: "found", count: result.fonts.length });
+    } else if (result.kind === "empty") {
+      setLocalFontStatus({ kind: "empty" });
+    } else if (result.kind === "unsupported") {
+      setLocalFontStatus({ kind: "unsupported" });
+    } else {
       setLocalFontStatus({ kind: "error" });
-    } finally {
-      setIsLoadingLocalFonts(false);
     }
+
+    setIsLoadingLocalFonts(false);
   };
 
-  const appearanceRows: ControlRow[] = [
-    {
-      label: () => t("setup.messageSize"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={size()}
-          onChange={(e) => setSize(e.currentTarget.value)}
-        >
-          <option value="1">{t("setup.small")}</option>
-          <option value="2">{t("setup.medium")}</option>
-          <option value="3">{t("setup.large")}</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.font"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={font()}
-          onChange={(e) => setFont(e.currentTarget.value)}
-        >
-          <option value="0">{t("setup.customFont")}</option>
-          <option value="1">Baloo Tammudu</option>
-          <option value="2">Segoe UI (Chatterino)</option>
-          <option value="3">Roboto</option>
-          <option value="4">Lato</option>
-          <option value="5">Noto Sans</option>
-          <option value="6">Source Code Pro</option>
-          <option value="7">Impact</option>
-          <option value="8">Comfortaa</option>
-          <option value="9">Dancing Script</option>
-          <option value="10">Indie Flower</option>
-          <option value="11">Open Sans</option>
-          <option value="12">Alsina (Vsauce)</option>
-          <option value="13">BF Mono</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.customFontName"),
-      hint: () => t("setup.customFontHint"),
-      control: (labelId) => (
-        <div class="flex flex-col gap-2">
-          <Input
-            aria-labelledby={labelId}
-            type="text"
-            value={fontCustom()}
-            onInput={(e) => setFontCustom(e.currentTarget.value)}
-            placeholder={t("setup.customFontPlaceholder")}
-            disabled={font() !== "0"}
-            class={cn(font() !== "0" && "opacity-50")}
-          />
-          <Show when={localFontBrowser()}>
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={loadLocalFonts}
-                disabled={font() !== "0" || isLoadingLocalFonts()}
-                class="h-10"
-              >
-                {isLoadingLocalFonts() ? t("setup.loading") : t("setup.local")}
-              </Button>
-              <SetupSelect
-                aria-label={t("setup.selectLocalFont")}
-                value=""
-                onChange={(e) => {
-                  const selectedFont = e.currentTarget.value;
-                  if (selectedFont) setFontCustom(selectedFont);
-                }}
-                disabled={font() !== "0" || localFonts().length === 0}
-                class={cn(
-                  !(font() === "0" && localFonts().length > 0) && "opacity-50",
-                )}
-              >
-                <option value="">
-                  {localFonts().length > 0
-                     ? t("setup.selectLocalFont")
-                     : t("setup.loadLocalFontsFirst")}
-                </option>
-                <For each={localFonts()}>
-                  {(localFont) => (
-                    <option value={localFont.family}>
-                      {localFont.family}
-                      {localFont.styles.length > 0
-                        ? ` (${localFont.styles.join(", ")})`
-                        : ""}
-                    </option>
-                  )}
-                </For>
-              </SetupSelect>
-            </div>
-          </Show>
-          <div class="text-xs text-muted-foreground">{localFontStatusText()}</div>
-        </div>
-      ),
-    },
-    {
-      label: () => t("setup.lineHeight"),
-      hint: () => t("setup.lineHeightHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.lineHeight")}
-          value={lineHeight()}
-          onChange={setLineHeight}
-          min={80}
-          max={200}
-          step={1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.textWeight"),
-      hint: () => t("setup.textWeightHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.textWeight")}
-          value={fontWeight()}
-          onChange={setFontWeight}
-          min={100}
-          max={1000}
-          step={100}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.nicknameWeight"),
-      hint: () => t("setup.nicknameWeightHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.nicknameWeight")}
-          value={nickFontWeight()}
-          onChange={setNickFontWeight}
-          min={100}
-          max={1000}
-          step={100}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.emoteSize"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.emoteSize")}
-          value={emoteScale()}
-          onChange={setEmoteScale}
-          min={0}
-          max={3}
-          step={0.1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.gifSize"),
-      hint: () => t("setup.gifSizeHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.gifSize")}
-          value={gifScale()}
-          onChange={setGifScale}
-          min={0.25}
-          max={3}
-          step={0.1}
-        />
-      ),
-    },
-  ];
+  const appearanceRows = createAppearanceRows({
+    size,
+    setSize,
+    font,
+    setFont,
+    fontCustom,
+    setFontCustom,
+    localFontBrowser,
+    localFonts,
+    localFontStatusText,
+    isLoadingLocalFonts,
+    loadLocalFonts,
+    lineHeight,
+    setLineHeight,
+    fontWeight,
+    setFontWeight,
+    nickFontWeight,
+    setNickFontWeight,
+    emoteScale,
+    setEmoteScale,
+    gifScale,
+    setGifScale,
+  });
 
-  const stylingRows: ControlRow[] = [
-    {
-      label: () => t("setup.textShadow"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={shadow()}
-          onChange={(e) => setShadow(e.currentTarget.value)}
-        >
-          <option value="0">{t("setup.off")}</option>
-          <option value="1">{t("setup.small")}</option>
-          <option value="2">{t("setup.medium")}</option>
-          <option value="3">{t("setup.large")}</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.textStroke"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={stroke()}
-          onChange={(e) => setStroke(e.currentTarget.value)}
-        >
-          <option value="0">{t("setup.off")}</option>
-          <option value="1">{t("setup.thin")}</option>
-          <option value="2">{t("setup.medium")}</option>
-          <option value="3">{t("setup.thick")}</option>
-          <option value="4">{t("setup.veryThick")}</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.hideMessagesAfter"),
-      hint: () => t("setup.hideMessagesAfterHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.hideMessagesAfter")}
-          value={fade()}
-          onChange={setFade}
-          min={0}
-          placeholder="30"
-        />
-      ),
-    },
-    {
-      label: () => t("setup.messageBackground"),
-      control: (_labelId) => (
-        <ColorPickerField
-          label={t("setup.messageBackground")}
-          color={overlayBackgroundColor()}
-          opacity={toInt(
-            overlayBackgroundOpacity(),
-            DEFAULT_CHAT_CONFIG.overlayBackgroundOpacity,
-          )}
-          onChange={({ color, opacity }) => {
-            setOverlayBackgroundColor(color);
-            setOverlayBackgroundOpacity(String(opacity));
-          }}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.backgroundRadius"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.backgroundRadius")}
-          value={overlayBackgroundRadius()}
-          onChange={setOverlayBackgroundRadius}
-          min={0}
-          max={64}
-          step={1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.padding"),
-      hint: () => t("setup.paddingHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.padding")}
-          value={overlayPadding()}
-          onChange={setOverlayPadding}
-          min={0}
-          max={64}
-          step={1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.borderThickness"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.borderThickness")}
-          value={overlayBorderWidth()}
-          onChange={setOverlayBorderWidth}
-          min={0}
-          max={8}
-          step={1}
-        />
-      ),
-    },
-  ];
+  const stylingRows = createStylingRows({
+    shadow,
+    setShadow,
+    stroke,
+    setStroke,
+    fade,
+    setFade,
+    overlayBackgroundColor,
+    setOverlayBackgroundColor,
+    overlayBackgroundOpacity,
+    setOverlayBackgroundOpacity,
+    overlayBackgroundRadius,
+    setOverlayBackgroundRadius,
+    overlayPadding,
+    setOverlayPadding,
+    overlayBorderWidth,
+    setOverlayBorderWidth,
+  });
 
   const linkColorRow: ControlRow = {
     label: () => t("setup.linkColor"),
@@ -1707,160 +1099,60 @@ const [activeSection, setActiveSection] =
     ),
   };
 
-  const behaviorRows: ControlRow[] = [
-    {
-      label: () => t("setup.messageAnimation"),
-      hint: () => t("setup.messageAnimationHint"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={animation()}
-          onChange={(event) =>
-            setAnimation(event.currentTarget.value as ChatAnimationMode)
-          }
-        >
-          <option value="fade">{t("setup.fadeIn")}</option>
-          <option value="flow">{t("setup.smoothFlow")}</option>
-          <option value="scroll">{t("setup.smoothScroll")}</option>
-          <option value="none">{t("setup.noAnimation")}</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.messageLinks"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={linkMode()}
-          onChange={(event) =>
-            setLinkMode(event.currentTarget.value as LinkDisplayMode)
-          }
-        >
-          <option value="normal">{t("setup.normalText")}</option>
-          <option value="highlight">{t("setup.highlightWithColor")}</option>
-          <option value="hide">{t("setup.hide")}</option>
-        </SetupSelect>
-      ),
-    },
-  ];
+  const behaviorRows = createBehaviorRows({ animation, setAnimation, linkMode, setLinkMode });
 
-  const behaviorToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.emphasizeEventText"),
-      checked: twitchEventBold,
-      onChange: setTwitchEventBold,
-      hint: () => t("setup.emphasizeEventTextHint"),
-    },
-    {
-      label: () => t("setup.italicEvents"),
-      checked: twitchEventItalic,
-      onChange: setTwitchEventItalic,
-    },
-    {
-      label: () => t("setup.loadRecentMessages"),
-      checked: recentMessages,
-      onChange: setRecentMessages,
-      hint: () => t("setup.loadRecentMessagesHint"),
-    },
-    {
-      label: () => t("setup.uppercaseNicknames"),
-      checked: smallCaps,
-      onChange: setSmallCaps,
-    },
-    {
-      label: () => t("setup.lineBreakAfterNickname"),
-      checked: nlAfterName,
-      onChange: setNlAfterName,
-    },
-    { label: () => t("setup.hideNicknames"), checked: hideNames, onChange: setHideNames },
-    {
-      label: () => t("setup.reverseMessageOrder"),
-      checked: reverseLineOrder,
-      onChange: setReverseLineOrder,
-    },
-    {
-      label: () => t("setup.horizontalMessageFeed"),
-      checked: horizontal,
-      onChange: setHorizontal,
-    },
-  ];
+  const behaviorToggles = createBehaviorToggles({
+    twitchEventBold,
+    setTwitchEventBold,
+    twitchEventItalic,
+    setTwitchEventItalic,
+    recentMessages,
+    setRecentMessages,
+    smallCaps,
+    setSmallCaps,
+    nlAfterName,
+    setNlAfterName,
+    hideNames,
+    setHideNames,
+    reverseLineOrder,
+    setReverseLineOrder,
+    horizontal,
+    setHorizontal,
+  });
 
-  const contentToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.showHighlightedMessages"),
-      checked: showHighlightedMessages,
-      onChange: setShowHighlightedMessages,
-    },
-    {
-      label: () => t("setup.showPointRewards"),
-      checked: showChannelPointRewards,
-      onChange: setShowChannelPointRewards,
-    },
-    {
-      label: () => t("setup.hideLinkRewards"),
-      checked: hideLinkRewards,
-      onChange: setHideLinkRewards,
-      hint: () => t("setup.hideLinkRewardsHint"),
-    },
-    {
-      label: () => t("setup.showGigantifiedEmotes"),
-      checked: showGigantifiedEmotes,
-      onChange: setShowGigantifiedEmotes,
-    },
-    {
-      label: () => t("setup.showGifs"),
-      checked: showGifs,
-      onChange: setShowGifs,
-      hint: () => t("setup.showGifsHint"),
-    },
-    {
-      label: () => t("setup.showPredictions"),
-      checked: showPredictions,
-      onChange: setShowPredictions,
-      hint: () => t("setup.showPredictionsHint"),
-    },
-    {
-      label: () => t("setup.showCommands"),
-      checked: commands,
-      onChange: setCommands,
-    },
-    {
-      label: () => t("setup.showUnlistedEmotes"),
-      checked: show7tvUnlisted,
-      onChange: setShow7tvUnlisted,
-    },
-  ];
+  const contentToggles = createContentToggles({
+    showHighlightedMessages,
+    setShowHighlightedMessages,
+    showChannelPointRewards,
+    setShowChannelPointRewards,
+    hideLinkRewards,
+    setHideLinkRewards,
+    showGigantifiedEmotes,
+    setShowGigantifiedEmotes,
+    showGifs,
+    setShowGifs,
+    showPredictions,
+    setShowPredictions,
+    commands,
+    setCommands,
+    show7tvUnlisted,
+    setShow7tvUnlisted,
+  });
 
 
-  const ttsToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.chatIsTts"),
-      checked: rteChatIsTts,
-      onChange: setRteChatIsTts,
-      hint: () => t("setup.chatIsTtsHint"),
-    },
-    {
-      label: () => t("setup.azureTts"),
-      checked: rteAzureTts,
-      onChange: setRteAzureTts,
-      hint: () => t("setup.azureTtsHint"),
-    },
-  ];
+  const ttsToggles = createTtsToggles({
+    rteChatIsTts,
+    setRteChatIsTts,
+    rteAzureTts,
+    setRteAzureTts,
+  });
 
-  const rteToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.rteProxy"),
-      checked: rteProxy,
-      onChange: setRteProxy,
-      hint: () => t("setup.rteProxyHint"),
-    },
-    {
-      label: () => t("setup.rteCosmetics"),
-      checked: rteCustomCosmetics,
-      onChange: setRteCustomCosmetics,
-      hint: () => t("setup.rteCosmeticsHint"),
-    },
-  ];
+  const rteToggles = createRteToggles({
+    rteProxy,
+    setRteProxy,
+    rteCustomCosmetics,
+    setRteCustomCosmetics,
+  });
 
   const roleBadgeMergeOptions = [
     {
@@ -1883,61 +1175,6 @@ const [activeSection, setActiveSection] =
     },
   ];
 
-  const ffzBadgeMergeBlock = (
-    <div class="setup-role-merge grid grid-cols-1 gap-3 rounded-lg border border-border bg-black/40 p-3.5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
-      <div class="flex min-w-0 flex-col gap-1.5">
-        <div class="text-sm font-bold text-foreground">
-          {t("setup.botBadgeNearRole")}
-        </div>
-        <div class="text-xs leading-snug text-muted-foreground">
-          {t("setup.botBadgeNearRoleHint")}
-        </div>
-      </div>
-      <div class="setup-role-pills grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <For each={roleBadgeMergeOptions}>
-          {(option) => {
-            const active = () => option.checked();
-            const disabled = () => !showFfzBadges() || hideAllBadges();
-            return (
-              <button
-                type="button"
-                disabled={disabled()}
-                class={cn(
-                  "flex min-h-[74px] flex-col items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold transition-colors",
-                  disabled()
-                    ? "cursor-not-allowed text-white/35"
-                    : active()
-                      ? "text-white hover:bg-[#27272a]"
-                      : "text-white/55 hover:bg-[#27272a] hover:text-white/80",
-                )}
-                onClick={() => option.onChange(!active())}
-                aria-pressed={active()}
-              >
-                <span
-                  class={cn(
-                    "inline-flex size-[31px] items-center justify-center rounded-lg border p-0.5 transition-[filter,border-color]",
-                    active() && !disabled() ? "border-white/70" : "border-white/25",
-                    (!active() || disabled()) && "saturate-0",
-                  )}
-                  style={{ background: option.badgeColor }}
-                >
-                  <img
-                    src={ffzBotBadgePreviewUrl}
-                    alt=""
-                    class="block size-full object-contain"
-                    loading="lazy"
-                  />
-                </span>
-                <span class="text-center leading-tight">
-                  {option.label()}
-                </span>
-              </button>
-            );
-          }}
-        </For>
-      </div>
-    </div>
-  );
   const badgeProviderRows: Array<{
     toggle: ToggleRow;
     extra?: JSX.Element;
@@ -1989,7 +1226,12 @@ const [activeSection, setActiveSection] =
         onChange: setShowFfzBadges,
         disabled: hideAllBadges,
       },
-      extra: ffzBadgeMergeBlock,
+      extra: (
+        <FfzBadgeMergeBlock
+          options={roleBadgeMergeOptions}
+          disabled={!showFfzBadges() || hideAllBadges()}
+        />
+      ),
     },
     {
       toggle: {
@@ -2026,64 +1268,6 @@ const [activeSection, setActiveSection] =
     },
   ];
 
-  const renderUserChip = (
-    login: string,
-    remove: (login: string) => void,
-    ariaLabel: () => string,
-    profiles: () => Record<string, BotProfile> = botProfiles,
-  ) => {
-    const profile = () => profiles()[login];
-    const displayName = () => profile()?.displayName || login;
-    const avatarUrl = () => profile()?.avatarUrl || "";
-
-    return (
-      <div
-        class="inline-flex max-w-full items-center gap-2 rounded-[0.5rem] border border-white/50 bg-[#27272a] px-1.5 py-0.5 text-white"
-        tabIndex={0}
-        onKeyDown={(event) => {
-          if (event.key === "Backspace" || event.key === "Delete") {
-            event.preventDefault();
-            remove(login);
-          }
-        }}
-      >
-        <Show
-          when={avatarUrl()}
-          fallback={
-            <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black text-xs font-bold">
-              {botFallbackName(login)}
-            </span>
-          }
-        >
-          <img
-            src={avatarUrl()}
-            alt=""
-            class="size-7 shrink-0 rounded-full border border-white/40 object-cover"
-            loading="lazy"
-          />
-        </Show>
-        <span class="flex min-w-0 flex-col justify-center leading-tight">
-          <span class="max-w-[150px] truncate text-xs font-bold">
-            {displayName()}
-          </span>
-          <Show when={displayName().toLowerCase() !== login}>
-            <span class="max-w-[150px] truncate text-[10px] text-white/60">
-              @{login}
-            </span>
-          </Show>
-        </span>
-        <button
-          type="button"
-          class="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-base leading-none text-white hover:bg-white/10"
-          onClick={() => remove(login)}
-          aria-label={`${ariaLabel()}: ${displayName()}`}
-        >
-          <X size={16} aria-hidden="true" />
-        </button>
-      </div>
-    );
-  };
-
   const chipFieldClass =
     "flex min-h-[72px] w-full flex-wrap content-start items-center gap-1.5 rounded-lg border border-input bg-background p-2";
 
@@ -2107,7 +1291,7 @@ const [activeSection, setActiveSection] =
                 target="_blank"
                 rel="noreferrer"
               >
-                <span class="hgi-stroke hgi-alert-02" aria-hidden="true" />
+                <Icon icon={Alert02Icon} aria-hidden="true" />
                 {t("toolbar.reportIssue")}
               </a>
               <a
@@ -2117,7 +1301,7 @@ const [activeSection, setActiveSection] =
                 rel="noreferrer"
                 aria-label={t("toolbar.github")}
               >
-                <span class="hgi-stroke hgi-github" aria-hidden="true" />
+                <Icon icon={GithubIcon} aria-hidden="true" />
               </a>
               <a
                 class="setup-toolbar-icon-link"
@@ -2131,8 +1315,8 @@ const [activeSection, setActiveSection] =
             </div>
           </header>
           <div class="setup-view-switch" role="group" aria-label={t("common.workspace")}>
-            <button type="button" aria-pressed={mobileView() === "settings"} aria-controls="setup-settings" onClick={() => selectMobileView("settings")}><SlidersHorizontal size={16} aria-hidden="true" />{t("common.settings")}</button>
-            <button type="button" aria-pressed={mobileView() === "preview"} aria-controls="setup-preview" onClick={() => selectMobileView("preview")}><Monitor size={16} aria-hidden="true" />{t("common.preview")}</button>
+            <button type="button" aria-pressed={mobileView() === "settings"} aria-controls="setup-settings" onClick={() => selectMobileView("settings")}><Icon icon={SlidersHorizontalIcon} size={16} aria-hidden="true" />{t("common.settings")}</button>
+            <button type="button" aria-pressed={mobileView() === "preview"} aria-controls="setup-preview" onClick={() => selectMobileView("preview")}><Icon icon={MonitorIcon} size={16} aria-hidden="true" />{t("common.preview")}</button>
           </div>
           <main class="setup-body setup-pane-scroll" ref={bodyScrollRef}>
             <div class="setup-source-row">
@@ -2140,18 +1324,20 @@ const [activeSection, setActiveSection] =
               <div class="setup-connection-intro"><h2>{t("setup.connection")}</h2><p>{t("setup.connectionHint")}</p></div>
               <div class="setup-channel-field">
                 <span class="setup-field-label setup-platform-label">
-                  <svg class="setup-platform-logo setup-platform-logo--twitch" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0 1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
-                  </svg>
+                  <PlatformGlyph
+                    name="twitch"
+                    class="setup-platform-logo setup-platform-logo--twitch"
+                  />
                   Twitch
                 </span>
                 <TwitchChannelField value={channel()} onChange={setChannel} />
               </div>
               <div class="setup-channel-field">
                 <label class="setup-field-label setup-platform-label" for="setup-youtube">
-                  <svg class="setup-platform-logo setup-platform-logo--youtube" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M23.5 6.19a3.02 3.02 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.51A3.02 3.02 0 0 0 .5 6.19C0 8.07 0 12 0 12s0 3.93.5 5.81a3.02 3.02 0 0 0 2.123 2.136c1.872.509 9.377.509 9.377.509s7.505 0 9.377-.51a3.02 3.02 0 0 0 2.122-2.135C24 15.93 24 12 24 12s0-3.93-.5-5.81zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                  </svg>
+                  <PlatformGlyph
+                    name="youtube"
+                    class="setup-platform-logo setup-platform-logo--youtube"
+                  />
                   YouTube <span>{t("setup.optional")}</span>
                 </label>
                 <TwitchChannelField
@@ -2196,13 +1382,13 @@ const [activeSection, setActiveSection] =
                       copyStatus() === "success" && "setup-url-copy-button--success",
                     )}
                   >
-                    <span class="hgi-stroke hgi-copy-01 setup-export-icon" aria-hidden="true" />
+                    <Icon icon={Copy01Icon} class="setup-export-icon" aria-hidden="true" />
                     {copyStatus() === "success" ? t("setup.copied") : t("setup.copy")}
                   </Button>
-                  <Show when={generatedUrl()}><a class="setup-export-action setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label={t("setup.openOverlayNewTab")}><span class="hgi-stroke hgi-link-square-01 setup-export-icon" aria-hidden="true" /><span>{t("setup.open")}</span></a></Show>
+                  <Show when={generatedUrl()}><a class="setup-export-action setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label={t("setup.openOverlayNewTab")}><Icon icon={LinkSquare01Icon} class="setup-export-icon" aria-hidden="true" /><span>{t("setup.open")}</span></a></Show>
                 </div>
                 <Button type="button" variant="outline" class="setup-export-action setup-reset-button" onClick={resetSettings}>
-                  <span class="hgi-stroke hgi-trash setup-export-icon" aria-hidden="true" />
+                  <Icon icon={TrashIcon} class="setup-export-icon" aria-hidden="true" />
                   {resetPending() ? t("setup.confirm") : t("setup.reset")}
                 </Button>
               </div>
@@ -2232,10 +1418,10 @@ const [activeSection, setActiveSection] =
                     onMouseDown={(e) => e.preventDefault()}
                   >
                     <Show when={!setupSearch()}>
-                      <span class="hgi-stroke hgi-searching" aria-hidden="true" />
+                      <Icon icon={SearchingIcon} aria-hidden="true" />
                     </Show>
                     <Show when={setupSearch()}>
-                      <span class="hgi-stroke hgi-x text-sm" aria-hidden="true" />
+                      <Icon icon={XIcon} class="text-sm" aria-hidden="true" />
                     </Show>
                   </button>
                   <label for="setup-settings-search" class="sr-only">{t("setup.searchSettings")}</label>
@@ -2250,8 +1436,8 @@ const [activeSection, setActiveSection] =
                   <Show when={setupSearch().length > 0}>
                     <div class="ml-auto flex shrink-0 items-center gap-1">
                       <span class="whitespace-nowrap text-xs tabular-nums text-muted-foreground" aria-live="polite">{setupSearchCounter()}</span>
-                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><span class="hgi-stroke hgi-arrow-left-01" aria-hidden="true" /></Button>
-                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><span class="hgi-stroke hgi-arrow-right-01" aria-hidden="true" /></Button>
+                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchHits().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><Icon icon={ArrowLeft01Icon} aria-hidden="true" /></Button>
+                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchHits().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><Icon icon={ArrowRight01Icon} aria-hidden="true" /></Button>
                     </div>
                   </Show>
                 </div>
@@ -2278,7 +1464,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-appearance"
                 title={t("setup.appearanceTitle")}
                 description={t("setup.appearanceDescription")}
-                icon="hgi-text"
+                icon={TextIcon}
                 hidden={activeSection() !== "appearance"}
               >
                 <div class="setup-field-group"><h3>{t("setup.messageFont")}</h3><ControlRows rows={appearanceRows.slice(0, 3)} /></div>
@@ -2289,7 +1475,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-styling"
                 title={t("setup.stylingTitle")}
                 description={t("setup.stylingDescription")}
-                icon="hgi-colors"
+                icon={ColorsIcon}
                 hidden={activeSection() !== "styling"}
               >
                 <div class="setup-field-group"><h3>{t("setup.textReadability")}</h3><ControlRows rows={stylingRows.slice(0, 3)} /></div>
@@ -2336,7 +1522,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-behavior"
                 title={t("setup.behaviorTitle")}
                 description={t("setup.behaviorDescription")}
-                icon="hgi-arrow-up-right-stack"
+                icon={ArrowUpRightStackIcon}
                 hidden={activeSection() !== "behavior"}
               >
                 <div class="setup-field-group"><h3>{t("setup.animationAndLinks")}</h3><ControlRows rows={behaviorRows} /><Show when={linkMode() === "highlight"}><ControlRows rows={[linkColorRow]} /></Show></div>
@@ -2348,7 +1534,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-content"
                 title={t("setup.contentTitle")}
                 description={t("setup.contentDescription")}
-                icon="hgi-dashboard-square-03"
+                icon={DashboardSquare03Icon}
                 hidden={activeSection() !== "content"}
               >
                 <div class="setup-field-group"><h3>{t("setup.messagesAndEvents")}</h3><ToggleRows rows={contentToggles} /></div>
@@ -2376,7 +1562,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-bots"
                 title={t("setup.botsTitle")}
                 description={t("setup.botsDescription")}
-                icon="hgi-bot-message-square"
+                icon={BotMessageSquareIcon}
                 hidden={activeSection() !== "bots"}
               >
                 <div class="setup-bot-row flex flex-col gap-2">
@@ -2392,28 +1578,25 @@ const [activeSection, setActiveSection] =
                   </div>
                   <div class={chipFieldClass}>
                     <For each={botNames()}>
-                      {(login) =>
-                        renderUserChip(
-                          login,
-                          removeBotName,
-                          () => t("setup.removeBot"),
-                        )
-                      }
+                      {(login) => (
+                        <UserChip
+                          login={login}
+                          profiles={botProfiles}
+                          onRemove={removeBotName}
+                          removeLabel={() => t("setup.removeBot")}
+                        />
+                      )}
                     </For>
-                    <input
-                       aria-label={t("setup.addBot")}
-                      type="text"
+                    <SetupChipInput
                       value={botInput()}
-                      onInput={(event) =>
-                        setBotInput(event.currentTarget.value)
-                      }
+                      onInput={setBotInput}
                       onKeyDown={handleBotInputKeyDown}
-                      onBlur={() => {
+                      onCommit={() => {
                         addBotNames(botInput());
                         setBotInput("");
                       }}
-                       placeholder={t("setup.nicknamePlaceholder")}
-                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                      label={t("setup.addBot")}
+                      placeholder={t("setup.nicknamePlaceholder")}
                     />
                   </div>
                 </div>
@@ -2426,29 +1609,25 @@ const [activeSection, setActiveSection] =
                   </div>
                   <div class={chipFieldClass}>
                     <For each={youtubeBotNames()}>
-                      {(login) =>
-                        renderUserChip(
-                          login,
-                          removeYouTubeBotName,
-                          () => t("setup.removeYouTubeBot"),
-                          () => ({}),
-                        )
-                      }
+                      {(login) => (
+                        <UserChip
+                          login={login}
+                          profiles={EMPTY_BOT_PROFILES}
+                          onRemove={removeYouTubeBotName}
+                          removeLabel={() => t("setup.removeYouTubeBot")}
+                        />
+                      )}
                     </For>
-                    <input
-                      aria-label={t("setup.addYouTubeBot")}
-                      type="text"
+                    <SetupChipInput
                       value={youtubeBotInput()}
-                      onInput={(event) =>
-                        setYoutubeBotInput(event.currentTarget.value)
-                      }
+                      onInput={setYoutubeBotInput}
                       onKeyDown={handleYouTubeBotInputKeyDown}
-                      onBlur={() => {
+                      onCommit={() => {
                         addYouTubeBotNames(youtubeBotInput());
                         setYoutubeBotInput("");
                       }}
+                      label={t("setup.addYouTubeBot")}
                       placeholder={t("setup.nicknamePlaceholder")}
-                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                     />
                   </div>
                 </div>
@@ -2461,29 +1640,25 @@ const [activeSection, setActiveSection] =
                   </div>
                   <div class={chipFieldClass}>
                     <For each={kickBotNames()}>
-                      {(login) =>
-                        renderUserChip(
-                          login,
-                          removeKickBotName,
-                          () => t("setup.removeKickBot"),
-                          kickBotProfiles,
-                        )
-                      }
+                      {(login) => (
+                        <UserChip
+                          login={login}
+                          profiles={kickBotProfiles}
+                          onRemove={removeKickBotName}
+                          removeLabel={() => t("setup.removeKickBot")}
+                        />
+                      )}
                     </For>
-                    <input
-                      aria-label={t("setup.addKickBot")}
-                      type="text"
+                    <SetupChipInput
                       value={kickBotInput()}
-                      onInput={(event) =>
-                        setKickBotInput(event.currentTarget.value)
-                      }
+                      onInput={setKickBotInput}
                       onKeyDown={handleKickBotInputKeyDown}
-                      onBlur={() => {
+                      onCommit={() => {
                         addKickBotNames(kickBotInput());
                         setKickBotInput("");
                       }}
+                      label={t("setup.addKickBot")}
                       placeholder={t("setup.nicknamePlaceholder")}
-                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                     />
                   </div>
                 </div>
@@ -2499,28 +1674,25 @@ const [activeSection, setActiveSection] =
                   </div>
                   <div class={chipFieldClass}>
                     <For each={allowedChatters()}>
-                      {(login) =>
-                        renderUserChip(
-                          login,
-                          removeAllowedChatter,
-                          () => t("setup.removeViewer"),
-                        )
-                      }
+                      {(login) => (
+                        <UserChip
+                          login={login}
+                          profiles={botProfiles}
+                          onRemove={removeAllowedChatter}
+                          removeLabel={() => t("setup.removeViewer")}
+                        />
+                      )}
                     </For>
-                    <input
-                       aria-label={t("setup.addViewer")}
-                      type="text"
+                    <SetupChipInput
                       value={allowedChatterInput()}
-                      onInput={(event) =>
-                        setAllowedChatterInput(event.currentTarget.value)
-                      }
+                      onInput={setAllowedChatterInput}
                       onKeyDown={handleAllowedChatterInputKeyDown}
-                      onBlur={() => {
+                      onCommit={() => {
                         addAllowedChatters(allowedChatterInput());
                         setAllowedChatterInput("");
                       }}
-                       placeholder={t("setup.nicknamePlaceholder")}
-                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                      label={t("setup.addViewer")}
+                      placeholder={t("setup.nicknamePlaceholder")}
                     />
                   </div>
                 </div>
@@ -2530,7 +1702,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-tts"
                 title={t("setup.ttsTitle")}
                 description={t("setup.ttsDescription")}
-                icon="hgi-voice-comment"
+                icon={VoiceCommentIcon}
                 hidden={activeSection() !== "tts"}
               >
                 <ToggleRows rows={ttsToggles} />
@@ -2541,7 +1713,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-rte"
                 title={t("setup.rteTitle")}
                 description={t("setup.rteDescription")}
-                icon="hgi-blockchain-05"
+                icon={Blockchain05Icon}
                 hidden={activeSection() !== "rte"}
               >
                 <ToggleRows rows={rteToggles} />
@@ -2558,199 +1730,23 @@ const [activeSection, setActiveSection] =
                   class="setup-preview-section min-[1100px]:flex min-[1100px]:min-h-0 min-[1100px]:flex-1 min-[1100px]:flex-col"
                 >
                   <div class="setup-preview-content">
-                    <div class="setup-preview-options">
-                      <div
-                        class="setup-preview-controls"
-                        ref={(element) => (previewControlsRef = element)}
-                      >
-                        <div class="setup-preview-control-panel">
-                           <div class="setup-preview-control-title">{t("setup.demoBackgroundColor")}</div>
-                          <div
-                            class="setup-stage-switcher"
-                            role="group"
-                             aria-label={t("setup.previewBackground")}
-                          >
-                            <button
-                              type="button"
-                              class={cn("setup-stage-option", stageBackdrop() === "dark" && "setup-stage-option--active")}
-                              aria-pressed={stageBackdrop() === "dark"}
-                               aria-label={t("setup.blackBackground")}
-                              onClick={() => setStageBackdrop("dark")}
-                            >
-                              <span class="setup-stage-swatch setup-stage-swatch--dark" aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              class={cn("setup-stage-option", stageBackdrop() === "light" && "setup-stage-option--active")}
-                              aria-pressed={stageBackdrop() === "light"}
-                               aria-label={t("setup.whiteBackground")}
-                              onClick={() => setStageBackdrop("light")}
-                            >
-                              <span class="setup-stage-swatch setup-stage-swatch--light" aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              class={cn("setup-stage-option", stageBackdrop() === "checker" && "setup-stage-option--active")}
-                              aria-pressed={stageBackdrop() === "checker"}
-                               aria-label={t("setup.checkerBackground")}
-                              onClick={() => setStageBackdrop("checker")}
-                            >
-                              <span class="setup-stage-swatch setup-stage-swatch--checker" aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              class={cn("setup-stage-option", stageBackdrop() === "custom" && "setup-stage-option--active")}
-                              aria-pressed={stageBackdrop() === "custom"}
-                               aria-label={t("setup.customBackgroundColor")}
-                              onClick={() => setStageBackdrop("custom")}
-                            >
-                              <span class="setup-stage-swatch" style={`background-color: ${stageColor()}`} aria-hidden="true" />
-                            </button>
-                          </div>
-                          <Show when={stageBackdrop() === "custom"}>
-                            <div class="setup-stage-color">
-                              <ColorPickerField
-                                color={stageColor()}
-                                opacity={100}
-                                showOpacity={false}
-                                showTransparencyGrid={false}
-                                 label={t("setup.backgroundColor")}
-                                onChange={(value) => setStageColor(value.color)}
-                              />
-                            </div>
-                          </Show>
-                        </div>
-                        <div class="setup-preview-control-panel">
-                           <div class="setup-preview-control-title">{t("setup.previewSettings")}</div>
-                          <div class="setup-preview-setting-grid">
-                            <div class="setup-preview-setting">
-                               <div class="setup-preview-setting-title">{t("setup.chatMode")}</div>
-                              <div
-                                class="setup-preview-selector"
-                                ref={(element) => (previewModeSelectorRef = element)}
-                                role="radiogroup"
-                                 aria-label={t("setup.previewChatMode")}
-                              >
-                                <div
-                                  class="setup-selection-thumb"
-                                  aria-hidden="true"
-                                  style={previewModeThumbStyle()}
-                                />
-                                <button
-                                  type="button"
-                                  role="radio"
-                                  ref={(element) => (previewLiveOptionRef = element)}
-                                  disabled={!hasPreviewChannel()}
-                                  aria-checked={previewMode() === "live"}
-                                  class={cn("setup-preview-selector-option", previewMode() === "live" && "setup-preview-selector-option--selected")}
-                                  onClick={() => setPreviewMode("live")}
-                                >
-                                  <span class="hgi-stroke hgi-live-streaming-02 setup-preview-selector-icon" aria-hidden="true" />
-                                   <span>{t("setup.channelChat")}</span>
-                                </button>
-                                <Show when={!isExternalOnly()}>
-                                  <button
-                                    type="button"
-                                    role="radio"
-                                    ref={(element) => (previewDemoOptionRef = element)}
-                                    aria-checked={previewMode() === "demo"}
-                                    class={cn("setup-preview-selector-option", previewMode() === "demo" && "setup-preview-selector-option--selected")}
-                                    onClick={() => setPreviewMode("demo")}
-                                  >
-                                    <span class="hgi-stroke hgi-test-tube-01 setup-preview-selector-icon" aria-hidden="true" />
-                                     <span>{t("setup.demo")}</span>
-                                  </button>
-                                </Show>
-                              </div>
-                            </div>
-                            <Show when={!isExternalOnly()}>
-                              <div class="setup-preview-setting">
-                                 <div class="setup-preview-setting-title">{t("setup.demoScenario")}</div>
-                                <div
-                                  class={cn(
-                                    "setup-preview-selector",
-                                    previewMode() !== "demo" && "setup-preview-selector--disabled",
-                                  )}
-                                  ref={(element) => (previewDemoSelectorRef = element)}
-                                  role="radiogroup"
-                                 aria-label={t("setup.demoScenario")}
-                                >
-                                  <div
-                                    class="setup-selection-thumb"
-                                    aria-hidden="true"
-                                    style={previewDemoThumbStyle()}
-                                  />
-                                  <button
-                                    type="button"
-                                    role="radio"
-                                    ref={(element) => (previewPastaOptionRef = element)}
-                                    disabled={previewMode() !== "demo"}
-                                    aria-checked={previewDemoKind() === "pasta"}
-                                    class={cn("setup-preview-selector-option", previewDemoKind() === "pasta" && "setup-preview-selector-option--selected")}
-                                    onClick={() => setPreviewDemoKind("pasta")}
-                                  >
-                                    <span class="hgi-stroke hgi-message-square-more setup-preview-selector-icon" aria-hidden="true" />
-                                     <span>{t("setup.messages")}</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    role="radio"
-                                    ref={(element) => (previewEmoteOptionRef = element)}
-                                    disabled={previewMode() !== "demo"}
-                                    aria-checked={previewDemoKind() === "emote"}
-                                    class={cn("setup-preview-selector-option", previewDemoKind() === "emote" && "setup-preview-selector-option--selected")}
-                                    onClick={() => setPreviewDemoKind("emote")}
-                                  >
-                                    <span class="hgi-stroke hgi-rubber-duck setup-preview-selector-icon" aria-hidden="true" />
-                                     <span>{t("setup.emotes")}</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </Show>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Show when={previewMode() === "demo"}>
-                      <div class="setup-preview-playback">
-                        <div class="setup-preview-speed">
-                          <span class="text-xs font-medium sm:text-sm">
-                             {t("setup.speed")}
-                          </span>
-                          <Slider
-                             aria-label={t("setup.messageSpeed")}
-                            minValue={MIN_MESSAGE_SPEED}
-                            maxValue={MAX_MESSAGE_SPEED}
-                            step={1}
-                            value={[messageSpeedValue()]}
-                            onChange={(values) => {
-                              const next = values[0];
-                              if (next !== undefined)
-                                setMessageSpeed(String(next));
-                            }}
-                            class="min-w-0 flex-1 px-1"
-                          />
-                          <div class="whitespace-nowrap text-[11px] font-semibold tabular-nums text-muted-foreground sm:text-xs">
-                            {messageSpeedLabel()}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          class={cn(
-                            "setup-pause-button",
-                            demoPaused() && "setup-pause-button--paused",
-                          )}
-                          onClick={() => setDemoPaused((value) => !value)}
-                          aria-pressed={demoPaused()}
-                        >
-                          <Show when={demoPaused()} fallback={<Pause size={14} aria-hidden="true" />}>
-                            <Play size={14} aria-hidden="true" />
-                          </Show>
-                           {demoPaused() ? t("setup.resume") : t("setup.pause")}
-                        </button>
-                      </div>
-                    </Show>
+                    <PreviewControls
+                      stageBackdrop={stageBackdrop}
+                      setStageBackdrop={setStageBackdrop}
+                      stageColor={stageColor}
+                      setStageColor={setStageColor}
+                      previewMode={previewMode}
+                      setPreviewMode={setPreviewMode}
+                      previewDemoKind={previewDemoKind}
+                      setPreviewDemoKind={setPreviewDemoKind}
+                      demoPaused={demoPaused}
+                      setDemoPaused={setDemoPaused}
+                      messageSpeedValue={messageSpeedValue}
+                      messageSpeedLabel={messageSpeedLabel}
+                      setMessageSpeed={setMessageSpeed}
+                      hasPreviewChannel={hasPreviewChannel}
+                      isExternalOnly={isExternalOnly}
+                    />
 
                     <div
                       class="setup-preview-frame relative isolate h-[clamp(180px,36dvh,320px)] w-full shrink-0 overflow-hidden min-[1100px]:h-auto min-[1100px]:flex-1 min-[1100px]:min-h-[min(180px,36dvh)]"
@@ -2759,7 +1755,7 @@ const [activeSection, setActiveSection] =
                       <iframe
                         ref={iframeRef}
                         src={previewUrl()}
-                        onLoad={() => postPreviewConfig()}
+                        onLoad={() => previewSync.postConfig(previewConfig())}
                         class="pointer-events-none block h-full w-full border-0 bg-transparent"
                          title={t("setup.chatPreview")}
                         scrolling="no"

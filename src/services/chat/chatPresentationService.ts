@@ -6,24 +6,25 @@ import { badgeService, type Badge } from "../badges/badgeService";
 import { SevenTVPaintService, type Paint } from "./seven-tv/paintService";
 import { sevenTVEventApi } from "./seven-tv/eventApi";
 import type { SevenTVEventApiService } from "./seven-tv/eventApi";
+import { sevenTVCosmeticsService } from "./seven-tv/cosmeticsService";
 import { BotFilterService } from "../../utils/botFilter";
 import {
   MessageFadeManager,
   DEFAULT_FADE_OPTIONS,
-} from "../../utils/ui/fadeUtils";
-import type { FadeOptions } from "../../utils/ui/fadeUtils";
+} from "./runtime/messageFade";
+import type { FadeOptions } from "./runtime/messageFade";
 import {
   LayoutManager,
   DEFAULT_LAYOUT_OPTIONS,
-} from "../../utils/ui/layoutUtils";
-import type { LayoutOptions } from "../../utils/ui/layoutUtils";
+} from "./runtime/layoutManager";
+import type { LayoutOptions } from "./runtime/layoutManager";
 import {
   DEFAULT_ANIMATION_OPTIONS,
   getMessageEntryAnimationDuration,
   hasMessageEntryAnimation,
-  injectAnimationStyles,
-} from "../../utils/ui/animationUtils";
-import type { AnimationOptions } from "../../utils/ui/animationUtils";
+} from "../../config/chatAnimation";
+import { injectAnimationStyles } from "./runtime/animationStyles";
+import type { AnimationOptions } from "../../config/chatAnimation";
 import { parseBotNames, type ChatConfig } from "../../config/chatUrlParams";
 import { log, LOG_CATEGORIES } from "../../utils/logger";
 
@@ -635,11 +636,18 @@ export class ChatPresentationService {
       await this.eventApiService.disconnect();
     }
 
-    // Clear fade timers
+    // Clear fade timers and the stylesheets both managers injected
     this.fadeManager.clear();
+    this.fadeManager.cleanup();
+    this.layoutManager?.cleanup();
     this.clearPaintCache();
     this.rteBadges.clear();
     this.rtePaints.clear();
+    // The 7TV cosmetics caches are keyed by channel and user and would otherwise
+    // outlive the runtime that filled them, as would the paint stylesheet the
+    // service generated from provider data.
+    sevenTVCosmeticsService.clearAllCaches();
+    sevenTVCosmeticsService.disposeStylesheet();
 
     this.initialized = false;
     log.info(LOG_CATEGORIES.INTEGRATION, "Cleanup complete");

@@ -44,7 +44,15 @@ body {
   overflow-x: hidden;
   background-color: transparent;
   color: white;
-  font-weight: 800;
+  /* Overlay values arrive as custom properties from the runtime. An absent
+     property leaves its declaration invalid at computed-value time, which
+     resolves to the initial value — the same result the old generated rules
+     produced by not existing. */
+  font-size: var(--chat-size-font-size);
+  font-weight: var(--chat-font-weight, 800);
+  filter: var(--chat-shadow-filter);
+  -webkit-text-stroke: var(--chat-stroke);
+  paint-order: var(--chat-paint-order);
   word-break: break-word;
   user-select: text;
   -webkit-user-select: text;
@@ -62,6 +70,7 @@ body {
     var(--chat-event-color, #9146ff) var(--chat-event-opacity, 22%),
     transparent
   );
+  line-height: var(--chat-line-height);
   box-sizing: border-box;
   inline-size: fit-content;
   min-inline-size: 0;
@@ -315,10 +324,30 @@ body {
   display: inline-block;
 }
 
+/* The author block is hidden rather than removed so the message keeps its
+   badge/author rhythm when the setting is switched back on. */
+:root[data-hide-names] .user_info {
+  display: none;
+}
+
+.message {
+  font-weight: var(--chat-font-weight, 800);
+}
+
+/* Breaks the line after the author name. */
+:root[data-nl-after-name] .message::before {
+  content: '\A';
+  white-space: pre;
+}
+
 .badge {
   display: inline-block;
   vertical-align: middle;
   border-radius: 10%;
+  width: var(--chat-badge-size);
+  height: var(--chat-badge-size);
+  margin-right: var(--chat-badge-margin-right);
+  margin-bottom: var(--chat-badge-margin-bottom);
 }
 
 img.badge {
@@ -331,7 +360,7 @@ img.badge {
 }
 
 .badge:last-of-type {
-  margin-right: 3px;
+  margin-right: var(--chat-badge-last-margin-right);
 }
 
 .badge.ffz-bot-mix {
@@ -351,26 +380,35 @@ img.badge {
 }
 
 .nick {
-  font-weight: 800;
+  font-weight: var(--chat-nick-font-weight, 800);
 }
 
 .colon {
-  margin-right: 8px;
+  margin-right: var(--chat-colon-margin-right);
+  font-weight: var(--chat-nick-font-weight, 800);
 }
 
 .cheer_bits {
-  font-weight: 700;
-  margin-left: 2px;
-  margin-right: 4px;
+  font-weight: var(--chat-cheer-bits-font-weight);
+  margin-left: var(--chat-cheer-bits-margin-left);
+  margin-right: var(--chat-cheer-bits-margin-right);
   -webkit-text-stroke: 1px black;
 }
 
 .cheer_emote {
   vertical-align: middle;
+  max-height: var(--chat-cheer-emote-max-height);
+  margin-bottom: var(--chat-cheer-emote-margin-bottom);
 }
 
 .emote {
   vertical-align: middle;
+  max-width: var(--chat-emote-max-width);
+  max-height: var(--chat-emote-max-height);
+}
+
+.emote-container {
+  margin-right: var(--chat-emote-margin-right);
 }
 
 .youtube-emote {
@@ -584,6 +622,11 @@ img.badge {
 
 .emoji {
   vertical-align: middle;
+  /* The emoji image carries its own inline size, so the scale-aware size has to
+     win over it; at the default scale this resolves to the same value the inline
+     style already sets. */
+  width: var(--chat-emoji-size) !important;
+  height: var(--chat-emoji-size) !important;
 }
 
 .mention {
@@ -612,13 +655,19 @@ img.badge {
 }
 
 .upscale {
-  /* Emotes that need upscaling */
+  height: var(--chat-upscale-height);
+}
+
+/* The embedded preview scrolls the page around the overlay, so the container
+   must not scroll on its own. */
+:root[data-preview] #chat_container {
+  overflow: hidden;
 }
 
 .gigantified-emote {
   position: relative;
   align-self: flex-start;
-  inline-size: min(var(--gigantified-emote-width), 100%);
+  inline-size: min(var(--chat-gigantified-emote-width), 100%);
   max-inline-size: 100%;
   white-space: normal;
 }
@@ -636,14 +685,14 @@ img.badge {
 
 .gigantified-emote-line {
   display: block;
-  inline-size: min(var(--gigantified-emote-width), 100%);
+  inline-size: min(var(--chat-gigantified-emote-width), 100%);
   max-inline-size: 100%;
   line-height: 1;
   overflow: visible;
 }
 
 .gigantified-emote-line:has(.emote-modifier-wide) {
-  inline-size: min(var(--gigantified-emote-width), 100%);
+  inline-size: min(var(--chat-gigantified-emote-width), 100%);
 }
 
 .gigantified-emote-line img.gigantified {

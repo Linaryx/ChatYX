@@ -1,4 +1,4 @@
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import { normalizeFontWeight } from "~/config/chatUrlParams";
 
 // Size presets (v2 parity)
@@ -65,150 +65,138 @@ export const SIZE_CONFIGS = {
   },
 } as const;
 
-export const generateSizeStyles = (size: 1 | 2 | 3, lineHeight = 100) => {
-  const config = SIZE_CONFIGS[size];
-  const lineHeightPx = Number.parseInt(config.lineHeight, 10) * Math.min(Math.max(lineHeight, 80), 200) / 100;
-  return `
-#chat_container {
-    font-size: ${config.fontSize};
-}
+/** Shadow filters by preset, indexed the way the config stores them. */
+const SHADOW_FILTERS = {
+  1: "drop-shadow(2px 2px 0.2rem black)",
+  2: "drop-shadow(2px 2px 0.35rem black)",
+  3: "drop-shadow(2px 2px 0.5rem black)",
+} as const;
 
-.chat_line {
-    line-height: ${lineHeightPx}px;
-}
+const STROKE_WIDTHS = {
+  1: "1px",
+  2: "2px",
+  3: "3px",
+  4: "4px",
+} as const;
 
-.badge {
-    width: ${config.badgeSize}px;
-    height: ${config.badgeSize}px;
-    margin-right: ${config.badgeMarginRight};
-    margin-bottom: ${config.badgeMarginBottom};
-}
+/** Line-height percentages outside this range are clamped, as they always were. */
+const MIN_LINE_HEIGHT_PERCENT = 80;
+const MAX_LINE_HEIGHT_PERCENT = 200;
 
-.badge:last-of-type {
-    margin-right: ${config.badgeLastMarginRight};
-}
+/** The emote scale is clamped rather than rejected, as it always was. */
+const MIN_EMOTE_SCALE = 0.25;
+const MAX_EMOTE_SCALE = 3;
 
-.colon {
-    margin-right: ${config.colonMarginRight};
-}
-
-.cheer_bits {
-    font-weight: ${config.cheerBitsFontWeight};
-    margin-left: ${config.cheerBitsMarginLeft};
-    margin-right: ${config.cheerBitsMarginRight};
-}
-
-.cheer_emote {
-    max-height: ${config.cheerEmoteMaxHeight}px;
-    margin-bottom: ${config.cheerEmoteMarginBottom};
-}
-
-.emote {
-    max-width: ${config.emoteMaxWidth};
-    max-height: ${config.emoteMaxHeight}px;
-}
-
-.emote-container {
-    margin-right: ${config.emoteMarginRight};
-}
-
-.upscale {
-    height: ${config.upscaleHeight}px;
-}
-
-.gigantified-emote {
-    --gigantified-emote-width: ${config.gigantifiedEmoteWidth};
-}
-
-.emoji {
-    height: ${config.emojiHeight}px;
-}
-`;
-};
-
-export const generateShadowStyles = (shadow: 1 | 2 | 3) => {
-  const shadows = {
-    1: "drop-shadow(2px 2px 0.2rem black)",
-    2: "drop-shadow(2px 2px 0.35rem black)",
-    3: "drop-shadow(2px 2px 0.5rem black)",
-  };
-  return `
-#chat_container {
-    filter: ${shadows[shadow]};
-}
-`;
-};
-
-export const generateStrokeStyles = (stroke: 1 | 2 | 3 | 4) => {
-  const strokes = {
-    1: "1px",
-    2: "2px",
-    3: "3px",
-    4: "4px",
-  };
-  return `
-#chat_container {
-    -webkit-text-stroke: ${strokes[stroke]} black;
-    paint-order: stroke fill;
-}
-`;
-};
-
-export const generateVariantStyles = (config: ChatConfig) => {
-  let styles = "";
+/**
+ * Custom properties the overlay stylesheet consumes, derived from one config.
+ *
+ * `chat.css` owns every rule; this function only decides the values, the same way
+ * `getChatEventStyleVariables` does for event colours. A property that is absent
+ * falls back to the stylesheet's own default, which is how the disabled states
+ * are expressed — so a shadow or stroke that is switched off simply publishes
+ * nothing.
+ *
+ * The emote and emoji sizes fold in the user's emote scale, because a stylesheet
+ * cannot multiply a preset by a runtime value.
+ */
+export function getOverlayStyleVariables(
+  config: ChatConfig,
+): Record<string, string> {
   const size =
     SIZE_CONFIGS[config.size as keyof typeof SIZE_CONFIGS] || SIZE_CONFIGS[2];
-  const fontWeight = normalizeFontWeight(config.fontWeight);
-  const nickFontWeight = normalizeFontWeight(config.nickFontWeight);
+  const lineHeightPercent = Math.min(
+    Math.max(config.lineHeight, MIN_LINE_HEIGHT_PERCENT),
+    MAX_LINE_HEIGHT_PERCENT,
+  );
   const emoteScale = Number.isFinite(config.emoteScale)
-    ? Math.min(Math.max(config.emoteScale, 0.25), 3)
+    ? Math.min(Math.max(config.emoteScale, MIN_EMOTE_SCALE), MAX_EMOTE_SCALE)
     : 1;
 
-  styles += `
-#chat_container,
-.message {
-    font-weight: ${fontWeight};
-}
+  const variables: Record<string, string> = {
+    "--chat-size-font-size": size.fontSize,
+    "--chat-line-height": `${
+      (Number.parseInt(size.lineHeight, 10) * lineHeightPercent) / 100
+    }px`,
+    "--chat-font-weight": String(normalizeFontWeight(config.fontWeight)),
+    "--chat-nick-font-weight": String(normalizeFontWeight(config.nickFontWeight)),
+    "--chat-badge-size": `${size.badgeSize}px`,
+    "--chat-badge-margin-right": size.badgeMarginRight,
+    "--chat-badge-margin-bottom": size.badgeMarginBottom,
+    "--chat-badge-last-margin-right": size.badgeLastMarginRight,
+    "--chat-colon-margin-right": size.colonMarginRight,
+    "--chat-cheer-bits-font-weight": String(size.cheerBitsFontWeight),
+    "--chat-cheer-bits-margin-left": size.cheerBitsMarginLeft,
+    "--chat-cheer-bits-margin-right": size.cheerBitsMarginRight,
+    "--chat-cheer-emote-max-height": `${size.cheerEmoteMaxHeight}px`,
+    "--chat-cheer-emote-margin-bottom": size.cheerEmoteMarginBottom,
+    "--chat-emote-max-width": `${
+      Number.parseFloat(size.emoteMaxWidth) * emoteScale
+    }px`,
+    "--chat-emote-max-height": `${size.emoteMaxHeight * emoteScale}px`,
+    "--chat-emoji-size": `${size.emojiHeight * emoteScale}px`,
+    "--chat-emote-margin-right": size.emoteMarginRight,
+    "--chat-upscale-height": `${size.upscaleHeight}px`,
+    "--chat-gigantified-emote-width": size.gigantifiedEmoteWidth,
+  };
 
-.nick,
-.colon {
-    font-weight: ${nickFontWeight};
-}
-`;
-
-  if (config.hideNames) {
-    styles += `
-.user_info {
-    display: none;
-}
-`;
+  if (config.shadow) {
+    variables["--chat-shadow-filter"] =
+      SHADOW_FILTERS[config.shadow as keyof typeof SHADOW_FILTERS];
+  }
+  if (config.stroke) {
+    variables["--chat-stroke"] =
+      `${STROKE_WIDTHS[config.stroke as keyof typeof STROKE_WIDTHS]} black`;
+    variables["--chat-paint-order"] = "stroke fill";
   }
 
-  if (config.nlAfterName) {
-    styles += `
-.message::before {
-    content: '\\A';
-    white-space: pre;
-}
-`;
-  }
-
-  if (emoteScale !== 1) {
-    styles += `
-.emote {
-    max-width: ${Number.parseFloat(size.emoteMaxWidth) * emoteScale}px;
-    max-height: ${size.emoteMaxHeight * emoteScale}px;
+  return variables;
 }
 
-.emoji {
-    width: ${size.emojiHeight * emoteScale}px !important;
-    height: ${size.emojiHeight * emoteScale}px !important;
-}
-`;
-  }
+/**
+ * Every property `getOverlayStyleVariables` can publish, so a teardown can
+ * remove all of them without re-deriving the config.
+ * `tests/overlayStylesheet.test.ts` fails if this list and the function drift
+ * apart.
+ */
+export const OVERLAY_STYLE_PROPERTIES = [
+  "--chat-size-font-size",
+  "--chat-line-height",
+  "--chat-font-weight",
+  "--chat-nick-font-weight",
+  "--chat-badge-size",
+  "--chat-badge-margin-right",
+  "--chat-badge-margin-bottom",
+  "--chat-badge-last-margin-right",
+  "--chat-colon-margin-right",
+  "--chat-cheer-bits-font-weight",
+  "--chat-cheer-bits-margin-left",
+  "--chat-cheer-bits-margin-right",
+  "--chat-cheer-emote-max-height",
+  "--chat-cheer-emote-margin-bottom",
+  "--chat-emote-max-width",
+  "--chat-emote-max-height",
+  "--chat-emoji-size",
+  "--chat-emote-margin-right",
+  "--chat-upscale-height",
+  "--chat-gigantified-emote-width",
+  "--chat-shadow-filter",
+  "--chat-stroke",
+  "--chat-paint-order",
+] as const;
 
-  return styles;
-};
+/**
+ * Attributes the overlay stylesheet keys its boolean variants on, so those rules
+ * stay static instead of being generated. `chat.css` spells them literally, and
+ * `tests/overlayStylesheet.test.ts` fails if the two ever drift apart.
+ */
+export const OVERLAY_ATTRIBUTES = {
+  /** Hides the author block (`.user_info`). */
+  hideNames: "data-hide-names",
+  /** Breaks the line after the author name (`.message::before`). */
+  nlAfterName: "data-nl-after-name",
+  /** Suppresses the container's own scrolling, for the embedded preview. */
+  preview: "data-preview",
+} as const;
 
 export const FONTS = [
   "'Baloo Tammudu 2', cursive",

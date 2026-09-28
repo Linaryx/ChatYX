@@ -25,6 +25,5 @@ export type {
   TwitchGqlSender,
 } from "./twitch/twitchGqlService";
 export { chatFeatureIntegration } from "./chatFeatureIntegration";
-export { YouTubeChatService } from "./external/youtubeChatService";
 export { ExternalChatService } from "./external/externalChatService";
 export type { ExternalChatEvent } from "./external/externalChatService";

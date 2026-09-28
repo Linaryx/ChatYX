@@ -12,9 +12,9 @@ import {
   clampMessageSpeed,
   normalizeChatAnimationMode,
   type ChatAnimationMode,
-} from "../utils/ui/animationUtils";
+} from "./chatAnimation";
 
-export type { ChatAnimationMode } from "../utils/ui/animationUtils";
+export type { ChatAnimationMode } from "./chatAnimation";
 
 export type LinkDisplayMode = "normal" | "hide" | "highlight";
 export type PlatformMarkerMode = "none" | "stripe" | "icon";

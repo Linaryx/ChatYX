@@ -3,7 +3,7 @@ import {
   type PreviewDemoKind,
 } from "~/services/chat/preview";
 import type { TwitchPredictionEvent } from "~/services/predictions/twitchPredictions";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import type { PredictionControllerHooks } from "./predictionController";
 import type { ChatRuntimeHooks } from "./runtimeHooks";
 import {
@@ -67,6 +67,7 @@ export class ChatOverlayApplication {
   private readonly predictions: PredictionsRuntime;
   private config: ChatConfig;
   private started = false;
+  private destroyed = false;
 
   constructor(
     private readonly options: ChatOverlayApplicationOptions,
@@ -106,14 +107,21 @@ export class ChatOverlayApplication {
   }
 
   async start() {
-    if (this.started) return;
+    if (this.started || this.destroyed) return;
     this.started = true;
     window.addEventListener("message", this.handleConfigMessage);
     await this.runtime.initialize();
   }
 
+  /**
+   * Releases both runtimes. The constructor builds them, so teardown is not
+   * conditional on `start()` having run: an application that never started still
+   * owns what it constructed. Destruction is terminal and idempotent, which also
+   * makes it safe while `start()` is still awaiting `initialize()`.
+   */
   destroy() {
-    if (!this.started) return;
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.started = false;
     window.removeEventListener("message", this.handleConfigMessage);
     this.predictions.destroy();

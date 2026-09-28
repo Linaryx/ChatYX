@@ -16,7 +16,7 @@ import "./PerfPanel.css";
 export interface PerfPanelProps {
   snapshot: CollectorSnapshot;
   snapshots: readonly CollectorSnapshot[];
-  /** Optional connection state prop (for Todo 5 integration) */
+  /** Connection state passed by the monitor when the route can report it. */
   isConnected?: boolean;
 }
 

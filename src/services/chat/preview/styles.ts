@@ -1,80 +1,21 @@
-import {
-  generateShadowStyles,
-  generateSizeStyles,
-  generateStrokeStyles,
-  generateVariantStyles,
-} from "~/styles/chatStyles";
-import {
-  getMessageEntryAnimationDuration,
-  hasMessageEntryAnimation,
-  injectAnimationStyles,
-} from "~/utils/ui/animationUtils";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
+import { applyOverlayStyles, clearOverlayStyles } from "~/services/chat/runtime/overlayStyleManager";
+import { OVERLAY_ATTRIBUTES } from "~/styles/chatStyles";
 
-const PREVIEW_STYLE_IDS = [
-  "chat-size-styles",
-  "chat-shadow-styles",
-  "chat-stroke-styles",
-  "chat-variant-styles",
-  "chat-animations",
-  "chat-preview-layout-styles",
-];
-
-export function cleanupPreviewStyles() {
-  PREVIEW_STYLE_IDS.forEach((id) => document.getElementById(id)?.remove());
-}
-
+/**
+ * Publishes the overlay styles for the embedded preview.
+ *
+ * The preview wants exactly what the live overlay wants, plus a marker that stops
+ * the container from scrolling on its own, so this delegates rather than
+ * duplicating the variable set.
+ */
 export function injectPreviewStyles(config: ChatConfig) {
   cleanupPreviewStyles();
-
-  const sizeEl = document.createElement("style");
-  sizeEl.id = "chat-size-styles";
-  sizeEl.innerHTML = generateSizeStyles(config.size as 1 | 2 | 3, config.lineHeight);
-  document.head.appendChild(sizeEl);
-
-  if (config.shadow) {
-    const el = document.createElement("style");
-    el.id = "chat-shadow-styles";
-    el.innerHTML = generateShadowStyles(config.shadow as 1 | 2 | 3);
-    document.head.appendChild(el);
-  }
-
-  if (config.stroke) {
-    const el = document.createElement("style");
-    el.id = "chat-stroke-styles";
-    el.innerHTML = generateStrokeStyles(config.stroke as 1 | 2 | 3 | 4);
-    document.head.appendChild(el);
-  }
-
-  const variantStyles = generateVariantStyles(config);
-  if (variantStyles) {
-    const el = document.createElement("style");
-    el.id = "chat-variant-styles";
-    el.innerHTML = variantStyles;
-    document.head.appendChild(el);
-  }
-
-  if (hasMessageEntryAnimation(config.animation)) {
-    injectAnimationStyles({
-      enabled: true,
-      duration: getMessageEntryAnimationDuration(config.animation),
-      easing: "ease-out",
-      type: config.animation,
-    });
-  }
-
-  const layoutEl = document.createElement("style");
-  layoutEl.id = "chat-preview-layout-styles";
-  layoutEl.innerHTML = `
-#chat_container {
-    overflow: hidden !important;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+  applyOverlayStyles(config);
+  document.documentElement.setAttribute(OVERLAY_ATTRIBUTES.preview, "");
 }
 
-#chat_container::-webkit-scrollbar {
-    display: none;
-}
-`;
-  document.head.appendChild(layoutEl);
+export function cleanupPreviewStyles() {
+  clearOverlayStyles();
+  document.documentElement.removeAttribute(OVERLAY_ATTRIBUTES.preview);
 }
