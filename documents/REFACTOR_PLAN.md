@@ -573,3 +573,34 @@ UI primitive, second icon system, unnecessary dependency, generic `utils`
 dumping ground, hidden side effect, broken lifecycle cleanup, duplicated
 platform SVG, static design literal, accessibility regression, OBS regression or
 config/URL contract change was introduced.
+
+## Closing state
+
+The checklist above was walked item by item at the end of the work:
+
+- **Cyclic dependencies.** The one lateral edge this refactor added is
+  `config/setupTemplates` → `services/storage/setupStorage`, whose target is a
+  dependency-free leaf, so no cycle exists. `config/chatAnimation` imports
+  nothing. Recorded in `ARCHITECTURE.md`.
+- **Second icon system / duplicated platform SVG.** `grep -r "hgi-"` and
+  `grep -r "lucide"` over `src` return nothing; `PlatformGlyph` is the only owner
+  of the platform glyphs; the stale `lucide-solid` entry in the `vite.config.ts`
+  chunk group was removed and `@hugeicons` added in its place.
+- **Unnecessary dependency.** `package.json` carries nine runtime dependencies,
+  none of them a test-render library or an icon font.
+- **Generic `utils` dumping ground.** `utils/chat/badgePriority` and
+  `utils/ui/animationUtils` left; what remains under `utils/ui` is the three chat
+  presentation runtime helpers, each with a single purpose, and their move is
+  blocked by layering rather than by effort.
+- **Hidden side effects and lifecycle cleanup.** The teardown ownership work in
+  phase 7 plus the animation-stylesheet fix above; a browser trace across overlay
+  teardown shows every stylesheet removed and every published property released.
+- **Static design literals.** The overlay's presets are now custom properties;
+  `chatStyles.ts` is the documented remainder.
+- **OBS and config/URL contract.** No query parameter changed.
+  `tests/setupConfig.test.ts` and `tests/formValues.test.ts` pin the round trip,
+  and `buildOverlayUrl` remains the single producer.
+
+Closing verification: `bun run check` passes (lint 0/0, typecheck 0, 375 tests,
+production build), the production bundle is 2.15 MB, and the browser checks
+recorded per phase pass against the built behaviour.
