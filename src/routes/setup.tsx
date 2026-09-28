@@ -34,7 +34,6 @@ import { TwitchChannelField } from "~/components/setup/TwitchChannelField";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Slider } from "~/components/ui/slider";
-import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES } from "~/config/botNames";
 import {
   DEFAULT_EVENT_COLORS,
   normalizeEventColor,
@@ -45,6 +44,7 @@ import {
   DEFAULT_CHAT_CONFIG,
   chatConfigToSearchParams,
   normalizeBotNames,
+  parseBotNames,
   type ChatAnimationMode,
   type ChatConfig,
   type LinkDisplayMode,
@@ -487,13 +487,17 @@ export default function ChatSetup() {
   );
   const [showGifs, setShowGifs] = createSignal(DEFAULT_CHAT_CONFIG.showGifs);
   const [gifScale, setGifScale] = createSignal(String(DEFAULT_CHAT_CONFIG.gifScale));
-  const [botNames, setBotNames] = createSignal<string[]>([
-    ...DEFAULT_BOT_NAMES,
-  ]);
+  const [botNames, setBotNames] = createSignal<string[]>(
+    parseBotNames(DEFAULT_CHAT_CONFIG.botNames),
+  );
   const [botInput, setBotInput] = createSignal("");
-  const [kickBotNames, setKickBotNames] = createSignal<string[]>([
-    ...DEFAULT_KICK_BOT_NAMES,
-  ]);
+  const [youtubeBotNames, setYoutubeBotNames] = createSignal<string[]>(
+    parseBotNames(DEFAULT_CHAT_CONFIG.youtubeBotNames),
+  );
+  const [youtubeBotInput, setYoutubeBotInput] = createSignal("");
+  const [kickBotNames, setKickBotNames] = createSignal<string[]>(
+    parseBotNames(DEFAULT_CHAT_CONFIG.kickBotNames),
+  );
   const [kickBotInput, setKickBotInput] = createSignal("");
   const [botProfiles, setBotProfiles] = createSignal<
     Record<string, BotProfile>
@@ -761,6 +765,7 @@ const [activeSection, setActiveSection] =
       hideNames: setHideNames,
       botNames: setBotNames,
       kickBotNames: setKickBotNames,
+      youtubeBotNames: setYoutubeBotNames,
       reverseLineOrder: setReverseLineOrder,
       horizontal: setHorizontal,
       singleChatter: setAllowedChatters,
@@ -926,6 +931,7 @@ const [activeSection, setActiveSection] =
     gifScale: toFloat(gifScale(), DEFAULT_CHAT_CONFIG.gifScale),
     botNames: normalizeBotNames(botNames().join(",")),
     kickBotNames: normalizeBotNames(kickBotNames().join(",")),
+    youtubeBotNames: normalizeBotNames(youtubeBotNames().join(",")),
     singleChatter: normalizeBotNames(allowedChatters().join(",")),
     show7tvUnlisted: show7tvUnlisted(),
     smallCaps: smallCaps(),
@@ -1101,6 +1107,10 @@ const [activeSection, setActiveSection] =
     setBotNames((current) => mergeUniqueLogins(current, raw));
   };
 
+  const addYouTubeBotNames = (raw: string) => {
+    setYoutubeBotNames((current) => mergeUniqueLogins(current, raw));
+  };
+
   const addKickBotNames = (raw: string) => {
     setKickBotNames((current) => mergeUniqueLogins(current, raw));
   };
@@ -1111,6 +1121,10 @@ const [activeSection, setActiveSection] =
 
   const removeBotName = (login: string) => {
     setBotNames((current) => current.filter((entry) => entry !== login));
+  };
+
+  const removeYouTubeBotName = (login: string) => {
+    setYoutubeBotNames((current) => current.filter((entry) => entry !== login));
   };
 
   const removeKickBotName = (login: string) => {
@@ -1131,6 +1145,19 @@ const [activeSection, setActiveSection] =
 
     if (event.key === "Backspace" && botInput().trim() === "") {
       setBotNames((current) => current.slice(0, -1));
+    }
+  };
+
+  const handleYouTubeBotInputKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addYouTubeBotNames(youtubeBotInput());
+      setYoutubeBotInput("");
+      return;
+    }
+
+    if (event.key === "Backspace" && youtubeBotInput().trim() === "") {
+      setYoutubeBotNames((current) => current.slice(0, -1));
     }
   };
 
@@ -2390,7 +2417,42 @@ const [activeSection, setActiveSection] =
                   </div>
                 </div>
 
-                <div class="setup-control-row flex flex-col gap-2">
+                <div class="setup-bot-row flex flex-col gap-2">
+                  <div class="flex min-w-0 flex-col gap-0.5">
+                    <div class="text-xs font-medium text-foreground sm:text-sm">
+                      {t("setup.youtubeBotNicknames")}
+                    </div>
+                  </div>
+                  <div class={chipFieldClass}>
+                    <For each={youtubeBotNames()}>
+                      {(login) =>
+                        renderUserChip(
+                          login,
+                          removeYouTubeBotName,
+                          () => t("setup.removeYouTubeBot"),
+                          () => ({}),
+                        )
+                      }
+                    </For>
+                    <input
+                      aria-label={t("setup.addYouTubeBot")}
+                      type="text"
+                      value={youtubeBotInput()}
+                      onInput={(event) =>
+                        setYoutubeBotInput(event.currentTarget.value)
+                      }
+                      onKeyDown={handleYouTubeBotInputKeyDown}
+                      onBlur={() => {
+                        addYouTubeBotNames(youtubeBotInput());
+                        setYoutubeBotInput("");
+                      }}
+                      placeholder={t("setup.nicknamePlaceholder")}
+                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </div>
+
+                <div class="setup-bot-row flex flex-col gap-2">
                   <div class="flex min-w-0 flex-col gap-0.5">
                     <div class="text-xs font-medium text-foreground sm:text-sm">
                       {t("setup.kickBotNicknames")}
@@ -2425,7 +2487,7 @@ const [activeSection, setActiveSection] =
                   </div>
                 </div>
 
-                <div class="setup-control-row flex flex-col gap-2">
+                <div class="setup-bot-row flex flex-col gap-2">
                   <div class="flex min-w-0 flex-col gap-0.5">
                     <div class="text-xs font-medium text-foreground sm:text-sm">
                        {t("setup.onlyTheseViewers")}
