@@ -20,9 +20,9 @@ type ChatBadgesProps = {
 };
 
 export const ChatBadges = (props: ChatBadgesProps): JSX.Element => {
-  if (props.config.hideAllBadges) return null;
   const renderedBadges = createMemo(() => {
     const { message, config, service } = props;
+    if (config.hideAllBadges) return [] as JSX.Element[];
     const showPlatformIcon =
       config.platformMarker === "icon" &&
       hasMultipleChatSources(config) &&
