@@ -10,7 +10,7 @@ import {
 } from "solid-js";
 import { Title } from "@solidjs/meta";
 import { PlatformGlyph } from "~/components/brand/PlatformGlyph";
-import { ColorPickerField } from "~/components/ColorPickerField";
+import { ColorPickerField } from "~/components/setup/ColorPickerField";
 import { LanguageSwitcher } from "~/components/setup/LanguageSwitcher";
 import { locale, t } from "~/i18n";
 import {
@@ -25,6 +25,7 @@ import {
 } from "~/components/setup/SetupLayout";
 import { VoiceCatalog } from "~/components/setup/VoiceCatalog";
 import { SetupImportCard } from "~/components/setup/SetupImportCard";
+import { SetupChipInput } from "~/components/setup/SetupChipInput";
 import { parseSetupImport } from "~/config/setupImport";
 import { toVisualSetupPatch } from "~/config/setupTemplates";
 import { applySetupImport } from "~/components/setup/setupImportAdapter";
@@ -2423,20 +2424,16 @@ const [activeSection, setActiveSection] =
                         )
                       }
                     </For>
-                    <input
-                       aria-label={t("setup.addBot")}
-                      type="text"
+                    <SetupChipInput
                       value={botInput()}
-                      onInput={(event) =>
-                        setBotInput(event.currentTarget.value)
-                      }
+                      onInput={setBotInput}
                       onKeyDown={handleBotInputKeyDown}
-                      onBlur={() => {
+                      onCommit={() => {
                         addBotNames(botInput());
                         setBotInput("");
                       }}
-                       placeholder={t("setup.nicknamePlaceholder")}
-                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                      label={t("setup.addBot")}
+                      placeholder={t("setup.nicknamePlaceholder")}
                     />
                   </div>
                 </div>
@@ -2458,20 +2455,16 @@ const [activeSection, setActiveSection] =
                         )
                       }
                     </For>
-                    <input
-                      aria-label={t("setup.addYouTubeBot")}
-                      type="text"
+                    <SetupChipInput
                       value={youtubeBotInput()}
-                      onInput={(event) =>
-                        setYoutubeBotInput(event.currentTarget.value)
-                      }
+                      onInput={setYoutubeBotInput}
                       onKeyDown={handleYouTubeBotInputKeyDown}
-                      onBlur={() => {
+                      onCommit={() => {
                         addYouTubeBotNames(youtubeBotInput());
                         setYoutubeBotInput("");
                       }}
+                      label={t("setup.addYouTubeBot")}
                       placeholder={t("setup.nicknamePlaceholder")}
-                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                     />
                   </div>
                 </div>
@@ -2493,20 +2486,16 @@ const [activeSection, setActiveSection] =
                         )
                       }
                     </For>
-                    <input
-                      aria-label={t("setup.addKickBot")}
-                      type="text"
+                    <SetupChipInput
                       value={kickBotInput()}
-                      onInput={(event) =>
-                        setKickBotInput(event.currentTarget.value)
-                      }
+                      onInput={setKickBotInput}
                       onKeyDown={handleKickBotInputKeyDown}
-                      onBlur={() => {
+                      onCommit={() => {
                         addKickBotNames(kickBotInput());
                         setKickBotInput("");
                       }}
+                      label={t("setup.addKickBot")}
                       placeholder={t("setup.nicknamePlaceholder")}
-                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                     />
                   </div>
                 </div>
@@ -2530,20 +2519,16 @@ const [activeSection, setActiveSection] =
                         )
                       }
                     </For>
-                    <input
-                       aria-label={t("setup.addViewer")}
-                      type="text"
+                    <SetupChipInput
                       value={allowedChatterInput()}
-                      onInput={(event) =>
-                        setAllowedChatterInput(event.currentTarget.value)
-                      }
+                      onInput={setAllowedChatterInput}
                       onKeyDown={handleAllowedChatterInputKeyDown}
-                      onBlur={() => {
+                      onCommit={() => {
                         addAllowedChatters(allowedChatterInput());
                         setAllowedChatterInput("");
                       }}
-                       placeholder={t("setup.nicknamePlaceholder")}
-                      class="h-[34px] min-w-[150px] flex-1 border-0 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                      label={t("setup.addViewer")}
+                      placeholder={t("setup.nicknamePlaceholder")}
                     />
                   </div>
                 </div>

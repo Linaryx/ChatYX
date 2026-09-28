@@ -23,7 +23,7 @@ series) following Conventional Commits.
 | 1 | Guard rails | low | new characterization tests | in progress — `ChatBadges` reactivity fixed; remaining characterization tests outstanding |
 | 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | in progress — dead tokens and the `--border` collision done; `chatStyles.ts` preset conversion outstanding |
 | 3 | Icon normalization | low | 1:1 glyph mapping, visual check | **done** |
-| 4 | UI primitives | low | visual check, existing tests | not started |
+| 4 | UI primitives | low | visual check, existing tests | **done** |
 | 5 | Setup decomposition | high | setup/URL/import test suites | not started |
 | 6 | Chat presentation cleanup | high | render and emote test suites | not started |
 | 7 | Dependency and dead-code cleanup | none-low | grep verification, build | in progress — dead modules and `YouTubeChatService` done; singleton lifecycle ownership outstanding |
@@ -162,23 +162,41 @@ pre-migration font restored out of git and resolved 21/21 glyphs with no gaps.
 
 ## Phase 4 — UI primitives
 
-**Goal:** routes stop re-implementing controls the primitive layer already owns.
+**Goal:** routes stop re-implementing control *structures* the feature layer can
+own. This is about duplication, not about forcing every raw element through a
+primitive.
+
+**Corrected scope.** The audit's raw-element counts were case-insensitive and
+roughly triple the real figures. Case-sensitive counts are 14 raw `<button>` and
+5 raw `<input>` in `setup.tsx`, one of each in `TwitchChannelField.tsx`, and
+none in `SetupImportCard.tsx`. Almost all of those raw elements are bespoke
+single-purpose controls with their own CSS contracts — role pills, stage
+swatches, preview radio options, chip remove buttons. Pushing them through the
+generic `Button` would inject conflicting base styles (`h-10`, `px-4`,
+`rounded-md`, `bg-primary`) and change the design, so they stay as they are.
 
 **Steps:**
 
-1. Replace the 19 raw `<button>` in `src/routes/setup.tsx` and 8 in
-   `src/components/setup/SetupImportCard.tsx` with `Button`, adding variants
-   where a case is genuinely not covered.
-2. Replace the 7 raw `<input>` in `src/routes/setup.tsx` and 2 in
-   `SetupImportCard.tsx` with `Input`.
-3. Move `src/components/ColorPickerField.tsx` under `src/components/setup/` so
+1. Extract the genuinely duplicated structure: the four byte-identical chip
+   inputs in the Twitch-bot, YouTube-bot, Kick-bot and viewer-allowlist rows
+   become `src/components/setup/SetupChipInput.tsx`. It is deliberately a
+   feature-level wrapper rather than the generic `Input`, because the field sits
+   borderless inside an existing bordered container, exactly as the layering in
+   section 8 prescribes.
+2. Move `src/components/ColorPickerField.tsx` under `src/components/setup/` so
    feature components live with their feature.
-4. Do not touch the dev route's raw elements; it is a diagnostic surface.
+3. Leave the remaining raw controls and the dev route alone.
 
-**Exit criteria:** no raw `<button>` or `<input>` outside `components/ui/` and
-the dev route; keyboard and focus behavior unchanged; visual check passes.
+**Exit criteria:** no duplicated chip-input structure; keyboard, focus and blur
+behaviour unchanged; the dev route untouched.
 
-**Commit:** `refactor(setup): reuse ui primitives for controls`
+**Commit:** `refactor(setup): extract chip input and colocate feature components`
+
+**Outcome:** complete. `setup.tsx` now has one raw `<input>` left — the embedded
+settings search field, which has no duplicate. Verified functionally in a real
+browser: all four rows still add a chip on Enter and clear the draft, and the
+bots section renders unchanged. The only network error observed was an expected
+`404` from `kick.com` for a probe username that does not exist.
 
 ---
 
