@@ -271,7 +271,19 @@ downstream blocks.
    error in either the page or the frame.
 6. **Preview synchronization.** Move the postMessage sender (`:627-632`), the
    debounced navigation (`:1279-1311`) and the config push effect into
-   `features/setup/`.
+   `features/setup/`. **Done.** `src/features/setup/previewSync.ts` owns the
+   iframe protocol: the config message, the direct `src` swap that avoids the
+   about:blank flash, the session-key gate, the debounce and the cancellation.
+   The route keeps only the reactive effects that read signals. The navigation
+   URL is built lazily, so an unchanged session costs nothing. Verified two
+   ways: `tests/previewSync.test.ts` covers the repeat-key no-op, the burst that
+   collapses into one navigation with the last URL, `dispose`, the pre-mount
+   fallback and the postMessage origin using a minimal `window` shim; in a
+   browser a committed channel change reloads the frame with `c=abcdef`, a
+   message-size change does not reload it, and the overlay still re-renders
+   (20px → 48px) with no console error. The debounce is covered by the unit test
+   because the channel signal commits on blur, which makes burst timing
+   unreliable to drive from outside.
 7. **Document style lock.** Move the `documentElement`/`body`/`#root` style
    handling and reduced-motion listener (`:634-684`) into a lifecycle-owned
    helper.

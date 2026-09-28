@@ -80,10 +80,8 @@ import {
   MIN_MESSAGE_SPEED,
   messageSpeedToIntervalMs,
 } from "~/utils/ui/animationUtils";
-import {
-  createChatPreviewConfigMessage,
-  getChatPreviewSessionKey,
-} from "~/services/chat/preview";
+import { getChatPreviewSessionKey } from "~/services/chat/preview";
+import { createPreviewSynchronizer } from "~/features/setup/previewSync";
 import { cn } from "~/lib/utils";
 import { isSetupSearchMatch } from "~/utils/setupSearch";
 import Alert02Icon from "@hugeicons/core-free-icons/Alert02Icon";
@@ -428,16 +426,12 @@ export default function ChatSetup() {
   let bodyScrollRef: HTMLDivElement | undefined;
   const sectionScrollPositions = new Map<SetupSectionId, number>();
   const viewScrollPositions = { settings: 0, preview: 0 };
-  let activePreviewSessionKey = "";
-  let previewNavigationTimer: number | undefined;
   let copyResetTimer: number | undefined;
 
-  const postPreviewConfig = (config = previewConfig()) => {
-    iframeRef?.contentWindow?.postMessage(
-      createChatPreviewConfigMessage(config),
-      window.location.origin,
-    );
-  };
+  const previewSync = createPreviewSynchronizer({
+    getIframe: () => iframeRef,
+    setFallbackUrl: setPreviewUrl,
+  });
 
   onMount(() => {
     const html = document.documentElement;
@@ -1002,15 +996,9 @@ const [activeSection, setActiveSection] =
     const mode = previewMode();
     const demoKind = previewDemoKind();
     const sessionKey = getChatPreviewSessionKey(cfg, mode, demoKind);
-    if (sessionKey === activePreviewSessionKey) return;
 
-    activePreviewSessionKey = sessionKey;
-    if (previewNavigationTimer !== undefined) {
-      window.clearTimeout(previewNavigationTimer);
-    }
-    previewNavigationTimer = window.setTimeout(() => {
-      previewNavigationTimer = undefined;
-      const nextPreviewUrl = buildOverlayUrl(
+    previewSync.scheduleNavigation(sessionKey, () =>
+      buildOverlayUrl(
         cfg,
         mode === "demo"
           ? {
@@ -1020,28 +1008,19 @@ const [activeSection, setActiveSection] =
           : {
               preview: "false",
             },
-      );
-
-      // Set via ref to avoid about:blank flash — just swap src directly
-      if (iframeRef) {
-        iframeRef.src = nextPreviewUrl;
-      } else {
-        setPreviewUrl(nextPreviewUrl);
-      }
-    }, 180);
+      ),
+    );
   });
 
   onCleanup(() => {
-    if (previewNavigationTimer !== undefined) {
-      window.clearTimeout(previewNavigationTimer);
-    }
+    previewSync.dispose();
     if (copyResetTimer !== undefined) {
       window.clearTimeout(copyResetTimer);
     }
   });
 
   createEffect(() => {
-    postPreviewConfig(previewConfig());
+    previewSync.postConfig(previewConfig());
   });
 
   const copyToClipboard = async () => {
@@ -2465,7 +2444,7 @@ const [activeSection, setActiveSection] =
                       <iframe
                         ref={iframeRef}
                         src={previewUrl()}
-                        onLoad={() => postPreviewConfig()}
+                        onLoad={() => previewSync.postConfig(previewConfig())}
                         class="pointer-events-none block h-full w-full border-0 bg-transparent"
                          title={t("setup.chatPreview")}
                         scrolling="no"
