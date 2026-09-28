@@ -5,16 +5,13 @@
   src: url(/v3/font/Alsina_Ultrajada.ttf);
 }
 
-/* Minimalist grayscale theme with white text */
+/* Default text color for every surface.
+   The overlay renders on a transparent OBS background rather than on the
+   themed app surface, so it must not inherit the SolidCN foreground token,
+   which is near-black in the light theme. This is the only token that stays
+   outside `app.css` (see documents/REFACTORING.md section 10). */
 :root {
-  --bg: #1a1a1a;
-  --panel: #2a2a2a;
   --text: #ffffff;
-  --text-secondary: #b3b3b3;
-  --border: #3a3a3a;
-  --input-bg: #0f0f0f;
-  --button-bg: #ffffff;
-  --button-text: #000000;
 }
 
 html,
@@ -76,12 +73,4 @@ textarea:focus,
 button:focus {
   outline: none;
   box-shadow: none;
-}
-
-/* Utility classes */
-.bg-panel {
-  background: var(--panel);
-}
-.text-secondary {
-  color: var(--text-secondary);
 }
