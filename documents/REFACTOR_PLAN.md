@@ -637,6 +637,6 @@ The checklist above was walked item by item at the end of the work:
   `tests/setupConfig.test.ts` and `tests/formValues.test.ts` pin the round trip,
   and `buildOverlayUrl` remains the single producer.
 
-Closing verification: `bun run check` passes (lint 0/0, typecheck 0, 390 tests,
+Closing verification: `bun run check` passes (lint 0/0, typecheck 0, 394 tests,
 production build), the production bundle is about 2.15 MB, and the browser checks
 recorded per phase pass against the built behaviour.

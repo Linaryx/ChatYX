@@ -2054,6 +2054,13 @@ returned before touching anything, and `shouldShowMessage`, `getContainerClasses
   left. `onCleanup` now disposes it.
 - The overlay style manager contract is covered end to end: apply, apply twice,
   cleanup, and apply-after-cleanup.
+- `LayoutManager.cleanup()` cancelled only the stylesheet; a smooth follow it had
+  started kept its `requestAnimationFrame` scheduled. Cleanup now cancels the
+  frame and drops the follow state.
+- `PreviewRuntime.initialize()` used to reset its `destroyed` flag, so a destroyed
+  runtime could be re-initialized and re-claim the proxy flag and the shared
+  stores. Destruction is now terminal there too, which matches the application's
+  contract.
 - Animation CSS stays in `services/chat/runtime/animationStyles.ts`. It is the
   module the runtime already owns, and moving it would be organisation without a
   contract change.
@@ -2085,6 +2092,8 @@ returned before touching anything, and `shouldShowMessage`, `getContainerClasses
 | --- | --- |
 | Reconnect suppression (phase 1, item 3) | Still browser-verified. It is not on the follow-up's required-test list, and a unit test would need a WebSocket shim around the connection manager rather than a behaviour seam. |
 | `channelRolesService`, `twitchGqlService`, `bitsService` caches | Keyed by channel or by user/channel id, so an in-flight write cannot serve another channel's data. They are caches of provider facts, not runtime state, and no cross-channel leak was found. |
+| `ffzapBadgeService`, `bttvBadgeService`, `chatterinoBadgeService`, `chatisBadgeService` | All four load global, channel-independent badge directories keyed by user id or name, and none of them takes a channel. A response that resolves after teardown writes the same directory the next load would fetch, so it cannot serve another channel's badges. |
+| `sevenTVCosmeticsService` paint catalogue and user→paint assignments | Provider facts about users, not channel state. `clearAllCaches()` deliberately clears the channel-scoped caches and the generated CSS only; dropping the catalogue and the assignments would refetch both for the very users the next runtime renders. The `refresh` command's `reloadCosmetics()` clears them when a real refresh is wanted. |
 | `mentionStyleService` | Synchronous only: `registerMessageAuthor` and `reset`. No in-flight work exists to guard. |
 | `chatStyles.ts` `SIZE_CONFIGS` | It is the single source of truth for message size, weight, line height and the emote scale, and JS reads it for emote geometry. Deleting it would duplicate the table; it now publishes custom properties instead of generating rules. |
 | `renderMessageContent.ts` physical split | Section 21 explicitly allows closing it. The file has one cohesive pipeline (tokenize, then assemble an HTML string), no DOM binding and no provider-specific transformation, so a split buys organisation only. |
@@ -2110,11 +2119,12 @@ returned before touching anything, and `shouldShowMessage`, `getContainerClasses
 | --- | --- |
 | `tests/chatOverlayApplication.test.ts` | destroy before start, double destroy, double start, start after destroy, destroy during a pending initialization |
 | `tests/assetTeardownRace.test.ts` | stale commits after reset for emote (global + channel), badge (channel, third-party, per-user), 7TV cosmetics, and the paint stylesheet; plus the feature-integration initialization race |
-| `tests/previewRuntimeTeardown.test.ts` | preview destroy releases the flag and the shared stores, does not release what it never claimed, and ignores post-destroy configuration |
+| `tests/previewRuntimeTeardown.test.ts` | preview destroy releases the flag and the shared stores, does not release what it never claimed, ignores post-destroy configuration, and cannot be initialized again |
 | `tests/overlayStyleManager.test.ts` (added case) | apply after cleanup reconstructs properties, attributes and the stylesheet |
+| `tests/layoutUtils.test.ts` (added case) | cleanup cancels the smooth-scroll frame and removes the stylesheet |
 | `tests/channelSearch.test.ts`, `tests/setupTranslations.test.ts` (moved imports) | the two extracted pure helpers now test without a DOM |
 
-Suite size: 375 tests before the follow-up, 392 after.
+Suite size: 375 tests before the follow-up, 394 after.
 
 ## Dependency changes
 
@@ -2143,7 +2153,7 @@ returns nothing.
 ```text
 bun run lint       0 warnings, 0 errors (164 app files, 9 service files)
 bun run typecheck  exit 0
-bun test ./tests   392 pass, 0 fail (51 files, 1042 assertions)
+bun test ./tests   394 pass, 0 fail (51 files, 1048 assertions)
 bun run build      ok, 292 modules, dist 2.15 MB
 bun run check      ok (all four above, in order)
 ```
