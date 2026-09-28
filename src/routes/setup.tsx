@@ -46,13 +46,12 @@ import {
   loadLocalFontOptions,
   type LocalFontOption,
 } from "~/services/setup/localFonts";
+import { toClampedInt, toInt } from "~/config/formValues";
 import {
-  normalizeHexColor,
-  toClampedInt,
-  toFloat,
-  toInt,
-  toPositiveIntOrFalse,
-} from "~/config/formValues";
+  buildOverlayUrl,
+  buildSetupConfig,
+  type SetupFormState,
+} from "~/config/setupConfig";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
@@ -70,14 +69,12 @@ import {
 import {
   DEFAULT_CHAT_CONFIG,
   chatConfigToSearchParams,
-  normalizeBotNames,
   parseBotNames,
   type ChatAnimationMode,
-  type ChatConfig,
   type LinkDisplayMode,
   type PlatformMarkerMode,
 } from "~/config/chatUrlParams";
-import { getAppBaseUrl, getPublicAssetUrl } from "~/utils/appBase";
+import { getPublicAssetUrl } from "~/utils/appBase";
 import {
   MAX_MESSAGE_SPEED,
   MIN_MESSAGE_SPEED,
@@ -655,37 +652,20 @@ const [activeSection, setActiveSection] =
     return `${previewStageStyle()} border-radius: ${radius}px;`;
   });
 
-  const buildConfig = (selectedChannel: string): ChatConfig => ({
-    ...DEFAULT_CHAT_CONFIG,
-    channel: selectedChannel,
-    youtubeChannel: youtubeChannel().trim().replace(/^@/, ""),
-    kickChannel: kickChannel().trim().replace(/^@/, ""),
-    size: toInt(size(), DEFAULT_CHAT_CONFIG.size),
-    font: toInt(font(), DEFAULT_CHAT_CONFIG.font),
-    lineHeight: toClampedInt(lineHeight(), DEFAULT_CHAT_CONFIG.lineHeight, 80, 200),
-    fontWeight: toClampedInt(
-      fontWeight(),
-      DEFAULT_CHAT_CONFIG.fontWeight,
-      100,
-      1000,
-    ),
-    nickFontWeight: toClampedInt(
-      nickFontWeight(),
-      DEFAULT_CHAT_CONFIG.nickFontWeight,
-      100,
-      1000,
-    ),
+  const formState = (): SetupFormState => ({
+    youtubeChannel: youtubeChannel(),
+    kickChannel: kickChannel(),
+    size: size(),
+    font: font(),
+    lineHeight: lineHeight(),
+    fontWeight: fontWeight(),
+    nickFontWeight: nickFontWeight(),
     fontCustom: fontCustom(),
-    shadow: toPositiveIntOrFalse(shadow()),
-    stroke: toPositiveIntOrFalse(stroke()),
-    fade: toPositiveIntOrFalse(fade()),
+    shadow: shadow(),
+    stroke: stroke(),
+    fade: fade(),
     animation: animation(),
-    messageSpeed: toClampedInt(
-      messageSpeed(),
-      DEFAULT_CHAT_CONFIG.messageSpeed,
-      MIN_MESSAGE_SPEED,
-      MAX_MESSAGE_SPEED,
-    ),
+    messageSpeed: messageSpeed(),
     showHomies: showHomies(),
     show7tvBadges: show7tvBadges(),
     showFfzBadges: showFfzBadges(),
@@ -699,13 +679,13 @@ const [activeSection, setActiveSection] =
     bots: bots(),
     commands: commands(),
     hideAllBadges: hideAllBadges(),
-    emoteScale: toFloat(emoteScale(), DEFAULT_CHAT_CONFIG.emoteScale),
+    emoteScale: emoteScale(),
     showGifs: showGifs(),
-    gifScale: toFloat(gifScale(), DEFAULT_CHAT_CONFIG.gifScale),
-    botNames: normalizeBotNames(botNames().join(",")),
-    kickBotNames: normalizeBotNames(kickBotNames().join(",")),
-    youtubeBotNames: normalizeBotNames(youtubeBotNames().join(",")),
-    singleChatter: normalizeBotNames(allowedChatters().join(",")),
+    gifScale: gifScale(),
+    botNames: botNames(),
+    kickBotNames: kickBotNames(),
+    youtubeBotNames: youtubeBotNames(),
+    allowedChatters: allowedChatters(),
     show7tvUnlisted: show7tvUnlisted(),
     smallCaps: smallCaps(),
     nlAfterName: nlAfterName(),
@@ -713,38 +693,18 @@ const [activeSection, setActiveSection] =
     reverseLineOrder: reverseLineOrder(),
     horizontal: horizontal(),
     platformMarker: platformMarker(),
-    ffzBotMixCustom: true,
     ffzBotMixBroadcaster: ffzBotMixBroadcaster(),
     ffzBotMixModerator: ffzBotMixModerator(),
     ffzBotMixVip: ffzBotMixVip(),
-    overlayBackgroundColor: normalizeHexColor(
-      overlayBackgroundColor(),
-      DEFAULT_CHAT_CONFIG.overlayBackgroundColor,
-    ),
-    overlayBackgroundOpacity: toInt(
-      overlayBackgroundOpacity(),
-      DEFAULT_CHAT_CONFIG.overlayBackgroundOpacity,
-    ),
-    overlayBackgroundRadius: toInt(
-      overlayBackgroundRadius(),
-      DEFAULT_CHAT_CONFIG.overlayBackgroundRadius,
-    ),
-    overlayPadding: toInt(
-      overlayPadding(),
-      DEFAULT_CHAT_CONFIG.overlayPadding,
-    ),
-    overlayBorderWidth: toInt(
-      overlayBorderWidth(),
-      DEFAULT_CHAT_CONFIG.overlayBorderWidth,
-    ),
-    overlayBorderColor: normalizeHexColor(
-      overlayBorderColor(),
-      DEFAULT_CHAT_CONFIG.overlayBorderColor,
-      true,
-    ),
+    overlayBackgroundColor: overlayBackgroundColor(),
+    overlayBackgroundOpacity: overlayBackgroundOpacity(),
+    overlayBackgroundRadius: overlayBackgroundRadius(),
+    overlayPadding: overlayPadding(),
+    overlayBorderWidth: overlayBorderWidth(),
+    overlayBorderColor: overlayBorderColor(),
     highlightTwitchEvents: highlightTwitchEvents(),
-    eventColorOpacity: toInt(eventColorOpacity(), DEFAULT_CHAT_CONFIG.eventColorOpacity),
-    ...eventColors(),
+    eventColorOpacity: eventColorOpacity(),
+    eventColors: eventColors(),
     twitchEventBold: twitchEventBold(),
     twitchEventItalic: twitchEventItalic(),
     showHighlightedMessages: showHighlightedMessages(),
@@ -752,10 +712,9 @@ const [activeSection, setActiveSection] =
     showGigantifiedEmotes: showGigantifiedEmotes(),
     showPredictions: showPredictions(),
     linkMode: linkMode(),
-    linkColor: normalizeHexColor(linkColor(), DEFAULT_CHAT_CONFIG.linkColor),
-    usersColor: usersColorEnabled()
-      ? normalizeHexColor(usersColor(), "#ffffff")
-      : "",
+    linkColor: linkColor(),
+    usersColorEnabled: usersColorEnabled(),
+    usersColor: usersColor(),
     hideLinkRewards: hideLinkRewards(),
     rteProxy: rteProxy(),
     rteAzureTts: rteAzureTts(),
@@ -763,6 +722,13 @@ const [activeSection, setActiveSection] =
     rteReyohohoBadge: rteReyohohoBadge(),
     rteCustomCosmetics: rteCustomCosmetics(),
   });
+
+  /**
+   * The preview, the persisted config and the exported link all project the same
+   * form; only the channel differs between them.
+   */
+  const buildConfig = (selectedChannel: string) =>
+    buildSetupConfig(formState(), selectedChannel);
 
   let canPersistSetupConfig = false;
   onMount(() => {
@@ -781,24 +747,6 @@ const [activeSection, setActiveSection] =
       writeStoredSetupValue(SETUP_STORAGE_KEYS.config, persistedConfig);
     }
   });
-
-  const buildChatUrl = (
-    cfg: ChatConfig,
-    extraParams?: Record<string, string>,
-    options?: { includeMessageSpeed?: boolean },
-  ) => {
-    const params = chatConfigToSearchParams(cfg);
-    if (options?.includeMessageSpeed === false) {
-      params.delete("ms");
-    }
-    if (extraParams) {
-      Object.entries(extraParams).forEach(([key, value]) =>
-        params.set(key, value),
-      );
-    }
-    const query = params.toString();
-    return `${getAppBaseUrl()}/chat/${query ? `?${query}` : ""}`;
-  };
 
   const hasTwitchChannel = createMemo(() => Boolean(channel().trim()));
   const hasYouTubeChannel = createMemo(() => Boolean(youtubeChannel().trim()));
@@ -1043,7 +991,7 @@ const [activeSection, setActiveSection] =
     }
 
     setGeneratedUrl(
-      buildChatUrl(buildConfig(currentChannel), undefined, {
+      buildOverlayUrl(buildConfig(currentChannel), undefined, {
         includeMessageSpeed: false,
       }),
     );
@@ -1062,7 +1010,7 @@ const [activeSection, setActiveSection] =
     }
     previewNavigationTimer = window.setTimeout(() => {
       previewNavigationTimer = undefined;
-      const nextPreviewUrl = buildChatUrl(
+      const nextPreviewUrl = buildOverlayUrl(
         cfg,
         mode === "demo"
           ? {

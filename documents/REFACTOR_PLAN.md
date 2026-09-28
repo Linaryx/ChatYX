@@ -256,7 +256,19 @@ downstream blocks.
    test. New `tests/formValues.test.ts` also characterizes the form→URL→config
    round trip, which is the contract step 5 must not break.
 5. **Config projection.** Move `buildConfig` (`:885-992`) and `buildChatUrl`
-   (`:1012-1028`) into `config/`.
+   (`:1012-1028`) into `config/`. **Done.** `src/config/setupConfig.ts` owns
+   `SetupFormState`, `buildSetupConfig(form, selectedChannel)` and
+   `buildOverlayUrl(...)`. The form state is passed in rather than read from
+   signals, which is what makes the projection testable; `selectedChannel` stays
+   a separate argument because the preview and the exported link deliberately
+   project the same form onto different channels. `buildOverlayUrl` gained an
+   optional `baseUrl` so the URL contract can be asserted without a document.
+   New `tests/setupConfig.test.ts` covers default projection, `@`-stripping,
+   clamping, malformed input, the `ms` rule, extra-parameter precedence and a
+   full export→parse round trip. Verified in a browser: channel, size and
+   line-height each change the generated link and all three survive a reload;
+   the embedded preview renders 11 demo messages with `ms` absent and no console
+   error in either the page or the frame.
 6. **Preview synchronization.** Move the postMessage sender (`:627-632`), the
    debounced navigation (`:1279-1311`) and the config push effect into
    `features/setup/`.
