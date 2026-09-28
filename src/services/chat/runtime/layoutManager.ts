@@ -204,10 +204,17 @@ export class LayoutManager {
   }
 
   /**
-   * Removes the layout stylesheet this manager injected. The container classes
-   * are left alone because the container leaves with the runtime that owned it.
+   * Removes the layout stylesheet this manager injected and stops the smooth
+   * follow it may have running. The container classes are left alone because the
+   * container leaves with the runtime that owned it.
    */
   cleanup(): void {
+    if (this.smoothScrollFrame !== undefined) {
+      window.cancelAnimationFrame(this.smoothScrollFrame);
+      this.smoothScrollFrame = undefined;
+    }
+    this.smoothScrollTarget = undefined;
+    this.smoothScrollLastTime = undefined;
     document
       .querySelectorAll('style[id="chat-layout"]')
       .forEach((element) => element.remove());

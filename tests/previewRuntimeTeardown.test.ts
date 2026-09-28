@@ -134,4 +134,16 @@ describe("preview runtime teardown", () => {
 
     expect(calls).toHaveLength(afterDestroy);
   });
+
+  test("a destroyed preview runtime cannot be initialized again", async () => {
+    const { runtime, calls } = createHarness();
+
+    runtime.destroy();
+    const afterDestroy = calls.length;
+    await runtime.initialize();
+
+    // Destruction is terminal: nothing was claimed again.
+    expect(calls).toHaveLength(afterDestroy);
+    expect(calls).not.toContain("reset-shared-state");
+  });
 });

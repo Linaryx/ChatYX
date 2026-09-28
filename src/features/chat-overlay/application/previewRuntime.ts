@@ -122,7 +122,9 @@ export class PreviewRuntime {
   }
 
   async initialize() {
-    this.destroyed = false;
+    // Destruction is terminal: a runtime that released the shared state it
+    // claimed must not claim it again.
+    if (this.destroyed) return;
     const { channel } = this.options;
     const isRealChannel = Boolean(channel && channel !== "chatyxpreview");
 

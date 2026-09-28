@@ -505,9 +505,13 @@ export class SevenTVCosmeticsService {
         return this.getCSSColorFromInt(paint.color);
     }
 
-    // Очистка всех кэшей, привязанных к каналу или пользователю. `reloadCosmetics`
-    // also calls this before it re-fetches, so the bump happens first and the
-    // reload's own loads capture the new generation.
+    // Очистка кэшей, которые привязаны к загруженному каналу: paint CSS и список
+    // загруженных каналов. Каталог красок и назначения красок пользователям
+    // остаются: это провайдерские факты о пользователях, не зависящие от канала,
+    // и сбрасывать их на teardown значило бы перезагружать их заново ради
+    // сообщений тех же пользователей. `reloadCosmetics` сбрасывает и их.
+    // `reloadCosmetics` also calls this before it re-fetches, so the bump happens
+    // first and the reload's own loads capture the new generation.
     clearAllCaches(): void {
         this.generation += 1;
         this.paintCSSCache.clear();
