@@ -711,7 +711,7 @@ const [activeSection, setActiveSection] =
     const section = target.closest<HTMLElement>(".setup-section")?.id.replace("setup-section-", "") as SetupSectionId | undefined;
     if (section) scrollToSection(section);
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
     }));
   };
   let previousSearchQuery = "";
