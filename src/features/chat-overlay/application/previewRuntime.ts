@@ -54,6 +54,13 @@ export type PreviewRuntimeDependencies = {
   ) => Promise<unknown>;
   loadBadges: (channel: string, channelId: string) => Promise<unknown>;
   loadCosmetics: (channelId: string) => Promise<unknown>;
+  /**
+   * Releases the process-wide stores this document's preview filled. The
+   * preview runtime is the only runtime in its document, so its teardown leaves
+   * that document's singletons empty instead of leaving the demo's emotes and
+   * badges behind.
+   */
+  resetSharedAssetState: () => void;
 };
 
 const browserDependencies: PreviewRuntimeDependencies = {
@@ -66,6 +73,11 @@ const browserDependencies: PreviewRuntimeDependencies = {
     emoteService.loadEmotes(channelId, channel, { show7tvUnlisted }),
   loadBadges: (channel, channelId) => badgeService.loadBadges(channel, channelId),
   loadCosmetics: (channelId) => sevenTVCosmeticsService.loadCosmetics(channelId),
+  resetSharedAssetState: () => {
+    mentionStyleService.reset();
+    badgeService.reset();
+    emoteService.reset();
+  },
 };
 
 function isTwitchUserId(value: string): boolean {
@@ -94,6 +106,12 @@ export class PreviewRuntime {
   private renderTimer: number | null = null;
   private ready = false;
   private destroyed = false;
+  /**
+   * Set by `initialize()`, which is what claims the shared proxy flag and fills
+   * the shared asset stores. Teardown releases them only for a runtime that
+   * actually took them.
+   */
+  private holdsSharedState = false;
 
   constructor(
     private readonly options: PreviewRuntimeOptions,
@@ -109,6 +127,7 @@ export class PreviewRuntime {
     const isRealChannel = Boolean(channel && channel !== "chatyxpreview");
 
     this.dependencies.setProxyEnabled(this.config.rteProxy);
+    this.holdsSharedState = true;
     this.service = this.dependencies.createPresentationService(this.config);
     mentionStyleService.reset();
     this.service.updateConfig({ userId: "0" });
@@ -191,9 +210,11 @@ export class PreviewRuntime {
   }
 
   updateConfig(config: ChatConfig) {
+    if (this.destroyed) return;
     const speedChanged = this.config.messageSpeed !== config.messageSpeed;
     this.config = config;
     this.dependencies.setProxyEnabled(config.rteProxy);
+    this.holdsSharedState = true;
     this.hooks.onConfigResolved(config);
     injectPreviewStyles(config);
 
@@ -225,6 +246,16 @@ export class PreviewRuntime {
     cleanupPreviewStyles();
     this.service?.cleanup();
     this.service = null;
+
+    // Release the document-wide state this runtime claimed. Concurrency is not
+    // possible by design: a document hosts exactly one chat runtime, so the
+    // runtime that enabled the proxy flag and filled the asset stores is the
+    // one that clears them.
+    if (this.holdsSharedState) {
+      this.holdsSharedState = false;
+      this.dependencies.setProxyEnabled(false);
+      this.dependencies.resetSharedAssetState();
+    }
   }
 
   private finishInitialization() {
