@@ -60,6 +60,27 @@ desktop browser connection.
 **Exit criteria:** the new tests fail if the corresponding behavior changes,
 and `bun run check` passes.
 
+**Outcome.** The items were addressed in the order the phases needed them, and
+each landed with the change it protects rather than as a separate pass:
+
+- Item 1: `ChatBadges` reactivity fixed, and `tests/serviceReset.test.ts` covers
+  the reset behaviour that phase 7 introduced.
+- Item 6: the setup import/export round trip is characterized in
+  `tests/formValues.test.ts` and `tests/setupConfig.test.ts`, which exercise the
+  real `chatConfigToSearchParams` / `parseChatConfigFromSearchParams` pair, and
+  `tests/overlayStylesheet.test.ts` guards the stylesheet contract.
+- Preview teardown (item 5) is covered by `tests/previewSync.test.ts`, which
+  asserts cancellation directly instead of through a rendered component.
+
+Items 2, 3 and 4 — `OverlayStyleManager` teardown, reconnect suppression and
+`ChatOverlayApplication.destroy()` before `start()` — were verified in a browser
+instead of by new tests, because the user's decision to keep `happy-dom` out of
+the project leaves no component-render infrastructure. The teardown item is now
+also covered structurally: `OverlayStyleManager.cleanup()` removes properties and
+attributes rather than style elements, so there is no element to leak, and the
+MutationObserver trace recorded in phase 7 shows all five generated stylesheets
+removed.
+
 **Commit:** `test(chat): characterize runtime teardown and badge reactivity`
 
 ---
