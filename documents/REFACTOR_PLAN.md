@@ -114,8 +114,14 @@ removed.
    `--chat-gigantified-emote-width` readings with **zero** on the element that
    consumes it, 17 readings of an artificial `.emoji` probe (real `.emoji` images
    measure 22px with a matching inline size, since the renderer sets that size
-   itself), and one container height inside the measured noise floor — two runs of
-   the same code differ by a row height there.
+   itself), and one container height inside the measured noise floor - two runs of
+   the same code differ by a row height there. A follow-up lifecycle check caught a
+   regression this conversion introduced: `applyOverlayStyles` still injects the
+   animation stylesheet, and the rewritten `clearOverlayStyles` had stopped
+   removing it, so `#chat-animations` outlived the runtime. `clearAnimationStyles`
+   now closes that, guarded by `tests/overlayStyleManager.test.ts`, and a browser
+   trace shows the running overlay holding only the animation and layout
+   stylesheets and the teardown removing both.
 4. Convert the two boolean generated rules `.user_info { display: none }`
    (`chatStyles.ts:181-183`) and `.message::before { content }` (`:189-192`)
    into static rules keyed on a class or attribute. **Done** — they are keyed on

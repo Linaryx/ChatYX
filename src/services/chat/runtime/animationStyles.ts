@@ -111,3 +111,13 @@ export function injectAnimationStyles(
 export function updateAnimationStyles(options: AnimationOptions): void {
   injectAnimationStyles(options);
 }
+
+/**
+ * Removes the animation stylesheet this module injects, so the runtime that
+ * published it can take it down again.
+ */
+export function clearAnimationStyles(): void {
+  document
+    .querySelectorAll(`style[id="${ANIMATION_STYLE_ID}"]`)
+    .forEach((element) => element.remove());
+}

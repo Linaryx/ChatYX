@@ -8,7 +8,7 @@ import {
   getMessageEntryAnimationDuration,
   hasMessageEntryAnimation,
 } from "~/config/chatAnimation";
-import { updateAnimationStyles } from "./animationStyles";
+import { clearAnimationStyles, updateAnimationStyles } from "./animationStyles";
 
 function setRootAttribute(name: string, enabled: boolean) {
   const root = document.documentElement;
@@ -53,6 +53,9 @@ export function clearOverlayStyles(): void {
   }
   root.removeAttribute(OVERLAY_ATTRIBUTES.hideNames);
   root.removeAttribute(OVERLAY_ATTRIBUTES.nlAfterName);
+  // applyOverlayStyles injects the animation stylesheet, so the teardown owns it
+  // too. Nothing else generates a stylesheet for the overlay.
+  clearAnimationStyles();
 }
 
 /**
