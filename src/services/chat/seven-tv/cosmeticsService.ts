@@ -304,6 +304,19 @@ export class SevenTVCosmeticsService {
         return (this.paintStylesheet = style.sheet ?? null);
     }
 
+    /**
+     * Removes the paint stylesheet this service generated. The rules are keyed by
+     * provider paint id, so the runtime that filled them owns their removal; the
+     * next runtime rebuilds the element instead of writing into a detached sheet.
+     */
+    disposeStylesheet(): void {
+        this.paintStylesheet = null;
+        if (typeof document === "undefined") return;
+        document
+            .querySelectorAll('style[id="chatyx-seventv-paint-styles"]')
+            .forEach((element) => element.remove());
+    }
+
     calculatePaintCSS(username: string): any {
         // Проверяем кэш
         if (this.paintCSSCache.has(username)) {

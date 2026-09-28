@@ -644,8 +644,10 @@ export class ChatPresentationService {
     this.rteBadges.clear();
     this.rtePaints.clear();
     // The 7TV cosmetics caches are keyed by channel and user and would otherwise
-    // outlive the runtime that filled them.
+    // outlive the runtime that filled them, as would the paint stylesheet the
+    // service generated from provider data.
     sevenTVCosmeticsService.clearAllCaches();
+    sevenTVCosmeticsService.disposeStylesheet();
 
     this.initialized = false;
     log.info(LOG_CATEGORIES.INTEGRATION, "Cleanup complete");

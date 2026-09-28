@@ -228,6 +228,63 @@ describe("badge store teardown", () => {
 });
 
 describe("7TV cosmetics teardown", () => {
+  test("the generated paint stylesheet is removed with the runtime", () => {
+    const head: Array<{ id: string; remove: () => void; sheet: unknown }> = [];
+    const previousDocument = (globalThis as { document?: unknown }).document;
+
+    const makeElement = () => {
+      const element = {
+        id: "",
+        sheet: { cssRules: [], insertRule: () => {}, deleteRule: () => {} },
+        remove: () => {
+          const index = head.indexOf(element);
+          if (index >= 0) head.splice(index, 1);
+        },
+      };
+      return element;
+    };
+
+    (globalThis as unknown as { document: unknown }).document = {
+      createElement: makeElement,
+      head: { appendChild: (element: unknown) => head.push(element as never) },
+      querySelectorAll: (selector: string) =>
+        selector.includes("chatyx-seventv-paint-styles")
+          ? head.filter((element) => element.id === "chatyx-seventv-paint-styles")
+          : [],
+    };
+
+    try {
+      sevenTVCosmeticsService.addCosmetic("paint-1", {
+        function: "LINEAR_GRADIENT",
+        color: 0xffffffff,
+        stops: [
+          { at: 0, color: 0xff0000ff },
+          { at: 1, color: 0x00ff00ff },
+        ],
+      });
+      sevenTVCosmeticsService.addUserCosmetic("probeuser", "paint-1");
+
+      expect(sevenTVCosmeticsService.calculatePaintCSS("probeuser")).toBeTruthy();
+      expect(head).toHaveLength(1);
+
+      // What `ChatPresentationService.cleanup()` does on runtime teardown.
+      sevenTVCosmeticsService.clearAllCaches();
+      sevenTVCosmeticsService.disposeStylesheet();
+      expect(head).toHaveLength(0);
+
+      // The reference was dropped as well, so the next render rebuilds the
+      // element instead of writing into the detached sheet.
+      expect(sevenTVCosmeticsService.calculatePaintCSS("probeuser")).toBeTruthy();
+      expect(head).toHaveLength(1);
+    } finally {
+      if (previousDocument === undefined) {
+        Reflect.deleteProperty(globalThis, "document");
+      } else {
+        (globalThis as unknown as { document: unknown }).document = previousDocument;
+      }
+    }
+  });
+
   test("a channel cosmetics load that resolves after the caches were cleared is dropped", async () => {
     const channelUser = deferred<Response>();
     stubRequests(() => channelUser.promise);
