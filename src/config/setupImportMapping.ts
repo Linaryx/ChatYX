@@ -16,10 +16,11 @@ type RuntimeOnlySetting =
   | "ttsVolume" | "ttsMaxLength";
 
 export type SetupImportPatch = Readonly<Partial<Omit<
-  ChatConfig, RuntimeOnlySetting | "botNames" | "kickBotNames" | "singleChatter"
+  ChatConfig, RuntimeOnlySetting | "botNames" | "kickBotNames" | "youtubeBotNames" | "singleChatter"
 >>> & {
   readonly botNames?: readonly string[];
   readonly kickBotNames?: readonly string[];
+  readonly youtubeBotNames?: readonly string[];
   readonly singleChatter?: readonly string[];
 };
 
@@ -32,7 +33,7 @@ export function mapChatYxParams(params: URLSearchParams): SetupImportMapping {
   const {
     youtubeWebSocketUrl, kickWebSocketUrl, ffzBotMix, ffzBotMixCustom,
     ttsReadChat, ttsReadBots, ttsVoice, ttsChatIsVoice, ttsVolume, ttsMaxLength,
-    botNames, kickBotNames, singleChatter, ...settings
+    botNames, kickBotNames, youtubeBotNames, singleChatter, ...settings
   } = parseChatConfigFromSearchParams(params);
   const runtimeOnly = {
     youtubeWebSocketUrl, kickWebSocketUrl, ffzBotMix, ffzBotMixCustom,
@@ -43,6 +44,7 @@ export function mapChatYxParams(params: URLSearchParams): SetupImportMapping {
       ...settings,
       botNames: parseBotNames(botNames),
       kickBotNames: parseBotNames(kickBotNames),
+      youtubeBotNames: parseBotNames(youtubeBotNames),
       singleChatter: parseBotNames(singleChatter),
     },
     unsupported: (Object.keys(runtimeOnly) as RuntimeOnlySetting[])

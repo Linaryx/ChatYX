@@ -36,3 +36,8 @@ export const DEFAULT_KICK_BOT_NAMES = [
   "botrix",
   "kickbot",
 ] as const;
+
+export const DEFAULT_YOUTUBE_BOT_NAMES = [
+  "nightbot",
+  "streamelements",
+] as const;

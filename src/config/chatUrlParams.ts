@@ -1,4 +1,4 @@
-import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES } from "./botNames";
+import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES, DEFAULT_YOUTUBE_BOT_NAMES } from "./botNames";
 import {
   DEFAULT_EVENT_COLORS,
   EVENT_COLOR_FIELDS,
@@ -60,6 +60,7 @@ export interface ChatConfig extends EventColorConfig {
   hideNames: boolean;
   botNames: string;
   kickBotNames: string;
+  youtubeBotNames: string;
   reverseLineOrder: boolean;
   horizontal: boolean;
   singleChatter: string;
@@ -139,6 +140,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   emoteScale: 1,
   botNames: DEFAULT_BOT_NAMES.join(","),
   kickBotNames: DEFAULT_KICK_BOT_NAMES.join(","),
+  youtubeBotNames: DEFAULT_YOUTUBE_BOT_NAMES.join(","),
   singleChatter: "",
   show7tvUnlisted: true,
   smallCaps: false,
@@ -207,6 +209,46 @@ export function parseBotNames(raw: string): string[] {
 
 export function normalizeBotNames(raw: string): string {
   return parseBotNames(raw).join(",");
+}
+
+/**
+ * Splits a bot list into the delta from the defaults: names the user added and
+ * default names the user excluded. Lets the URL stay short when only a few
+ * entries differ from the built-in list.
+ */
+export function botNamesDelta(
+  current: string,
+  defaults: readonly string[],
+): { added: string[]; excluded: string[] } {
+  const currentSet = new Set(parseBotNames(current));
+  const defaultSet = new Set(defaults.map((name) => name.toLowerCase()));
+  return {
+    added: [...currentSet].filter((name) => !defaultSet.has(name)),
+    excluded: defaults.filter((name) => !currentSet.has(name.toLowerCase())),
+  };
+}
+
+/**
+ * Rebuilds a bot list from defaults plus the added names minus the excluded
+ * ones. Defaults keep their built-in order, then added names follow in order,
+ * so serialized links round-trip to a stable value.
+ */
+export function mergeBotNames(
+  defaults: readonly string[],
+  addedRaw: string,
+  excludedRaw: string,
+): string {
+  const added = parseBotNames(addedRaw);
+  const excluded = new Set(parseBotNames(excludedRaw));
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const name of [...defaults, ...added]) {
+    const normalized = name.toLowerCase();
+    if (excluded.has(normalized) || seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(normalized);
+  }
+  return result.join(",");
 }
 
 type ParamKind =
@@ -327,19 +369,22 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     query: "bn",
     kind: "string",
     aliases: ["botNames"],
-    serialize: (value) => {
-      const normalized = normalizeBotNames(String(value || ""));
-      return normalized || null;
-    },
+    // Legacy full list; still parsed for old links but emitted as a delta.
+    serialize: () => null,
   },
   kickBotNames: {
     query: "kbn",
     kind: "string",
     aliases: ["kick_bot_names", "kickBotNames"],
-    serialize: (value) => {
-      const normalized = normalizeBotNames(String(value || ""));
-      return normalized || null;
-    },
+    // Legacy full list; still parsed for old links but emitted as a delta.
+    serialize: () => null,
+  },
+  youtubeBotNames: {
+    query: "ybn",
+    kind: "string",
+    aliases: ["youtube_bot_names", "youtubeBotNames"],
+    // Legacy full list; still parsed for old links but emitted as a delta.
+    serialize: () => null,
   },
   singleChatter: { query: "sg", kind: "string", aliases: ["single_chatter"] },
   show7tvUnlisted: {
@@ -544,6 +589,37 @@ export const BADGES_HIDDEN_PARAM = {
   aliases: ["hidden_badges", "hiddenBadges"],
 } as const;
 
+// Bot lists are encoded as a delta from the built-in defaults.
+const BOT_NAMES_ADDED_PARAM = {
+  query: "ba",
+  aliases: ["bot_added", "botNamesAdded"],
+} as const;
+
+const BOT_NAMES_EXCLUDED_PARAM = {
+  query: "bx",
+  aliases: ["bot_excluded", "botNamesExcluded"],
+} as const;
+
+const KICK_BOT_NAMES_ADDED_PARAM = {
+  query: "kba",
+  aliases: ["kick_bot_added", "kickBotNamesAdded"],
+} as const;
+
+const KICK_BOT_NAMES_EXCLUDED_PARAM = {
+  query: "kbx",
+  aliases: ["kick_bot_excluded", "kickBotNamesExcluded"],
+} as const;
+
+const YOUTUBE_BOT_NAMES_ADDED_PARAM = {
+  query: "yba",
+  aliases: ["youtube_bot_added", "youtubeBotNamesAdded"],
+} as const;
+
+const YOUTUBE_BOT_NAMES_EXCLUDED_PARAM = {
+  query: "ybx",
+  aliases: ["youtube_bot_excluded", "youtubeBotNamesExcluded"],
+} as const;
+
 const EVENT_COLORS_PARAM = {
   query: "evc",
   aliases: ["event_colors"],
@@ -653,6 +729,18 @@ export const CHAT_CONFIG_QUERY_KEYS: readonly string[] = [
   ...Object.values(PARAMS).flatMap((def) => [def.query, ...(def.aliases ?? [])]),
   BADGES_HIDDEN_PARAM.query,
   ...BADGES_HIDDEN_PARAM.aliases,
+  BOT_NAMES_ADDED_PARAM.query,
+  ...BOT_NAMES_ADDED_PARAM.aliases,
+  BOT_NAMES_EXCLUDED_PARAM.query,
+  ...BOT_NAMES_EXCLUDED_PARAM.aliases,
+  KICK_BOT_NAMES_ADDED_PARAM.query,
+  ...KICK_BOT_NAMES_ADDED_PARAM.aliases,
+  KICK_BOT_NAMES_EXCLUDED_PARAM.query,
+  ...KICK_BOT_NAMES_EXCLUDED_PARAM.aliases,
+  YOUTUBE_BOT_NAMES_ADDED_PARAM.query,
+  ...YOUTUBE_BOT_NAMES_ADDED_PARAM.aliases,
+  YOUTUBE_BOT_NAMES_EXCLUDED_PARAM.query,
+  ...YOUTUBE_BOT_NAMES_EXCLUDED_PARAM.aliases,
   EVENT_COLORS_PARAM.query,
   ...EVENT_COLORS_PARAM.aliases,
   EVENT_OPACITY_PARAM.query,
@@ -843,22 +931,83 @@ export function parseChatConfigFromSearchParams(
   const hasExplicitBotsParam = botsDef
     ? hasAnyParam(searchParams, [botsDef.query, ...(botsDef.aliases ?? [])])
     : false;
-  const hasExplicitBotNamesParam = botNamesDef
-    ? hasAnyParam(searchParams, [
-        botNamesDef.query,
-        ...(botNamesDef.aliases ?? []),
-      ])
-    : false;
-  const hasExplicitKickBotNamesParam = kickBotNamesDef
-    ? hasAnyParam(searchParams, [
-        kickBotNamesDef.query,
-        ...(kickBotNamesDef.aliases ?? []),
-      ])
-    : false;
+  const botNamesLegacyKeys = botNamesDef
+    ? [botNamesDef.query, ...(botNamesDef.aliases ?? [])]
+    : [];
+  const kickBotNamesLegacyKeys = kickBotNamesDef
+    ? [kickBotNamesDef.query, ...(kickBotNamesDef.aliases ?? [])]
+    : [];
+  const youtubeBotNamesDef = PARAMS.youtubeBotNames;
+  const youtubeBotNamesLegacyKeys = youtubeBotNamesDef
+    ? [youtubeBotNamesDef.query, ...(youtubeBotNamesDef.aliases ?? [])]
+    : [];
+  const hasExplicitBotNamesParam = hasAnyParam(searchParams, [
+    ...botNamesLegacyKeys,
+    BOT_NAMES_ADDED_PARAM.query,
+    ...BOT_NAMES_ADDED_PARAM.aliases,
+    BOT_NAMES_EXCLUDED_PARAM.query,
+    ...BOT_NAMES_EXCLUDED_PARAM.aliases,
+  ]);
+  const hasExplicitKickBotNamesParam = hasAnyParam(searchParams, [
+    ...kickBotNamesLegacyKeys,
+    KICK_BOT_NAMES_ADDED_PARAM.query,
+    ...KICK_BOT_NAMES_ADDED_PARAM.aliases,
+    KICK_BOT_NAMES_EXCLUDED_PARAM.query,
+    ...KICK_BOT_NAMES_EXCLUDED_PARAM.aliases,
+  ]);
+  const hasExplicitYouTubeBotNamesParam = hasAnyParam(searchParams, [
+    ...youtubeBotNamesLegacyKeys,
+    YOUTUBE_BOT_NAMES_ADDED_PARAM.query,
+    ...YOUTUBE_BOT_NAMES_ADDED_PARAM.aliases,
+    YOUTUBE_BOT_NAMES_EXCLUDED_PARAM.query,
+    ...YOUTUBE_BOT_NAMES_EXCLUDED_PARAM.aliases,
+  ]);
 
-  if ((hasExplicitBotNamesParam || hasExplicitKickBotNamesParam) && !hasExplicitBotsParam) {
+  if (
+    (hasExplicitBotNamesParam || hasExplicitKickBotNamesParam || hasExplicitYouTubeBotNamesParam) &&
+    !hasExplicitBotsParam
+  ) {
     cfg.bots = false;
   }
+
+  const resolveBotNames = (
+    legacyKeys: string[],
+    added: { query: string; aliases: readonly string[] },
+    excluded: { query: string; aliases: readonly string[] },
+    defaults: readonly string[],
+  ): string | null => {
+    const addedRaw = getFirstParam(searchParams, [added.query, ...added.aliases]);
+    const excludedRaw = getFirstParam(searchParams, [excluded.query, ...excluded.aliases]);
+    if (addedRaw !== null || excludedRaw !== null) {
+      return mergeBotNames(defaults, addedRaw ?? "", excludedRaw ?? "");
+    }
+    const legacyRaw = getFirstParam(searchParams, legacyKeys);
+    return legacyRaw === null ? null : normalizeBotNames(legacyRaw);
+  };
+
+  const resolvedBotNames = resolveBotNames(
+    botNamesLegacyKeys,
+    BOT_NAMES_ADDED_PARAM,
+    BOT_NAMES_EXCLUDED_PARAM,
+    DEFAULT_BOT_NAMES,
+  );
+  if (resolvedBotNames !== null) cfg.botNames = resolvedBotNames;
+
+  const resolvedKickBotNames = resolveBotNames(
+    kickBotNamesLegacyKeys,
+    KICK_BOT_NAMES_ADDED_PARAM,
+    KICK_BOT_NAMES_EXCLUDED_PARAM,
+    DEFAULT_KICK_BOT_NAMES,
+  );
+  if (resolvedKickBotNames !== null) cfg.kickBotNames = resolvedKickBotNames;
+
+  const resolvedYouTubeBotNames = resolveBotNames(
+    youtubeBotNamesLegacyKeys,
+    YOUTUBE_BOT_NAMES_ADDED_PARAM,
+    YOUTUBE_BOT_NAMES_EXCLUDED_PARAM,
+    DEFAULT_YOUTUBE_BOT_NAMES,
+  );
+  if (resolvedYouTubeBotNames !== null) cfg.youtubeBotNames = resolvedYouTubeBotNames;
 
   const animationDef = PARAMS.animation;
   const hasExplicitAnimationParam = animationDef
@@ -943,6 +1092,30 @@ export function chatConfigToSearchParams(cfg: ChatConfig): URLSearchParams {
   const hiddenProviders = serializeHiddenBadgeProviders(cfg);
   if (hiddenProviders !== null) {
     params.set(BADGES_HIDDEN_PARAM.query, hiddenProviders);
+  }
+
+  const botDelta = botNamesDelta(cfg.botNames, DEFAULT_BOT_NAMES);
+  if (botDelta.added.length > 0) {
+    params.set(BOT_NAMES_ADDED_PARAM.query, botDelta.added.join(","));
+  }
+  if (botDelta.excluded.length > 0) {
+    params.set(BOT_NAMES_EXCLUDED_PARAM.query, botDelta.excluded.join(","));
+  }
+
+  const kickBotDelta = botNamesDelta(cfg.kickBotNames, DEFAULT_KICK_BOT_NAMES);
+  if (kickBotDelta.added.length > 0) {
+    params.set(KICK_BOT_NAMES_ADDED_PARAM.query, kickBotDelta.added.join(","));
+  }
+  if (kickBotDelta.excluded.length > 0) {
+    params.set(KICK_BOT_NAMES_EXCLUDED_PARAM.query, kickBotDelta.excluded.join(","));
+  }
+
+  const youtubeBotDelta = botNamesDelta(cfg.youtubeBotNames, DEFAULT_YOUTUBE_BOT_NAMES);
+  if (youtubeBotDelta.added.length > 0) {
+    params.set(YOUTUBE_BOT_NAMES_ADDED_PARAM.query, youtubeBotDelta.added.join(","));
+  }
+  if (youtubeBotDelta.excluded.length > 0) {
+    params.set(YOUTUBE_BOT_NAMES_EXCLUDED_PARAM.query, youtubeBotDelta.excluded.join(","));
   }
 
   if (cfg.highlightTwitchEvents) {

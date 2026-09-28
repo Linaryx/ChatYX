@@ -12,7 +12,13 @@ export function getRteChatSpeechRequest(
   }
 
   const filter = new BotFilterService(
-    parseBotNames(message.platform === "kick" ? config.kickBotNames : config.botNames),
+    parseBotNames(
+      message.platform === "kick"
+        ? config.kickBotNames
+        : message.platform === "youtube"
+          ? config.youtubeBotNames
+          : config.botNames,
+    ),
   );
   if (filter.isCommand(message.message)) return null;
   if (!config.ttsReadBots && filter.isBot(message.username)) return null;

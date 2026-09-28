@@ -12,7 +12,7 @@ function formSettings(config: ChatConfig) {
   return Object.fromEntries(Object.entries(config)
     .filter(([key]) => !runtimeOnlyKeys.includes(key))
     .map(([key, value]) => [key,
-      key === "botNames" || key === "kickBotNames" || key === "singleChatter"
+      key === "botNames" || key === "kickBotNames" || key === "youtubeBotNames" || key === "singleChatter"
         ? String(value).split(/[\s,]+/).filter(Boolean)
         : value,
     ]));
@@ -24,7 +24,7 @@ const nativeConfig: ChatConfig = {
   size: 3, font: 0, fontCustom: "Comic Sans MS", fontWeight: 650, nickFontWeight: 450,
   shadow: false, stroke: 4, fade: false, animation: "flow", messageSpeed: 72,
   showHomies: false, recentMessages: false, bots: true, commands: false,
-  show7tvBadges: false, showFfzBadges: false, emoteScale: 1.75, botNames: "nightbot,moobot", kickBotNames: "kickbot,botrix",
+  show7tvBadges: false, showFfzBadges: false, emoteScale: 1.75, botNames: "nightbot,moobot", kickBotNames: "botrix,kickbot",
   singleChatter: "alice,bob", show7tvUnlisted: false, smallCaps: true,
   nlAfterName: true, hideNames: true, reverseLineOrder: true, horizontal: true,
   ffzBotMixBroadcaster: true, ffzBotMixModerator: false, ffzBotMixVip: true,

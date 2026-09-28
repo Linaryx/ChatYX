@@ -38,6 +38,7 @@ export interface ChatPresentationConfig {
     hideCommands: boolean;
     customBots: string[];
     kickBots: string[];
+    youtubeBots: string[];
     singleChatter: string;
   };
   features: {
@@ -61,6 +62,7 @@ export const DEFAULT_CHAT_PRESENTATION_CONFIG: ChatPresentationConfig = {
     hideCommands: true,
     customBots: [],
     kickBots: [],
+    youtubeBots: [],
     singleChatter: "",
   },
   features: {
@@ -82,6 +84,7 @@ export class ChatPresentationService {
   private eventApiService?: SevenTVEventApiService;
   private botFilterService: BotFilterService;
   private kickBotFilterService: BotFilterService;
+  private youtubeBotFilterService: BotFilterService;
   private allowedChatters = new Set<string>();
   private fadeManager: MessageFadeManager;
   private layoutManager?: LayoutManager;
@@ -96,6 +99,7 @@ export class ChatPresentationService {
     this.sevenTVPaintService = new SevenTVPaintService();
     this.botFilterService = new BotFilterService(this.config.botFilter.customBots);
     this.kickBotFilterService = new BotFilterService(this.config.botFilter.kickBots);
+    this.youtubeBotFilterService = new BotFilterService(this.config.botFilter.youtubeBots);
     this.updateAllowedChatters();
     this.fadeManager = new MessageFadeManager(this.config.fade);
   }
@@ -281,7 +285,9 @@ export class ChatPresentationService {
 
     const botFilter = platform === "kick"
       ? this.kickBotFilterService
-      : this.botFilterService;
+      : platform === "youtube"
+        ? this.youtubeBotFilterService
+        : this.botFilterService;
     const shouldHide = botFilter.shouldHideMessage(
       username,
       message,
@@ -597,6 +603,9 @@ export class ChatPresentationService {
     if (config.botFilter?.kickBots) {
       this.kickBotFilterService.setBotNames(this.config.botFilter.kickBots);
     }
+    if (config.botFilter?.youtubeBots) {
+      this.youtubeBotFilterService.setBotNames(this.config.botFilter.youtubeBots);
+    }
     if (config.botFilter) {
       this.updateAllowedChatters();
     }
@@ -668,6 +677,7 @@ export function createChatPresentationConfig(
       hideCommands: !params.commands,
       customBots: parseBotNames(params.botNames),
       kickBots: parseBotNames(params.kickBotNames),
+      youtubeBots: parseBotNames(params.youtubeBotNames),
       singleChatter: params.singleChatter,
     },
     features: {

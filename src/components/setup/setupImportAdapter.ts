@@ -45,6 +45,7 @@ export function applySetupImport(
   if (patch.hideNames !== undefined) setters.hideNames(patch.hideNames);
   if (patch.botNames !== undefined) setters.botNames([...patch.botNames]);
   if (patch.kickBotNames !== undefined) setters.kickBotNames([...patch.kickBotNames]);
+  if (patch.youtubeBotNames !== undefined) setters.youtubeBotNames([...patch.youtubeBotNames]);
   if (patch.reverseLineOrder !== undefined) setters.reverseLineOrder(patch.reverseLineOrder);
   if (patch.horizontal !== undefined) setters.horizontal(patch.horizontal);
   if (patch.singleChatter !== undefined) setters.singleChatter([...patch.singleChatter]);

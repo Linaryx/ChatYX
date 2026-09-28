@@ -8,6 +8,7 @@ import {
   parseRecentMessageLimit,
   type ChatConfig,
 } from "../src/config/chatUrlParams";
+import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES, DEFAULT_YOUTUBE_BOT_NAMES } from "../src/config/botNames";
 
 describe("chat URL params", () => {
   test("reads the hidden recent-message limit without changing setup config", () => {
@@ -93,8 +94,10 @@ describe("chat URL params", () => {
       linkMode: "highlight",
       linkColor: "#00ccff",
       hideLinkRewards: false,
-      botNames: normalizeBotNames("Nightbot, StreamElements"),
-      kickBotNames: normalizeBotNames("KickBot, BotRix"),
+      botNames: normalizeBotNames(`${DEFAULT_BOT_NAMES.join(",")},mybot`),
+      kickBotNames: normalizeBotNames(
+        DEFAULT_KICK_BOT_NAMES.filter((name) => name !== "twirbot").join(","),
+      ),
     };
 
     const params = chatConfigToSearchParams(cfg);
@@ -126,8 +129,12 @@ describe("chat URL params", () => {
     expect(params.get("links")).toBe("highlight");
     expect(params.get("linkcolor")).toBe("#00ccff");
     expect(params.get("hidelinkrewards")).toBe("false");
-    expect(params.get("bn")).toBe("nightbot,streamelements");
-    expect(params.get("kbn")).toBe("kickbot,botrix");
+    expect(params.get("bn")).toBeNull();
+    expect(params.get("kbn")).toBeNull();
+    expect(params.get("ba")).toBe("mybot");
+    expect(params.get("bx")).toBeNull();
+    expect(params.get("kba")).toBeNull();
+    expect(params.get("kbx")).toBe("twirbot");
 
     expect(parseChatConfigFromSearchParams(params)).toEqual(cfg);
   });
@@ -233,6 +240,48 @@ describe("chat URL params", () => {
 
     expect(cfg.kickBotNames).toBe("kickbot,botrix");
     expect(cfg.bots).toBe(false);
+  });
+
+  test("encodes added bots as a short delta instead of the full list", () => {
+    const botNames = `${DEFAULT_BOT_NAMES.join(",")},mybot`;
+    const params = chatConfigToSearchParams({
+      ...DEFAULT_CHAT_CONFIG,
+      botNames,
+    });
+
+    expect(params.get("bn")).toBeNull();
+    expect(params.get("ba")).toBe("mybot");
+    expect(params.get("bx")).toBeNull();
+    expect(parseChatConfigFromSearchParams(params).botNames).toBe(botNames);
+  });
+
+  test("encodes bots removed from the defaults as exclusions", () => {
+    const remaining = DEFAULT_BOT_NAMES.filter((name) => name !== "nightbot");
+    const params = chatConfigToSearchParams({
+      ...DEFAULT_CHAT_CONFIG,
+      botNames: remaining.join(","),
+    });
+
+    expect(params.get("bx")).toBe("nightbot");
+    expect(params.get("ba")).toBeNull();
+    expect(parseChatConfigFromSearchParams(params).botNames).toBe(
+      remaining.join(","),
+    );
+  });
+
+  test("encodes added YouTube bots as a short delta", () => {
+    const youtubeBotNames = `${DEFAULT_YOUTUBE_BOT_NAMES.join(",")},mybot`;
+    const params = chatConfigToSearchParams({
+      ...DEFAULT_CHAT_CONFIG,
+      youtubeBotNames,
+    });
+
+    expect(params.get("ybn")).toBeNull();
+    expect(params.get("yba")).toBe("mybot");
+    expect(params.get("ybx")).toBeNull();
+    expect(parseChatConfigFromSearchParams(params).youtubeBotNames).toBe(
+      youtubeBotNames,
+    );
   });
 
   test("supports animation modes and legacy animate links", () => {

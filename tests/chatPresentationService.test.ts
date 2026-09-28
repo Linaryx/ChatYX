@@ -8,6 +8,7 @@ function createService(singleChatter: string) {
         hideCommands: false,
         customBots: [],
         kickBots: [],
+        youtubeBots: [],
         singleChatter,
     },
   });
@@ -32,6 +33,7 @@ describe("ChatPresentationService chatter filter", () => {
         hideCommands: false,
         customBots: [],
         kickBots: [],
+        youtubeBots: [],
         singleChatter: "beta",
       },
     });
@@ -49,6 +51,7 @@ describe("ChatPresentationService bot filter", () => {
         hideCommands: true,
         customBots: ["mybot"],
         kickBots: [],
+        youtubeBots: [],
         singleChatter: "",
       },
     });
@@ -64,6 +67,7 @@ describe("ChatPresentationService bot filter", () => {
         hideCommands: false,
         customBots: ["mybot"],
         kickBots: [],
+        youtubeBots: [],
         singleChatter: "",
       },
     });
@@ -78,6 +82,7 @@ describe("ChatPresentationService bot filter", () => {
         hideCommands: false,
         customBots: ["twitchbot"],
         kickBots: ["kickbot"],
+        youtubeBots: [],
         singleChatter: "",
       },
     });
@@ -85,5 +90,22 @@ describe("ChatPresentationService bot filter", () => {
     expect(service.shouldDisplayMessage("KickBot", "hello", "kick")).toBe(false);
     expect(service.shouldDisplayMessage("KickBot", "hello", "twitch")).toBe(true);
     expect(service.shouldDisplayMessage("TwitchBot", "hello", "kick")).toBe(true);
+  });
+
+  test("uses the YouTube list only for YouTube messages", () => {
+    const service = new ChatPresentationService({
+      botFilter: {
+        enabled: true,
+        hideCommands: false,
+        customBots: ["twitchbot"],
+        kickBots: ["kickbot"],
+        youtubeBots: ["ytbot"],
+        singleChatter: "",
+      },
+    });
+
+    expect(service.shouldDisplayMessage("YtBot", "hello", "youtube")).toBe(false);
+    expect(service.shouldDisplayMessage("YtBot", "hello", "twitch")).toBe(true);
+    expect(service.shouldDisplayMessage("TwitchBot", "hello", "youtube")).toBe(true);
   });
 });
