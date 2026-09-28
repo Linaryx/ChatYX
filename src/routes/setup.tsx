@@ -1351,14 +1351,15 @@ const [activeSection, setActiveSection] =
 
     importSettings({
       ...DEFAULT_CHAT_CONFIG,
-      botNames: [...DEFAULT_BOT_NAMES],
-      kickBotNames: [],
-      singleChatter: [],
+      botNames: parseBotNames(DEFAULT_CHAT_CONFIG.botNames),
+      youtubeBotNames: parseBotNames(DEFAULT_CHAT_CONFIG.youtubeBotNames),
+      kickBotNames: parseBotNames(DEFAULT_CHAT_CONFIG.kickBotNames),
+      singleChatter: parseBotNames(DEFAULT_CHAT_CONFIG.singleChatter),
     });
     setUsersColorEnabled(false);
     setBotInput("");
+    setYoutubeBotInput("");
     setKickBotInput("");
-    setBotProfiles({});
     setAllowedChatterInput("");
     setStageBackdrop("dark");
     setStageColor("#FF8400");
