@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeTwitchSearchSuggestions } from "../src/components/setup/TwitchChannelField";
+import { normalizeTwitchSearchSuggestions } from "../src/services/setup/channelSearch";
 
 describe("Twitch search suggestions", () => {
   test("keeps channel suggestions with HTTPS avatars", () => {

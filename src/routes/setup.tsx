@@ -20,9 +20,9 @@ import {
   SetupNav,
   ToggleRows,
   type ControlRow,
-  type SetupSectionId,
   type ToggleRow,
 } from "~/components/setup/SetupLayout";
+import type { SetupSectionId } from "~/features/setup/model/setupSections";
 import { VoiceCatalog } from "~/components/setup/VoiceCatalog";
 import { SetupImportCard } from "~/components/setup/SetupImportCard";
 import { SetupChipInput } from "~/components/setup/SetupChipInput";
@@ -51,9 +51,9 @@ import {
 import {
   loadKickBotProfiles,
   loadTwitchBotProfiles,
-  mergeUniqueLogins,
   type BotProfile,
 } from "~/services/setup/botProfiles";
+import { mergeUniqueLogins } from "~/services/setup/logins";
 import {
   detectLocalFontBrowser,
   loadLocalFontOptions,

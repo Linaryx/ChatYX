@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { resolveSetupText, type SetupText } from "~/components/setup/SetupLayout";
+import { resolveSetupText, type SetupText } from "../src/components/setup/setupText";
 import { setLocale, t } from "~/i18n";
 
 test("resolves setup labels with the active locale", () => {

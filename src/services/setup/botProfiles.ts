@@ -1,9 +1,9 @@
 /**
  * Bot profile lookup for the setup page.
  *
- * Owns both the pure bot-list helpers and the Twitch/Kick lookups that resolve
- * a login into a display name and avatar, so the route stays presentation and
- * the GQL request shape has a single definition.
+ * Owns the Twitch/Kick lookups that resolve a login into a display name and
+ * avatar, so the route stays presentation and the GQL request shape has a
+ * single definition. Login normalization itself lives in `./logins`.
  */
 import { TWITCH_GQL_ENDPOINT, TWITCH_WEB_CLIENT_ID } from "~/config/twitch";
 import { fetchJsonWithTimeout } from "~/services/network/fetchJsonWithTimeout";
@@ -15,43 +15,6 @@ export type BotProfile = {
 };
 
 const BOT_PROFILE_TIMEOUT_MS = 3500;
-
-/**
- * Normalizes one pasted login. The leading `@` is stripped so users can paste a
- * handle straight out of a chat client, which `config/chatUrlParams` bot-name
- * parsing deliberately does not do for URL values.
- */
-export function normalizeBotLogin(raw: string): string {
-  return raw.trim().replace(/^@/, "").toLowerCase();
-}
-
-export function splitBotLogins(raw: string): string[] {
-  return raw
-    .split(/[\s,]+/)
-    .map(normalizeBotLogin)
-    .filter(Boolean);
-}
-
-export function botFallbackName(login: string): string {
-  return login.slice(0, 1).toUpperCase();
-}
-
-/** Appends the logins in `raw` that `current` does not already contain. */
-export function mergeUniqueLogins(current: string[], raw: string): string[] {
-  const nextLogins = splitBotLogins(raw);
-  if (nextLogins.length === 0) return current;
-
-  const seen = new Set(current);
-  const merged = [...current];
-
-  for (const login of nextLogins) {
-    if (seen.has(login)) continue;
-    seen.add(login);
-    merged.push(login);
-  }
-
-  return merged;
-}
 
 /** Resolves logins through the public Twitch GQL endpoint in a single request. */
 export async function loadTwitchBotProfiles(logins: string[]): Promise<BotProfile[]> {

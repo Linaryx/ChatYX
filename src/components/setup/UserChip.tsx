@@ -1,7 +1,8 @@
 import { Show, type JSX } from "solid-js";
 import XIcon from "@hugeicons/core-free-icons/XIcon";
 import { Icon } from "~/components/ui/icon";
-import { botFallbackName, type BotProfile } from "~/services/setup/botProfiles";
+import { type BotProfile } from "~/services/setup/botProfiles";
+import { loginFallbackName } from "~/services/setup/logins";
 
 export type UserChipProps = {
   login: string;
@@ -41,7 +42,7 @@ export function UserChip(props: UserChipProps): JSX.Element {
         when={avatarUrl()}
         fallback={
           <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black text-xs font-bold">
-            {botFallbackName(props.login)}
+            {loginFallbackName(props.login)}
           </span>
         }
       >

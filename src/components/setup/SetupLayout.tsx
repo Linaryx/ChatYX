@@ -20,23 +20,9 @@ import VoiceCommentIcon from "@hugeicons/core-free-icons/VoiceCommentIcon";
 import { cn } from "~/lib/utils";
 import { t } from "~/i18n";
 import { Icon } from "~/components/ui/icon";
+import type { SetupSectionId } from "~/features/setup/model/setupSections";
+import { resolveSetupText, type SetupText } from "./setupText";
 import { SetupSwitch } from "./SetupSwitch";
-
-export type SetupSectionId =
-  | "import"
-  | "appearance"
-  | "styling"
-  | "behavior"
-  | "content"
-  | "bots"
-  | "tts"
-  | "rte";
-
-export type SetupText = string | (() => string);
-
-export function resolveSetupText(value: SetupText): string {
-  return typeof value === "function" ? value() : value;
-}
 
 export type ControlRow = {
   label: SetupText;

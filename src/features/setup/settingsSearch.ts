@@ -7,7 +7,7 @@
  * callback is passed in because the workspace's scroll state belongs to the
  * route.
  */
-import type { SetupSectionId } from "~/components/setup/SetupLayout";
+import type { SetupSectionId } from "~/features/setup/model/setupSections";
 import { isSetupSearchMatch } from "~/utils/setupSearch";
 
 /**
