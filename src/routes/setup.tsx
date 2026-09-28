@@ -87,7 +87,14 @@ import {
   watchReducedMotion,
 } from "~/features/setup/setupDocument";
 import { cn } from "~/lib/utils";
-import { isSetupSearchMatch } from "~/utils/setupSearch";
+import {
+  collectSetupSearchHits,
+  formatSetupSearchCounter,
+  highlightSetupSearchHits,
+  revealSetupSearchHit,
+  MIN_SETUP_SEARCH_LENGTH,
+  type SetupSearchHit,
+} from "~/features/setup/settingsSearch";
 import Alert02Icon from "@hugeicons/core-free-icons/Alert02Icon";
 import ArrowLeft01Icon from "@hugeicons/core-free-icons/ArrowLeft01Icon";
 import ArrowRight01Icon from "@hugeicons/core-free-icons/ArrowRight01Icon";
@@ -461,46 +468,33 @@ const [activeSection, setActiveSection] =
   const [setupSearch, setSetupSearch] = createSignal("");
   const [setupSearchIndex, setSetupSearchIndex] = createSignal(0);
   const setupSearchQuery = createMemo(() => setupSearch().trim());
-  const setupSearchResults = createMemo(() => {
+  const setupSearchHits = createMemo(() => {
     const query = setupSearchQuery();
-    if (query.length < 3 || typeof document === "undefined") return [] as HTMLElement[];
-    return Array.from(document.querySelectorAll<HTMLElement>(
-      ".setup-section .setup-control-row, .setup-section .setup-switch-row, .setup-section .setup-field-group > h3",
-    )).filter((element) => isSetupSearchMatch(query, element.textContent ?? ""));
+    if (query.length < MIN_SETUP_SEARCH_LENGTH) return [] as SetupSearchHit[];
+    return collectSetupSearchHits(query);
   });
   const matchedSearchSections = createMemo(() => new Set(
-    setupSearchResults().flatMap((element) => {
-      const id = element.closest<HTMLElement>(".setup-section")?.id.replace("setup-section-", "") as SetupSectionId | undefined;
-      return id ? [id] : [];
-    }),
+    setupSearchHits().flatMap((hit) => (hit.sectionId ? [hit.sectionId] : [])),
   ));
-  const setupSearchCounter = createMemo(() => {
-    const total = setupSearchResults().length;
-    if (total === 0) return "0";
-    return `${Math.min(setupSearchIndex(), total - 1) + 1} / ${total}`;
-  });
+  const setupSearchCounter = createMemo(() =>
+    formatSetupSearchCounter(setupSearchIndex(), setupSearchHits().length),
+  );
   const focusSearchResult = (index: number) => {
-    const results = setupSearchResults();
-    if (results.length === 0) return;
-    const next = (index + results.length) % results.length;
+    const hits = setupSearchHits();
+    if (hits.length === 0) return;
+    const next = (index + hits.length) % hits.length;
     setSetupSearchIndex(next);
-    const target = results[next]!;
-    const section = target.closest<HTMLElement>(".setup-section")?.id.replace("setup-section-", "") as SetupSectionId | undefined;
-    if (section) scrollToSection(section);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }));
+    revealSetupSearchHit(hits[next]!, scrollToSection);
   };
   let previousSearchQuery = "";
   createEffect(() => {
-    document.querySelectorAll(".setup-search-match").forEach((element) => element.classList.remove("setup-search-match"));
-    const results = setupSearchResults();
-    results.forEach((element) => element.classList.add("setup-search-match"));
+    const hits = setupSearchHits();
+    highlightSetupSearchHits(hits);
     const query = setupSearchQuery();
     if (query === previousSearchQuery) return;
     previousSearchQuery = query;
     setSetupSearchIndex(0);
-    if (results.length > 0) focusSearchResult(0);
+    if (hits.length > 0) focusSearchResult(0);
   });
 
   const importSettings = (patch: Parameters<typeof applySetupImport>[0]) => {
@@ -1922,8 +1916,8 @@ const [activeSection, setActiveSection] =
                   <Show when={setupSearch().length > 0}>
                     <div class="ml-auto flex shrink-0 items-center gap-1">
                       <span class="whitespace-nowrap text-xs tabular-nums text-muted-foreground" aria-live="polite">{setupSearchCounter()}</span>
-                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><Icon icon={ArrowLeft01Icon} aria-hidden="true" /></Button>
-                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><Icon icon={ArrowRight01Icon} aria-hidden="true" /></Button>
+                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchHits().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><Icon icon={ArrowLeft01Icon} aria-hidden="true" /></Button>
+                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchHits().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><Icon icon={ArrowRight01Icon} aria-hidden="true" /></Button>
                     </div>
                   </Show>
                 </div>

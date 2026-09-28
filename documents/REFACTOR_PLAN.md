@@ -298,7 +298,15 @@ downstream blocks.
    an early check misread that as a leak.
 8. **Settings search.** Move DOM query, match set, counter and highlight
    (`:686-731`) into `features/setup/`, keeping `utils/setupSearch.ts` as the
-   pure matcher.
+   pure matcher. **Done.** `src/features/setup/settingsSearch.ts` owns the
+   searchable-element selector, the section lookup, the highlight class, the
+   counter format and the reveal scroll; the route keeps the signals and memos
+   and passes its own `scrollToSection` in, because the workspace's scroll state
+   belongs to it. The `SetupSectionId` dependency is type-only, so there is no
+   runtime edge into the layout module. Verified in a browser: `twitch` matches 8
+   rows across 4 sections, the counter reads `1 / 8` and steps to `2 / 8` then
+   `3 / 8` and back to `2 / 8`, and clearing removes every highlight, every nav
+   marker and the counter, with no console error.
 9. **Section metadata and blocks.** Extract the section descriptor arrays
    (`:1400-2027`), `ffzBadgeMergeBlock` (`:1886-1940`), `renderUserChip`
    (`:2029-2085`) and the preview controls (`:2553-2753`) into
