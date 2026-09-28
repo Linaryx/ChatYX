@@ -20,14 +20,18 @@ series) following Conventional Commits.
 
 | Phase | Focus | Risk | Primary protection | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Guard rails | low | new characterization tests | partly done — `ChatBadges` reactivity fixed; pure-logic characterization added where no DOM is needed; component-render tests deferred by decision |
+| 1 | Guard rails | low | new characterization tests | **closed** — see the phase 1 outcome for the two items that stay browser-verified by decision |
 | 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | **done** |
 | 3 | Icon normalization | low | 1:1 glyph mapping, visual check | **done** |
 | 4 | UI primitives | low | visual check, existing tests | **done** |
 | 5 | Setup decomposition | high | setup/URL/import test suites | **done** — all nine steps |
-| 6 | Chat presentation cleanup | high | render and emote test suites | in progress — steps 1, 3 (partly), 5 and 6 done; render pipeline split outstanding |
+| 6 | Chat presentation cleanup | high | render and emote test suites | **done** — step 2's physical split is closed without code movement; step 3 is resolved in the follow-up |
 | 7 | Dependency and dead-code cleanup | none-low | grep verification, build | **done** |
 | 8 | Documentation and enforcement | low | full check | **done** |
+
+No phase is left "in progress". `documents/REFACTORING_FOLLOWUP.md` is the
+completion supplement that closed the remaining items; its own "Completion
+Report" records what changed and what was intentionally left alone.
 
 Visual verification is available through a local Playwright install kept
 outside the repository (`%TEMP%\opencode\pw`), which captures the setup page and
@@ -80,6 +84,19 @@ also covered structurally: `OverlayStyleManager.cleanup()` removes properties an
 attributes rather than style elements, so there is no element to leak, and the
 MutationObserver trace recorded in phase 7 shows all five generated stylesheets
 removed.
+
+The follow-up changed how two of those three are covered:
+
+- **Item 2, teardown**, now has a unit test: `tests/overlayStyleManager.test.ts`
+  pins that cleanup removes the animation stylesheet the apply injected.
+- **Item 4** is fully covered: `tests/chatOverlayApplication.test.ts` pins
+  construct→destroy, double destroy, start called twice, start after destroy and
+  destroy while initialization is pending. The early return it characterized is
+  gone — see the follow-up's completion report.
+- **Item 3, reconnect suppression**, stays browser-verified. It is not on the
+  follow-up's required-test list, and a unit test would need a WebSocket shim
+  around the connection manager's socket loop rather than a behaviour seam.
+  Recorded here as the one item still relying on a browser check.
 
 **Commit:** `test(chat): characterize runtime teardown and badge reactivity`
 
@@ -138,8 +155,8 @@ in a visual check.
 **Outcome so far:** the dead legacy tokens and the `--border` collision are
 resolved. Verified by computed style rather than by screenshot: `body` colour is
 still `rgb(255, 255, 255)` and `--border` now resolves from `app.css` alone. The
-`chatStyles.ts` preset conversion is still open and is the riskier half of this
-phase.
+`chatStyles.ts` preset conversion — the riskier half of this phase — is complete;
+see step 3.
 
 **Commit:** `refactor(styles): consolidate semantic design tokens`
 
@@ -158,9 +175,12 @@ Solid wrapper.
 - All 21 `hgi-*` names currently used in the codebase have a matching
   PascalCase export in the free set — verified 21/21, zero gaps — so glyphs are
   preserved exactly.
-- There is no official Hugeicons package for Solid (`@hugeicons/solid` does not
+- ~~There is no official Hugeicons package for Solid (`@hugeicons/solid` does not
   exist), so the integration is a small typed wrapper component rather than a
-  third-party runtime.
+  third-party runtime.~~ **Corrected in the follow-up: this was stale.**
+  `@hugeicons/solid-js` exists and is the vendor's official Solid renderer, so
+  the wrapper is now a thin project layer over `HugeiconsIcon` rather than a
+  payload renderer of our own. See `REFACTORING_FOLLOWUP.md` section 7.
 
 **Steps:**
 
@@ -420,14 +440,23 @@ round-trips a config through export, import and preview unchanged.
    zero times — while the existing suite still passes the real resolver, which
    keeps its RTE-rewrite coverage. Verified in a browser: the dev fixture renders
    4 emotes and 2 emoji, all with resolved CDN URLs, and 24 messages with no
-   console error. **Outstanding:** the physical module split into tokenize,
-   assemble and DOM-bind files. The function already builds a token array
-   internally, so the seam exists in the code; moving it into separate modules is
-   a wide mechanical change to a file that two suites protect, and it buys
-   organisation rather than testability now that the injection is in place.
+   console error. **Closed without further code movement.** The file is 500 lines
+   and holds one cohesive pipeline: tokenize, then assemble an HTML string. It has
+   no DOM binding and no provider-specific transformation, so splitting the halves
+   into separate modules would buy organisation rather than testability,
+   dependency direction or change isolation, and it would be a wide mechanical
+   change to a file that two suites protect. `REFACTORING_FOLLOWUP.md` section 21
+   allows exactly this closure.
 3. Move `LayoutManager` (`utils/ui/layoutUtils.ts:164`) and the fade manager
    (`utils/ui/fadeUtils.ts:105-186`) into the chat-overlay layer that owns their
-   lifecycle, and resolve the two-classes-one-name problem.
+   lifecycle, and resolve the two-classes-one-name problem. **Done in the
+   follow-up, in the service layer rather than under `features/chat-overlay`:**
+   their owner is `chatPresentationService`, and a service cannot import a
+   feature. `layoutUtils.ts` → `services/chat/runtime/layoutManager.ts` and
+   `fadeUtils.ts` → `services/chat/runtime/messageFade.ts`. The duplicate
+   `LayoutManager` in `utils/ui/layoutManager.ts` is deleted — its only caller was
+   `chatFeatureIntegration.setOptions`, and the class was a no-op because
+   `setContainer` was never called. One class, one name, one layer.
 4. Split `utils/ui/animationUtils.ts` so config constants live in `config/` and
    CSS generation lives with the overlay runtime. **Done.**
    `src/config/chatAnimation.ts` holds the modes, the speed bounds and the pure
@@ -439,14 +468,15 @@ round-trips a config through export, import and preview unchanged.
    generator from the runtime. Verified in a browser: `flow` and `fade` still
    animate and clean up with 0 rows stuck and no console error.
 5. Move `utils/chat/badgePriority.ts` next to `ChatBadges.tsx`, and move
-   `utils/ui/layoutManager.ts` with its feature integration. **Partly done.**
+   `utils/ui/layoutManager.ts` with its feature integration. **Done.**
    `badgePriority.ts` moved to `src/components/chat/badgePriority.ts` with
    `git mv`, since `ChatBadges` was its only importer and the badge ordering
    rules exist only to serve it; the import is now the sibling `./badgePriority`.
-   The layout manager move is blocked by layering rather than by effort: it is
-   owned by `services/chat/chatPresentationService`, and moving it under
-   `features/chat-overlay` would make a service import a feature, against the
-   documented direction. Recorded here instead of forced.
+   The layout manager was recorded as blocked by layering: it is owned by
+   `services/chat/chatPresentationService`, and moving it under
+   `features/chat-overlay` would make a service import a feature. The follow-up
+   resolved it by asking the responsibility question instead — the owner is the
+   service, so the file belongs in the service layer. See step 3 above.
 6. Fix the `ChatMessage.tsx` animation cleanup duplication between `:358-365`
    and `:377-381` once phase 1 tests cover it. **Done.** The two
    `clearEntryAnimation` closures differed only in whether they removed the
@@ -536,11 +566,13 @@ cache outlives the runtime that populated it.
    depend on a dependency-free service leaf), the icon package and its subpath
    import rule, and the two kinds of drawing that stay inline.
 2. Update `documents/DESIGN.md` with the token contract and the rule that
-   runtime presentation values are passed as custom properties. **Done** — a new
+   runtime presentation values are passed as custom properties. **Done** — the
    "Token Contract" section states the two rules, names the allowed exceptions and
-   records that `chatStyles.ts` is the last remaining exception, with the note
-   that its table is also read by JS so the conversion publishes properties rather
-   than deleting it.
+   records that `SIZE_CONFIGS` stays the single source of truth because JS reads it
+   for emote geometry, so it publishes custom properties instead of generating
+   rules. **Corrected in the follow-up:** that section no longer claims
+   `chatStyles.ts` still generates preset-dependent rules; it describes the
+   conversion that phase 2 completed.
 3. Record the allowed exceptions: provider cosmetics and emote modifiers may
    generate CSS at an integration boundary; brand assets are not UI icons.
    **Done** in both documents.
@@ -585,22 +617,26 @@ The checklist above was walked item by item at the end of the work:
 - **Second icon system / duplicated platform SVG.** `grep -r "hgi-"` and
   `grep -r "lucide"` over `src` return nothing; `PlatformGlyph` is the only owner
   of the platform glyphs; the stale `lucide-solid` entry in the `vite.config.ts`
-  chunk group was removed and `@hugeicons` added in its place.
-- **Unnecessary dependency.** `package.json` carries nine runtime dependencies,
-  none of them a test-render library or an icon font.
-- **Generic `utils` dumping ground.** `utils/chat/badgePriority` and
-  `utils/ui/animationUtils` left; what remains under `utils/ui` is the three chat
-  presentation runtime helpers, each with a single purpose, and their move is
-  blocked by layering rather than by effort.
+  chunk group was removed and `@hugeicons` added in its place. The follow-up then
+  replaced the hand-written payload renderer with the vendor's official
+  `@hugeicons/solid-js`, so the project no longer owns Hugeicons SVG logic.
+- **Unnecessary dependency.** `package.json` carries ten runtime dependencies,
+  each with one responsibility and no test-render library.
+- **Generic `utils` dumping ground.** `utils/chat/badgePriority`,
+  `utils/ui/animationUtils`, `utils/ui/layoutUtils`, `utils/ui/fadeUtils` and the
+  dead `utils/ui/layoutManager.ts` all left. `utils/ui/` no longer exists; the
+  chat runtime helpers now live in `services/chat/runtime/`.
 - **Hidden side effects and lifecycle cleanup.** The teardown ownership work in
-  phase 7 plus the animation-stylesheet fix above; a browser trace across overlay
-  teardown shows every stylesheet removed and every published property released.
-- **Static design literals.** The overlay's presets are now custom properties;
-  `chatStyles.ts` is the documented remainder.
+  phase 7 plus the follow-up's generation guards: reset() clears, a load that
+  resolves afterwards cannot commit, and `ChatOverlayApplication.destroy()` is
+  terminal, idempotent and safe before `start()`.
+- **Static design literals.** The overlay's presets are custom properties and
+  `chatStyles.ts` only publishes values; the setup document lock is an attribute
+  with the rules in CSS.
 - **OBS and config/URL contract.** No query parameter changed.
   `tests/setupConfig.test.ts` and `tests/formValues.test.ts` pin the round trip,
   and `buildOverlayUrl` remains the single producer.
 
-Closing verification: `bun run check` passes (lint 0/0, typecheck 0, 375 tests,
-production build), the production bundle is 2.15 MB, and the browser checks
+Closing verification: `bun run check` passes (lint 0/0, typecheck 0, 390 tests,
+production build), the production bundle is about 2.15 MB, and the browser checks
 recorded per phase pass against the built behaviour.

@@ -274,3 +274,55 @@ roughly triple the real figures. Case-sensitive counts are 15 raw buttons and
 7 raw inputs in feature code, most of them bespoke controls rather than
 reimplementations of a primitive. When counting JSX element usage, match
 case-sensitively.
+
+---
+
+## Post-refactor state
+
+The sections above are history and are kept as written, including their scores.
+This section records where each high-impact issue ended up. It was written after
+the first refactor pass (PR #15) and the completion follow-up
+(`documents/REFACTORING_FOLLOWUP.md`).
+
+### Scores, before and after
+
+| Dimension | Before | After | Why the number moved |
+| --- | --- | --- | --- |
+| Architecture coupling | 3 | 2 | The remaining `features` → `components` edge (the settings search importing `SetupSectionId`) is gone: section identity lives in `features/setup/model/setupSections.ts`. Every other direction was re-audited and is clean. Components still read mutable singletons (`ChatBadges` → `badgeService`, `ChatMessage` → `sevenTVCosmeticsService`, `renderMessageContent` → `bitsService`); that is the documented service boundary, not a layer inversion. |
+| Responsibility mixing | 7 | 2 | `src/routes/setup.tsx` went from 2779 to 1681 lines and now holds signals, effects, handler binding, descriptor wiring and JSX only. The renderer no longer resolves URLs. `utils/ui/` is gone. |
+| UI duplication | 3 | 3 | Unchanged. The corrected figures stand: one chip-input structure was extracted and the remaining raw controls are bespoke. |
+| CSS inconsistency | 6 | 2 | One token system: the dead legacy tokens and the `--border` collision were removed, and `chatStyles.ts` now publishes custom properties (including the size/weight/line-height presets and the boolean variants) instead of generating rule text for a preset table. Generated CSS remains only where the rule shape is provider data. 42 `!important` uses were classified and none was added. |
+| Icon inconsistency | 4 | 0 | One package, one renderer, one wrapper: `@hugeicons/core-free-icons` through the vendor's `@hugeicons/solid-js`, brand glyphs owned by `PlatformGlyph`, no icon font and no `lucide-solid`. |
+| Dependency overlap | 2 | 1 | `lucide-solid` is gone and the icon font is deleted. Ten runtime dependencies, each with one responsibility. |
+| Global state / side effects | 8 | 3 | `OverlayStyleManager.cleanup()` is called from the runtime, `RteCosmeticsService.clear()` is invoked by the RTE teardown, and `YouTubeChatService` is deleted. Every singleton the runtime fills is reset by it, and a generation token stops a response that resolves afterwards from committing. Remaining: channel-keyed provider caches that are deliberately unreset (`channelRolesService`, `twitchGqlService`, `bitsService`) and the 7TV paint catalog, which is provider data rather than per-channel state. |
+| Testability | 4 | 2 | 390 tests, including new coverage for the application lifecycle, the preview teardown, the stale-load races and the overlay stylesheet contract. Remaining: reconnect suppression is still browser-verified, and component rendering is covered by browser checks rather than by a DOM test environment. |
+| Naming / discoverability | 6 | 3 | The duplicate `LayoutManager` is deleted and `utils/ui/` no longer exists. Remaining: `lib/utils` versus `utils/` still use one word for two things, and `ChatConfig` still reaches 15 files through a two-hop barrel. |
+| **Overall technical debt** | **6** | **2** | Debt is no longer concentrated anywhere: the monolith is decomposed, the singleton layer has an owner, one token system and one icon system remain, and the docs describe the tree that exists. |
+
+### Issue by issue
+
+| Original issue | Final owner | Status | Remaining debt |
+| --- | --- | --- | --- |
+| §2.1 setup route owned persistence, capability detection, fetchers, URL projection and DOM search | `services/storage`, `services/setup`, `config/`, `features/setup/`, `components/setup/` | resolved | none |
+| §2.2 un-owned singleton caches | each service's `reset()`, invoked by the runtime that filled it | resolved, with a generation guard per service so in-flight work cannot repopulate a reset store | `channelRolesService`, `twitchGqlService` and `bitsService` are channel- or key-keyed caches that are intentionally not reset |
+| §2.3 `utils/ui/` runtime helpers and two `LayoutManager` classes | `services/chat/runtime/layoutManager.ts` and `messageFade.ts`; the duplicate class is deleted | resolved | none |
+| §2.4 dual CSS token systems | `app.css` is the only token system | resolved | none |
+| §2.5 dead code inventory | deleted, except `RteCosmeticsService.clear()` | resolved | none — `clear()` is now called from the RTE teardown, which is what the audit asked for |
+| §2.6 renderer owned network resolution and DOM construction | `RenderMessageOptions.resolveUrl` injected by `ChatText`; emote-modifier DOM binding stays at that integration boundary | resolved for the dependency direction; the physical file split is closed as not worthwhile | the file is 500 lines; that is a cohesion choice, recorded in `REFACTOR_PLAN.md` phase 6 |
+| §3 quick wins (dead tokens, `--border`, `ChatConfig` barrel hoist, `ChatBadges` reactivity) | tokens: `app.css`; barrel: still a two-hop path; reactivity: fixed | resolved except the barrel hoist | `ChatConfig` is still re-exported through `~/utils/chat`, which is naming debt rather than a defect |
+| §4 highest-risk refactors | phase 2 (tokens), phase 7 (singletons) and the follow-up (lifecycle) | all three completed with before/after verification | none |
+
+### What this audit did not predict
+
+Two issues were found by working on the code rather than by the audit, and both
+were fixed with regression tests:
+
+1. **A teardown regression introduced by the token conversion.** The rewritten
+   `clearOverlayStyles` stopped removing the animation stylesheet that
+   `applyOverlayStyles` injects. Caught by the phase-level browser trace and
+   closed in `f7e1ec7` with `tests/overlayStyleManager.test.ts`.
+2. **The stale-load race after reset.** Resetting a singleton dropped what it
+   held but not what was in flight, so a response could land in the next
+   runtime's store. The audit listed the caches as un-owned but did not reach the
+   in-flight case. Closed by generation tokens and
+   `tests/assetTeardownRace.test.ts`.

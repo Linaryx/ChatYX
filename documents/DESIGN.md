@@ -27,6 +27,15 @@ geometry, a measured layout shift, 7TV paint, provider cosmetics — is passed a
 custom property. A value that is a reusable design decision belongs in the
 stylesheet.
 
+`SIZE_CONFIGS` in `src/styles/chatStyles.ts` stays the single source of truth for
+message size, weight, line height and the emote scale, because
+`renderMessageContent.ts` reads the same table for emote geometry. The runtime
+publishes it through `getOverlayStyleVariables()` instead of generating rules, so
+the table drives custom properties rather than rule text. `OVERLAY_STYLE_PROPERTIES`
+and `OVERLAY_ATTRIBUTES` list exactly what the manager may write; the boolean
+variants (`.user_info`, the name separator) are keyed on
+`:root[data-hide-names]` and `:root[data-nl-after-name]`.
+
 Two boundaries are allowed to generate CSS, because there the rule shape is data
 supplied from outside rather than a design decision:
 
@@ -34,12 +43,43 @@ supplied from outside rather than a design decision:
   data;
 - emote modifiers, where geometry depends on the emote's own dimensions.
 
-`src/styles/chatStyles.ts` is the remaining exception: `SIZE_CONFIGS` and the
-shadow, stroke and variant generators still emit rules whose shape follows a
-preset. Note that this table is also read by `renderMessageContent.ts` for emote
-geometry, so the conversion is to keep one table as the single source of truth
-and have it publish custom properties, rather than to delete it. That work is
-recorded in `REFACTOR_PLAN.md`.
+The setup page's document lock follows the same rule in the other direction: the
+lifecycle helper sets `data-setup-document` on the root and the setup stylesheet
+owns the scrolling and height it implies. Product colors stay in CSS.
+
+## Styling Stack
+
+```text
+Tailwind            application utility styling, as it already exists
+components/ui       reusable primitives, with CVA where a real variant contract exists
+CSS custom props    overlay runtime values and component contracts
+plain CSS           overlay, provider and browser-integration boundaries
+@hugeicons/solid-js generic UI icon rendering
+PlatformGlyph       brand-owned glyphs
+```
+
+Tailwind is not scheduled for removal and is not being extended: no new utility
+spaghetti, no new abstraction layer, no Tailwind in provider- or
+runtime-generated markup.
+
+## Iconography
+
+Generic UI icons are Hugeicons payloads rendered by the project's thin `Icon`
+wrapper over the vendor's Solid renderer. The wrapper fixes `currentColor`, the
+`1em` default size and the decorative default; the payload keeps its own stroke
+width. Icons stay hidden from assistive technology unless they carry a label, and
+icon-only controls always have an accessible name.
+
+Brand marks are not generic icons: `PlatformGlyph` is their only owner, and the
+bespoke overlay graphics — sparkline, event, reply and role artwork — stay custom
+drawings.
+
+## Surface Ownership
+
+`.setup-root` paints the setup workspace surface; the document itself stays
+transparent because `app.css` forces that for OBS. `html`, `body` and `#root`
+therefore never need a background write at runtime, and a module that needs to
+change document behaviour changes state (an attribute) rather than presentation.
 
 ## Reusable Primitives
 

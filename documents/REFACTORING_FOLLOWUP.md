@@ -1910,3 +1910,269 @@ current architecture
 ```
 
 **Do not add Panda CSS in this phase.**
+
+---
+
+# Completion Report
+
+Written after finishing the follow-up on top of PR #15. Every claim below was
+checked against the tree that the last commit in the series produces.
+
+## Completed items
+
+### A. Root agent documentation (section 6) — `3baf16a`
+
+`AGENTS.md` now carries the engineering rules directly: architecture direction,
+route/feature/service responsibilities, lifecycle ownership, UI primitive
+boundaries, the icon policy (Hugeicons plus brand-glyph ownership), the styling
+and custom-property contract, dependency and utility-module rules, accessibility,
+OBS constraints, public contracts, testing requirements and Conventional
+Commits. It also requires repository-wide refactor work to read
+`documents/REFACTORING.md` and `documents/REFACTORING_FOLLOWUP.md`. The
+Conventional Commit rules and `bun run check` were preserved.
+
+### B. Official Hugeicons Solid renderer (sections 7, 40) — `cd17aae`
+
+`@hugeicons/solid-js` was added. `src/components/ui/icon.tsx` went from 68 lines
+of payload traversal, attribute kebab-casing and `createDynamic` to a 40-line
+wrapper over the vendor's `HugeiconsIcon`. The wrapper owns `currentColor`, the
+`1em` default size and decorative-by-default accessibility; the icon payload
+keeps its own stroke width, because all 25 icons in use carry `strokeWidth: 1.5`
+and a forced root default would give a stroke to a fill-only icon.
+
+Evidence: every `<svg>` on the setup page was captured before and after —
+65/65 identical geometry, font size, stroke width and colour, and identical
+attribute sets per element except the vendor's explicit `color="currentColor"`,
+which inherits to the same value. Subpath imports are unchanged, and a search of
+the built output for an unused icon's path data finds nothing, so the 675 KB
+barrel is not bundled.
+
+### C. Dependency direction (sections 9, 10) — `5121bf4`
+
+- `SetupSectionId` moved to `features/setup/model/setupSections.ts`, so the route,
+  the workspace layout and the settings search share the identity without
+  importing each other. The translation and icon metadata stayed with the
+  presentation that renders it.
+- Two pure helpers were unreachable for tests once the icon module imported the
+  client-only vendor renderer, because their tests imported JSX modules for a
+  function: the Twitch/Kick channel search moved to
+  `services/setup/channelSearch.ts`, and `resolveSetupText`/`SetupText` moved to
+  `components/setup/setupText.ts`.
+- The move collapsed a real duplication: `normalizeLogin`, the avatar fallback
+  letter and the login-list merge existed twice; they now have one owner in
+  `services/setup/logins.ts`.
+
+Fresh audit results: `features` → `components` zero, `features` → `routes` zero,
+`services`/`config`/`utils` → `features`/`routes`/`components` zero, and no new
+lateral edge. The only non-vertical edge remains the recorded
+`config/setupTemplates` → `services/storage/setupStorage`, whose target is a
+dependency-free leaf.
+
+### D. Async work after teardown (sections 11, 12, 13) — `bfd8102`
+
+The race exists. `emoteService`, `badgeService`, `sevenTVCosmeticsService` and
+`chatFeatureIntegration` all committed into their own stores after an `await`,
+so a response that arrived after `reset()` repopulated the store the next runtime
+had just cleaned. `chatFeatureIntegration` was worse: it could mark itself
+initialized after `destroy()` and then refuse the next runtime's initialization.
+
+Each service now carries a generation that `reset()` (or `clearAllCaches()`)
+bumps; a load captures it on entry and skips its commit when the store moved on.
+The 7TV visibility toggle bumps it too, because a response loaded under the
+previous filter is equally stale.
+
+Evidence: `tests/assetTeardownRace.test.ts` holds each response open, resets, and
+only then resolves it. All seven tests fail against the previous code and pass
+against the new one (verified by stashing the four services and re-running).
+
+`ChatAssetLoader` needed nothing: it is constructed per live runtime, so its
+shared-channel map and caches die with the instance.
+
+### E. Application and runtime destruction (sections 14, 15) — `a7f6fce`, `96200bd`
+
+`ChatOverlayApplication.destroy()` used to return immediately when `start()` had
+never run, although the constructor had already built both runtimes. It now
+releases what the constructor built, is idempotent, and is terminal, which is
+what also makes it safe while `start()` is still awaiting `initialize()`.
+
+The preview runtime enabled the RTE proxy flag and filled the shared emote,
+badge and mention stores without releasing either. Its teardown now clears both,
+and only when `initialize()`/`updateConfig()` actually claimed them.
+
+### F. Preview and proxy ownership (sections 16, 17) — `96200bd`
+
+`PreviewRuntime` teardown releases the message interval, the render timer, the
+preview styles, the presentation service and the shared state it claimed.
+A destroyed runtime also ignores further configuration instead of re-injecting
+the styles it just removed.
+
+Concurrency does not exist by design, and this was checked rather than assumed:
+the setup page loads the preview in an iframe, which has its own module
+instances, and the chat route renders exactly one application. The proxy flag is
+therefore a plain boolean, not a lease or a reference count; the ownership
+argument is recorded in `ARCHITECTURE.md` and at the teardown itself.
+
+### G. Setup document styling (section 18) — `0890919`
+
+The literal colour is gone. Measured before the change: the inline
+`#09090b` resolved to `rgba(0, 0, 0, 0)` because `app.css` forces
+`background: transparent !important` for OBS, while `.setup-root` painted
+`rgb(9, 9, 11)` and covered the viewport. The helper now sets
+`data-setup-document` and the setup stylesheet owns the scrolling and height.
+
+Verified by a DOM-level comparison, not a screenshot: the page is not
+pixel-stable (two shots of an unchanged state differ, even in a region with no
+animation), so every element's rect plus the lock-relevant computed styles and
+every scroll height were compared between the two implementations — zero
+changes. In the browser the lock is applied on setup, removed when navigating
+in-app to `/status`, and re-applied when navigating between two setup routes.
+
+### H. Layout and fade ownership (sections 21, 22) — `1f5c508`
+
+`utils/ui/layoutUtils.ts` → `services/chat/runtime/layoutManager.ts` and
+`utils/ui/fadeUtils.ts` → `services/chat/runtime/messageFade.ts`. These are chat
+overlay runtime infrastructure, not general helpers: their stylesheets are
+written against `#chat_container`, `.chat_line` and `.message-fade-out`, and
+`ChatPresentationService` is their only owner. The correct home is the service
+layer, which is why the earlier "blocked by layering" note is resolved rather
+than worked around.
+
+The duplicate `LayoutManager` in `utils/ui/layoutManager.ts` is deleted. Its only
+caller was `chatFeatureIntegration.setOptions`, which wired two options into a
+class that was a no-op: `setContainer` was never called, so `applyLayout`
+returned before touching anything, and `shouldShowMessage`, `getContainerClasses`,
+`getLayoutCSS` and `injectCSS` had no callers. `utils/ui/` no longer exists.
+
+### I. Remaining global state (sections 33, 34, 35) — `27b6096`, `adabb32`, `feb4e11`
+
+- The 7TV paint stylesheet was created on demand and never removed, and the
+  cached sheet reference would have kept writing into the detached element.
+  `disposeStylesheet()` now removes it and drops the reference; it is called from
+  `ChatPresentationService.cleanup()` next to `clearAllCaches()`.
+- The setup route created the preview synchronizer with a `dispose()` that
+  nothing called, so a pending navigation timer could fire after the route was
+  left. `onCleanup` now disposes it.
+- The overlay style manager contract is covered end to end: apply, apply twice,
+  cleanup, and apply-after-cleanup.
+- Animation CSS stays in `services/chat/runtime/animationStyles.ts`. It is the
+  module the runtime already owns, and moving it would be organisation without a
+  contract change.
+
+### J. Documentation (sections 23–27) — this commit
+
+- `ARCHITECTURE.md`: new dependency rule (a feature must not import a component),
+  new "Chat overlay lifecycle and asset ownership" section (construction and
+  teardown contract, generation-guarded loads, the single-owner proxy argument),
+  the layout/fade relocation, the setup module map including the new modules, the
+  descriptor-factory rule, the official icon renderer, and a renamed
+  "Plain and generated CSS" section that describes the actual boundaries.
+- `DESIGN.md`: the stale claim that `chatStyles.ts` still generates
+  preset-dependent rules is gone; the token contract now describes what the code
+  does, the allowed generated-CSS boundaries are unchanged, and new sections
+  record the styling stack, iconography and surface ownership. No Panda CSS and
+  no Ark UI is described, because neither exists here.
+- `REFACTOR_PLAN.md`: no phase is left in progress, the phase 6 items are closed
+  with reasons, the phase 2 outcome no longer says the conversion is open, and
+  the stale "no official Hugeicons package for Solid" claim is struck through
+  with the correction.
+- `REFACTOR_AUDIT.md`: a new "Post-refactor state" section keeps every original
+  score and adds the after-score, records the final owner and remaining debt per
+  issue, and lists the two problems the audit did not predict.
+
+## Items investigated and intentionally unchanged
+
+| Item | Why no change |
+| --- | --- |
+| Reconnect suppression (phase 1, item 3) | Still browser-verified. It is not on the follow-up's required-test list, and a unit test would need a WebSocket shim around the connection manager rather than a behaviour seam. |
+| `channelRolesService`, `twitchGqlService`, `bitsService` caches | Keyed by channel or by user/channel id, so an in-flight write cannot serve another channel's data. They are caches of provider facts, not runtime state, and no cross-channel leak was found. |
+| `mentionStyleService` | Synchronous only: `registerMessageAuthor` and `reset`. No in-flight work exists to guard. |
+| `chatStyles.ts` `SIZE_CONFIGS` | It is the single source of truth for message size, weight, line height and the emote scale, and JS reads it for emote geometry. Deleting it would duplicate the table; it now publishes custom properties instead of generating rules. |
+| `renderMessageContent.ts` physical split | Section 21 explicitly allows closing it. The file has one cohesive pipeline (tokenize, then assemble an HTML string), no DOM binding and no provider-specific transformation, so a split buys organisation only. |
+| The route's chip keydown handlers | Plain signal binding, which sections 18–19 list as a legitimate route responsibility. A factory would add indirection for line count. |
+| Tailwind, CVA, `tailwind-merge`/`clsx`, Kobalte | Kept as they are. No new abstraction layer, no removal in preparation for a different styling engine. |
+| `tests/chatRuntimeLifecycle.test.ts` private-field probes | They test orchestration that has no public seam; the follow-up's new tests cover the ownership boundaries instead. |
+| `buildOverlayUrl` and the stored setup keys | Public contract. Untouched, and still pinned by the round-trip tests. |
+
+## Deferred items
+
+- **Panda CSS migration** (explicitly excluded by section 4).
+- **Ark UI migration**, **Tailwind removal**, **CVA/`tailwind-merge` cleanup** —
+  section 51 assigns these to a future PR.
+- **`ChatConfig`'s two-hop barrel** (`~/utils/chat` re-exporting a `config/`
+  type) — naming debt that nothing depends on; moving 15 import sites is churn
+  without a behaviour or ownership change.
+- **Component-render characterization tests** — deferred by the decision to keep
+  `happy-dom` out of the project; those behaviours are covered by browser checks.
+
+## New tests
+
+| File | Covers |
+| --- | --- |
+| `tests/chatOverlayApplication.test.ts` | destroy before start, double destroy, double start, start after destroy, destroy during a pending initialization |
+| `tests/assetTeardownRace.test.ts` | stale commits after reset for emote (global + channel), badge (channel, third-party, per-user), 7TV cosmetics, and the paint stylesheet; plus the feature-integration initialization race |
+| `tests/previewRuntimeTeardown.test.ts` | preview destroy releases the flag and the shared stores, does not release what it never claimed, and ignores post-destroy configuration |
+| `tests/overlayStyleManager.test.ts` (added case) | apply after cleanup reconstructs properties, attributes and the stylesheet |
+| `tests/channelSearch.test.ts`, `tests/setupTranslations.test.ts` (moved imports) | the two extracted pure helpers now test without a DOM |
+
+Suite size: 375 tests before the follow-up, 392 after.
+
+## Dependency changes
+
+Added `@hugeicons/solid-js` (MIT, one peer dependency on `solid-js`). No
+dependency was removed in this follow-up; `lucide-solid` and the Hugeicons font
+were already gone. `package.json` carries ten runtime dependencies, each with one
+responsibility.
+
+## Bundle/build impact
+
+| Chunk | Before | After |
+| --- | --- | --- |
+| `ui` | 133.30 kB | 136.07 kB |
+| `setup` | 155.75 kB | 154.50 kB |
+| JS + CSS assets | 0.68 MB | 0.69 MB |
+| `dist` (with public assets) | 2.15 MB | 2.15 MB |
+
+The vendor renderer costs about 2.8 kB in the shared UI chunk and the removed
+payload renderer saves about 0.5 kB in the setup chunk, for a net increase of
+roughly 2.3 kB. Subpath imports still keep the icon barrel out of the bundle:
+searching the built assets for the path data of an icon the project does not use
+returns nothing.
+
+## Final verification
+
+```text
+bun run lint       0 warnings, 0 errors (164 app files, 9 service files)
+bun run typecheck  exit 0
+bun test ./tests   392 pass, 0 fail (51 files, 1042 assertions)
+bun run build      ok, 292 modules, dist 2.15 MB
+bun run check      ok (all four above, in order)
+```
+
+Browser checks (Playwright, installed outside the repository):
+
+- **Setup page** — 8 navigation icons, 8 section-heading icons, 2 platform
+  glyphs, 9 sections; settings search finds a row and marks its navigation item;
+  the generated overlay URL carries the channel; the channel survives a reload
+  through `chatyx.setup.twitchChannel`; the preview iframe renders and the
+  live/demo switch flips state and keeps rendering.
+- **Channel search** — the Twitch field resolves a login with its avatar and
+  commits it into the overlay URL as `c=linaryx`; the Kick field returns three
+  suggestions; no page error. The 404s the preview then produces are the
+  third-party emote/badge endpoints answering for a channel with no data.
+- **Reduced motion** — the demo is paused on mount.
+- **Route cleanup** — after an in-app navigation away from setup: the lock
+  attribute is gone, `#chat-animations` is gone, the preview attribute is gone,
+  no `.setup-root` remains, and the document did not reload.
+- **Overlay** — transparent `html`, `body`, `#root` and `#chat_container`;
+  9 messages, 3 badges, 11 event elements and a gigantified emote in the demo;
+  exactly one animation stylesheet; `hr=true` switches the container to
+  `layout-horizontal`/`row`; `st=3&sh=3` publishes `--chat-stroke: 3px black`
+  and the 0.5rem shadow preset, and the computed `-webkit-text-stroke-width`
+  becomes `3px`.
+- **Dev fixture** — 28 messages, 71 badges, 4 emotes, 2 emoji, 25 `user_info`
+  entries, 1 reply, 1 gigantified emote, 6 emote-modified images (2 wide, 1
+  rotated, 3 zero-width) with their transform, filter and animation layers, and
+  the wide modifier resolving to 88px; no page error.
+- **Accessibility of the icon migration** — 65 icons, all decorative; 36
+  icon-only buttons, none without an accessible name; 6 radios in 3 radiogroups;
+  34 switches; the section navigation carries a label.
