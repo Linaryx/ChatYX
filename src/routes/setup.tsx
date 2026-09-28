@@ -28,6 +28,17 @@ import { SetupImportCard } from "~/components/setup/SetupImportCard";
 import { SetupChipInput } from "~/components/setup/SetupChipInput";
 import { UserChip } from "~/components/setup/UserChip";
 import { FfzBadgeMergeBlock } from "~/components/setup/FfzBadgeMergeBlock";
+import { createAppearanceRows } from "~/components/setup/sections/appearanceRows";
+import { createStylingRows } from "~/components/setup/sections/stylingRows";
+import {
+  createBehaviorRows,
+  createBehaviorToggles,
+} from "~/components/setup/sections/behaviorRows";
+import {
+  createContentToggles,
+  createRteToggles,
+  createTtsToggles,
+} from "~/components/setup/sections/toggleRows";
 import { parseSetupImport } from "~/config/setupImport";
 import { toVisualSetupPatch } from "~/config/setupTemplates";
 import { applySetupImport } from "~/components/setup/setupImportAdapter";
@@ -53,7 +64,6 @@ import {
   buildSetupConfig,
   type SetupFormState,
 } from "~/config/setupConfig";
-import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
 import { TwitchChannelField } from "~/components/setup/TwitchChannelField";
@@ -1064,280 +1074,48 @@ const [activeSection, setActiveSection] =
     setIsLoadingLocalFonts(false);
   };
 
-  const appearanceRows: ControlRow[] = [
-    {
-      label: () => t("setup.messageSize"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={size()}
-          onChange={(e) => setSize(e.currentTarget.value)}
-        >
-          <option value="1">{t("setup.small")}</option>
-          <option value="2">{t("setup.medium")}</option>
-          <option value="3">{t("setup.large")}</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.font"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={font()}
-          onChange={(e) => setFont(e.currentTarget.value)}
-        >
-          <option value="0">{t("setup.customFont")}</option>
-          <option value="1">Baloo Tammudu</option>
-          <option value="2">Segoe UI (Chatterino)</option>
-          <option value="3">Roboto</option>
-          <option value="4">Lato</option>
-          <option value="5">Noto Sans</option>
-          <option value="6">Source Code Pro</option>
-          <option value="7">Impact</option>
-          <option value="8">Comfortaa</option>
-          <option value="9">Dancing Script</option>
-          <option value="10">Indie Flower</option>
-          <option value="11">Open Sans</option>
-          <option value="12">Alsina (Vsauce)</option>
-          <option value="13">BF Mono</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.customFontName"),
-      hint: () => t("setup.customFontHint"),
-      control: (labelId) => (
-        <div class="flex flex-col gap-2">
-          <Input
-            aria-labelledby={labelId}
-            type="text"
-            value={fontCustom()}
-            onInput={(e) => setFontCustom(e.currentTarget.value)}
-            placeholder={t("setup.customFontPlaceholder")}
-            disabled={font() !== "0"}
-            class={cn(font() !== "0" && "opacity-50")}
-          />
-          <Show when={localFontBrowser()}>
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-[150px_minmax(0,1fr)]">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={loadLocalFonts}
-                disabled={font() !== "0" || isLoadingLocalFonts()}
-                class="h-10"
-              >
-                {isLoadingLocalFonts() ? t("setup.loading") : t("setup.local")}
-              </Button>
-              <SetupSelect
-                aria-label={t("setup.selectLocalFont")}
-                value=""
-                onChange={(e) => {
-                  const selectedFont = e.currentTarget.value;
-                  if (selectedFont) setFontCustom(selectedFont);
-                }}
-                disabled={font() !== "0" || localFonts().length === 0}
-                class={cn(
-                  !(font() === "0" && localFonts().length > 0) && "opacity-50",
-                )}
-              >
-                <option value="">
-                  {localFonts().length > 0
-                     ? t("setup.selectLocalFont")
-                     : t("setup.loadLocalFontsFirst")}
-                </option>
-                <For each={localFonts()}>
-                  {(localFont) => (
-                    <option value={localFont.family}>
-                      {localFont.family}
-                      {localFont.styles.length > 0
-                        ? ` (${localFont.styles.join(", ")})`
-                        : ""}
-                    </option>
-                  )}
-                </For>
-              </SetupSelect>
-            </div>
-          </Show>
-          <div class="text-xs text-muted-foreground">{localFontStatusText()}</div>
-        </div>
-      ),
-    },
-    {
-      label: () => t("setup.lineHeight"),
-      hint: () => t("setup.lineHeightHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.lineHeight")}
-          value={lineHeight()}
-          onChange={setLineHeight}
-          min={80}
-          max={200}
-          step={1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.textWeight"),
-      hint: () => t("setup.textWeightHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.textWeight")}
-          value={fontWeight()}
-          onChange={setFontWeight}
-          min={100}
-          max={1000}
-          step={100}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.nicknameWeight"),
-      hint: () => t("setup.nicknameWeightHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.nicknameWeight")}
-          value={nickFontWeight()}
-          onChange={setNickFontWeight}
-          min={100}
-          max={1000}
-          step={100}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.emoteSize"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.emoteSize")}
-          value={emoteScale()}
-          onChange={setEmoteScale}
-          min={0}
-          max={3}
-          step={0.1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.gifSize"),
-      hint: () => t("setup.gifSizeHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.gifSize")}
-          value={gifScale()}
-          onChange={setGifScale}
-          min={0.25}
-          max={3}
-          step={0.1}
-        />
-      ),
-    },
-  ];
+  const appearanceRows = createAppearanceRows({
+    size,
+    setSize,
+    font,
+    setFont,
+    fontCustom,
+    setFontCustom,
+    localFontBrowser,
+    localFonts,
+    localFontStatusText,
+    isLoadingLocalFonts,
+    loadLocalFonts,
+    lineHeight,
+    setLineHeight,
+    fontWeight,
+    setFontWeight,
+    nickFontWeight,
+    setNickFontWeight,
+    emoteScale,
+    setEmoteScale,
+    gifScale,
+    setGifScale,
+  });
 
-  const stylingRows: ControlRow[] = [
-    {
-      label: () => t("setup.textShadow"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={shadow()}
-          onChange={(e) => setShadow(e.currentTarget.value)}
-        >
-          <option value="0">{t("setup.off")}</option>
-          <option value="1">{t("setup.small")}</option>
-          <option value="2">{t("setup.medium")}</option>
-          <option value="3">{t("setup.large")}</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.textStroke"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={stroke()}
-          onChange={(e) => setStroke(e.currentTarget.value)}
-        >
-          <option value="0">{t("setup.off")}</option>
-          <option value="1">{t("setup.thin")}</option>
-          <option value="2">{t("setup.medium")}</option>
-          <option value="3">{t("setup.thick")}</option>
-          <option value="4">{t("setup.veryThick")}</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.hideMessagesAfter"),
-      hint: () => t("setup.hideMessagesAfterHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.hideMessagesAfter")}
-          value={fade()}
-          onChange={setFade}
-          min={0}
-          placeholder="30"
-        />
-      ),
-    },
-    {
-      label: () => t("setup.messageBackground"),
-      control: (_labelId) => (
-        <ColorPickerField
-          label={t("setup.messageBackground")}
-          color={overlayBackgroundColor()}
-          opacity={toInt(
-            overlayBackgroundOpacity(),
-            DEFAULT_CHAT_CONFIG.overlayBackgroundOpacity,
-          )}
-          onChange={({ color, opacity }) => {
-            setOverlayBackgroundColor(color);
-            setOverlayBackgroundOpacity(String(opacity));
-          }}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.backgroundRadius"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.backgroundRadius")}
-          value={overlayBackgroundRadius()}
-          onChange={setOverlayBackgroundRadius}
-          min={0}
-          max={64}
-          step={1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.padding"),
-      hint: () => t("setup.paddingHint"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.padding")}
-          value={overlayPadding()}
-          onChange={setOverlayPadding}
-          min={0}
-          max={64}
-          step={1}
-        />
-      ),
-    },
-    {
-      label: () => t("setup.borderThickness"),
-      control: (_labelId) => (
-        <SetupNumberField
-          label={t("setup.borderThickness")}
-          value={overlayBorderWidth()}
-          onChange={setOverlayBorderWidth}
-          min={0}
-          max={8}
-          step={1}
-        />
-      ),
-    },
-  ];
+  const stylingRows = createStylingRows({
+    shadow,
+    setShadow,
+    stroke,
+    setStroke,
+    fade,
+    setFade,
+    overlayBackgroundColor,
+    setOverlayBackgroundColor,
+    overlayBackgroundOpacity,
+    setOverlayBackgroundOpacity,
+    overlayBackgroundRadius,
+    setOverlayBackgroundRadius,
+    overlayPadding,
+    setOverlayPadding,
+    overlayBorderWidth,
+    setOverlayBorderWidth,
+  });
 
   const linkColorRow: ControlRow = {
     label: () => t("setup.linkColor"),
@@ -1374,160 +1152,60 @@ const [activeSection, setActiveSection] =
     ),
   };
 
-  const behaviorRows: ControlRow[] = [
-    {
-      label: () => t("setup.messageAnimation"),
-      hint: () => t("setup.messageAnimationHint"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={animation()}
-          onChange={(event) =>
-            setAnimation(event.currentTarget.value as ChatAnimationMode)
-          }
-        >
-          <option value="fade">{t("setup.fadeIn")}</option>
-          <option value="flow">{t("setup.smoothFlow")}</option>
-          <option value="scroll">{t("setup.smoothScroll")}</option>
-          <option value="none">{t("setup.noAnimation")}</option>
-        </SetupSelect>
-      ),
-    },
-    {
-      label: () => t("setup.messageLinks"),
-      control: (labelId) => (
-        <SetupSelect
-          aria-labelledby={labelId}
-          value={linkMode()}
-          onChange={(event) =>
-            setLinkMode(event.currentTarget.value as LinkDisplayMode)
-          }
-        >
-          <option value="normal">{t("setup.normalText")}</option>
-          <option value="highlight">{t("setup.highlightWithColor")}</option>
-          <option value="hide">{t("setup.hide")}</option>
-        </SetupSelect>
-      ),
-    },
-  ];
+  const behaviorRows = createBehaviorRows({ animation, setAnimation, linkMode, setLinkMode });
 
-  const behaviorToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.emphasizeEventText"),
-      checked: twitchEventBold,
-      onChange: setTwitchEventBold,
-      hint: () => t("setup.emphasizeEventTextHint"),
-    },
-    {
-      label: () => t("setup.italicEvents"),
-      checked: twitchEventItalic,
-      onChange: setTwitchEventItalic,
-    },
-    {
-      label: () => t("setup.loadRecentMessages"),
-      checked: recentMessages,
-      onChange: setRecentMessages,
-      hint: () => t("setup.loadRecentMessagesHint"),
-    },
-    {
-      label: () => t("setup.uppercaseNicknames"),
-      checked: smallCaps,
-      onChange: setSmallCaps,
-    },
-    {
-      label: () => t("setup.lineBreakAfterNickname"),
-      checked: nlAfterName,
-      onChange: setNlAfterName,
-    },
-    { label: () => t("setup.hideNicknames"), checked: hideNames, onChange: setHideNames },
-    {
-      label: () => t("setup.reverseMessageOrder"),
-      checked: reverseLineOrder,
-      onChange: setReverseLineOrder,
-    },
-    {
-      label: () => t("setup.horizontalMessageFeed"),
-      checked: horizontal,
-      onChange: setHorizontal,
-    },
-  ];
+  const behaviorToggles = createBehaviorToggles({
+    twitchEventBold,
+    setTwitchEventBold,
+    twitchEventItalic,
+    setTwitchEventItalic,
+    recentMessages,
+    setRecentMessages,
+    smallCaps,
+    setSmallCaps,
+    nlAfterName,
+    setNlAfterName,
+    hideNames,
+    setHideNames,
+    reverseLineOrder,
+    setReverseLineOrder,
+    horizontal,
+    setHorizontal,
+  });
 
-  const contentToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.showHighlightedMessages"),
-      checked: showHighlightedMessages,
-      onChange: setShowHighlightedMessages,
-    },
-    {
-      label: () => t("setup.showPointRewards"),
-      checked: showChannelPointRewards,
-      onChange: setShowChannelPointRewards,
-    },
-    {
-      label: () => t("setup.hideLinkRewards"),
-      checked: hideLinkRewards,
-      onChange: setHideLinkRewards,
-      hint: () => t("setup.hideLinkRewardsHint"),
-    },
-    {
-      label: () => t("setup.showGigantifiedEmotes"),
-      checked: showGigantifiedEmotes,
-      onChange: setShowGigantifiedEmotes,
-    },
-    {
-      label: () => t("setup.showGifs"),
-      checked: showGifs,
-      onChange: setShowGifs,
-      hint: () => t("setup.showGifsHint"),
-    },
-    {
-      label: () => t("setup.showPredictions"),
-      checked: showPredictions,
-      onChange: setShowPredictions,
-      hint: () => t("setup.showPredictionsHint"),
-    },
-    {
-      label: () => t("setup.showCommands"),
-      checked: commands,
-      onChange: setCommands,
-    },
-    {
-      label: () => t("setup.showUnlistedEmotes"),
-      checked: show7tvUnlisted,
-      onChange: setShow7tvUnlisted,
-    },
-  ];
+  const contentToggles = createContentToggles({
+    showHighlightedMessages,
+    setShowHighlightedMessages,
+    showChannelPointRewards,
+    setShowChannelPointRewards,
+    hideLinkRewards,
+    setHideLinkRewards,
+    showGigantifiedEmotes,
+    setShowGigantifiedEmotes,
+    showGifs,
+    setShowGifs,
+    showPredictions,
+    setShowPredictions,
+    commands,
+    setCommands,
+    show7tvUnlisted,
+    setShow7tvUnlisted,
+  });
 
 
-  const ttsToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.chatIsTts"),
-      checked: rteChatIsTts,
-      onChange: setRteChatIsTts,
-      hint: () => t("setup.chatIsTtsHint"),
-    },
-    {
-      label: () => t("setup.azureTts"),
-      checked: rteAzureTts,
-      onChange: setRteAzureTts,
-      hint: () => t("setup.azureTtsHint"),
-    },
-  ];
+  const ttsToggles = createTtsToggles({
+    rteChatIsTts,
+    setRteChatIsTts,
+    rteAzureTts,
+    setRteAzureTts,
+  });
 
-  const rteToggles: ToggleRow[] = [
-    {
-      label: () => t("setup.rteProxy"),
-      checked: rteProxy,
-      onChange: setRteProxy,
-      hint: () => t("setup.rteProxyHint"),
-    },
-    {
-      label: () => t("setup.rteCosmetics"),
-      checked: rteCustomCosmetics,
-      onChange: setRteCustomCosmetics,
-      hint: () => t("setup.rteCosmeticsHint"),
-    },
-  ];
+  const rteToggles = createRteToggles({
+    rteProxy,
+    setRteProxy,
+    rteCustomCosmetics,
+    setRteCustomCosmetics,
+  });
 
   const roleBadgeMergeOptions = [
     {

@@ -328,20 +328,27 @@ downstream blocks.
 9. **Section metadata and blocks.** Extract the section descriptor arrays
    (`:1400-2027`), `ffzBadgeMergeBlock` (`:1886-1940`), `renderUserChip`
    (`:2029-2085`) and the preview controls (`:2553-2753`) into
-   `components/setup/`. **Partly done.** `renderUserChip` became
-   `src/components/setup/UserChip.tsx`, and `ffzBadgeMergeBlock` became
-   `src/components/setup/FfzBadgeMergeBlock.tsx`, which also took over the badge
-   preview asset URL. Both kept their reactive shape: `UserChip` receives the
+   `components/setup/`. **Blocks and descriptors done.** `renderUserChip` became
+   `src/components/setup/UserChip.tsx` and `ffzBadgeMergeBlock` became
+   `src/components/setup/FfzBadgeMergeBlock.tsx` (which also took over the badge
+   preview asset URL). Both kept their reactive shape: `UserChip` receives the
    profile map as a getter, not as one resolved profile, because bot profiles
-   arrive after the chip renders. `roleBadgeMergeOptions` stays in the route
-   because it is the signal wiring. Verified in a browser: the Twitch bot row
-   renders 29 chips with 29 avatars and the first resolved name `Nightbot`,
-   removing one leaves 28, and the three role pills toggle `aria-pressed` with
-   the badge preview resolving. **Outstanding:** the three `ControlRow`
-   descriptor arrays (`appearanceRows`, `stylingRows`, `behaviorRows`) and the
-   preview controls block. They are already declarative data consumed by the
-   extracted `ControlRows` component, so moving them is mechanical but wide; it
-   is tracked here rather than done in this pass.
+   arrive after the chip renders.
+
+   The descriptor arrays moved to `src/components/setup/sections/`:
+   `appearanceRows.tsx`, `stylingRows.tsx`, `behaviorRows.tsx` and
+   `toggleRows.tsx`. Each factory takes one source object and destructures it up
+   front, so the row bodies are exactly what the route declared before — the
+   extraction could not silently change a label or a control. `roleBadgeMergeOptions`
+   stays in the route because it is the signal wiring. `setup.tsx` went from 2779
+   lines at the start of this phase to 1909.
+
+   Verified in a browser: every section renders the rows its array declares
+   (`behavior` 2 control rows and 8 switches, `tts` 2, `rte` 2, `appearance` 8,
+   `content` 19 switches), toggling a switch changes the generated URL in every
+   section that has one, the settings search still reports 8 matches across the
+   extracted rows, and there is no console error. **Outstanding:** the preview
+   controls block (`:2553-2753`).
 
 **Exit criteria after each step:** `bun run check` passes and the setup page
 round-trips a config through export, import and preview unchanged.
