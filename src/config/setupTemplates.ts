@@ -1,6 +1,9 @@
 import { DEFAULT_CHAT_CONFIG } from "./chatUrlParams";
 import { DEFAULT_EVENT_COLORS } from "./eventColors";
 import type { SetupImportPatch } from "./setupImport";
+import {
+  getSetupStorage,
+} from "../services/storage/setupStorage";
 
 const STORAGE_KEY = "chatyx.setup.templates.v1";
 const STORAGE_VERSION = 1;
@@ -64,8 +67,6 @@ export type UserSetupTemplate = {
   readonly updatedAt: string;
   readonly settings: VisualSetupPatch;
 };
-
-type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 export type BuiltInSetupTemplate = {
   readonly id: "standard" | "atom";
@@ -149,19 +150,6 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
   },
 ];
 
-function hasStorage(): boolean {
-  return typeof window !== "undefined" && "localStorage" in window;
-}
-
-function getStorage(): StorageLike | null {
-  if (!hasStorage()) return null;
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
 function isTemplateSource(value: unknown): value is TemplateSource {
   return value === "manual" || value === "chatyx" || value === "chatis" || value === "cyan" || value === "davii";
 }
@@ -207,7 +195,7 @@ function isUserTemplate(value: unknown): value is UserSetupTemplate {
     && typeof value.createdAt === "string" && typeof value.updatedAt === "string";
 }
 
-export function readUserSetupTemplates(storage = getStorage()): UserSetupTemplate[] {
+export function readUserSetupTemplates(storage = getSetupStorage()): UserSetupTemplate[] {
   if (!storage) return [];
   try {
     const raw = storage.getItem(STORAGE_KEY);
@@ -223,7 +211,7 @@ export function readUserSetupTemplates(storage = getStorage()): UserSetupTemplat
   }
 }
 
-export function writeUserSetupTemplates(templates: readonly UserSetupTemplate[], storage = getStorage()): boolean {
+export function writeUserSetupTemplates(templates: readonly UserSetupTemplate[], storage = getSetupStorage()): boolean {
   if (!storage) return false;
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, templates }));

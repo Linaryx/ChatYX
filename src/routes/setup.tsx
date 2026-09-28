@@ -29,6 +29,11 @@ import { SetupChipInput } from "~/components/setup/SetupChipInput";
 import { parseSetupImport } from "~/config/setupImport";
 import { toVisualSetupPatch } from "~/config/setupTemplates";
 import { applySetupImport } from "~/components/setup/setupImportAdapter";
+import {
+  SETUP_STORAGE_KEYS,
+  readStoredSetupValue,
+  writeStoredSetupValue,
+} from "~/services/storage/setupStorage";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
@@ -145,38 +150,6 @@ type LocalFontStatus =
 const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 const TWITCH_WEB_CLIENT_ID =
   import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
-const SETUP_STORAGE_KEYS = {
-  config: "chatyx.setup.config.v1",
-  twitchChannel: "chatyx.setup.twitchChannel",
-  previewStageBackdrop: "chatyx.setup.previewStageBackdrop",
-  previewStageColor: "chatyx.setup.previewStageColor",
-} as const;
-
-function readStoredSetupValue(key: string): string {
-  if (typeof window === "undefined") return "";
-
-  try {
-    return window.localStorage.getItem(key) || "";
-  } catch {
-    return "";
-  }
-}
-
-function writeStoredSetupValue(key: string, value: string) {
-  if (typeof window === "undefined") return;
-
-  try {
-    const normalized = value.trim();
-    if (normalized) {
-      window.localStorage.setItem(key, normalized);
-    } else {
-      window.localStorage.removeItem(key);
-    }
-  } catch {
-    // Storage can be blocked in private windows; setup must still work.
-  }
-}
-
 function detectLocalFontBrowser(): string | null {
   if (typeof window === "undefined" || typeof navigator === "undefined") {
     return null;

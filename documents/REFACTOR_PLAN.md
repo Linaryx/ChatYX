@@ -24,7 +24,7 @@ series) following Conventional Commits.
 | 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | in progress — dead tokens and the `--border` collision done; `chatStyles.ts` preset conversion outstanding |
 | 3 | Icon normalization | low | 1:1 glyph mapping, visual check | **done** |
 | 4 | UI primitives | low | visual check, existing tests | **done** |
-| 5 | Setup decomposition | high | setup/URL/import test suites | not started |
+| 5 | Setup decomposition | high | setup/URL/import test suites | in progress — step 1 of 9 (storage adapter) done |
 | 6 | Chat presentation cleanup | high | render and emote test suites | in progress — duplication removed; pipeline split and layer moves outstanding |
 | 7 | Dependency and dead-code cleanup | none-low | grep verification, build | in progress — dead modules and `YouTubeChatService` done; singleton lifecycle ownership outstanding |
 | 8 | Documentation and enforcement | low | full check | not started |
@@ -208,7 +208,16 @@ Extraction order is chosen so each step is independently verifiable and nothing
 downstream blocks.
 
 1. **Storage adapter.** Move `readStoredSetupValue` / `writeStoredSetupValue`
-   (`:133-156`) and the key registry (`:126-131`) to `services/` and `config/`.
+   and the key registry to `src/services/storage/setupStorage.ts`. **Done.** The
+   adapter owns every setup-page `localStorage` access and keeps the injectable
+   `StorageLike` parameter so tests can pass an in-memory store.
+   `config/setupTemplates.ts` had grown its own second copy of the same
+   availability and try/catch guards; it now uses the shared adapter. The
+   adapter is a dependency-free leaf, so the `config → services` edge it adds
+   cannot form a cycle, unlike the alternative of moving template persistence
+   into `services/`. Verified end to end in a browser: a typed channel is
+   written, survives a reload, appears in the generated overlay URL, and
+   removing it deletes the key instead of storing an empty string.
 2. **Bot profile lookup.** Move the Twitch and Kick fetchers (`:212-318`) into a
    `services/` module, removing the duplication with
    `src/components/setup/TwitchChannelField.tsx:189-204` and the repeated GQL
