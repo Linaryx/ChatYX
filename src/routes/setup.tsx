@@ -34,6 +34,13 @@ import {
   readStoredSetupValue,
   writeStoredSetupValue,
 } from "~/services/storage/setupStorage";
+import {
+  botFallbackName,
+  loadKickBotProfiles,
+  loadTwitchBotProfiles,
+  mergeUniqueLogins,
+  type BotProfile,
+} from "~/services/setup/botProfiles";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
@@ -116,12 +123,6 @@ const eventColorPalette: ReadonlyArray<{
 
 import "~/components/setup/SetupWorkspace.css";
 
-type BotProfile = {
-  login: string;
-  displayName: string;
-  avatarUrl: string;
-};
-
 type LocalFontData = {
   family: string;
   fullName?: string;
@@ -147,9 +148,6 @@ type LocalFontStatus =
   | { kind: "empty" }
   | { kind: "error" };
 
-const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
-const TWITCH_WEB_CLIENT_ID =
-  import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
 function detectLocalFontBrowser(): string | null {
   if (typeof window === "undefined" || typeof navigator === "undefined") {
     return null;
@@ -187,145 +185,6 @@ function normalizeLocalFonts(fonts: LocalFontData[]): LocalFontOption[] {
       styles: Array.from(styles).sort((a, b) => a.localeCompare(b)),
     }))
     .sort((a, b) => a.family.localeCompare(b.family));
-}
-
-function normalizeBotLogin(raw: string): string {
-  return raw.trim().replace(/^@/, "").toLowerCase();
-}
-
-function splitBotLogins(raw: string): string[] {
-  return raw
-    .split(/[\s,]+/)
-    .map(normalizeBotLogin)
-    .filter(Boolean);
-}
-
-function botFallbackName(login: string): string {
-  return login.slice(0, 1).toUpperCase();
-}
-
-async function fetchJsonWithTimeout(
-  url: string,
-  init: RequestInit,
-  timeoutMs: number,
-): Promise<unknown> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
-
-async function loadBotProfiles(logins: string[]): Promise<BotProfile[]> {
-  if (logins.length === 0) return [];
-
-  try {
-    const payload = await fetchJsonWithTimeout(
-      TWITCH_GQL_ENDPOINT,
-      {
-        method: "POST",
-        headers: {
-          "Client-ID": TWITCH_WEB_CLIENT_ID,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          operationName: "ChatYXSetupBotProfiles",
-          query: `
-            query ChatYXSetupBotProfiles($logins: [String!]!) {
-              users(logins: $logins) {
-                login
-                displayName
-                profileImageURL(width: 70)
-              }
-            }
-          `,
-          variables: { logins },
-        }),
-      },
-      3500,
-    );
-
-    const users = (payload as { data?: { users?: unknown[] } })?.data?.users;
-    if (!Array.isArray(users)) return [];
-
-    return users
-      .map((user) => {
-        if (!user || typeof user !== "object") return null;
-
-        const entry = user as {
-          login?: unknown;
-          displayName?: unknown;
-          profileImageURL?: unknown;
-        };
-        const login = String(entry.login || "").toLowerCase();
-        if (!login) return null;
-
-        return {
-          login,
-          displayName: String(entry.displayName || entry.login || login),
-          avatarUrl: String(entry.profileImageURL || ""),
-        };
-      })
-      .filter((profile): profile is BotProfile => profile !== null);
-  } catch {
-    return [];
-  }
-}
-
-async function loadKickBotProfiles(logins: string[]): Promise<BotProfile[]> {
-  const profiles = await Promise.all(
-    logins.map(async (login) => {
-      try {
-        const payload = await fetchJsonWithTimeout(
-          `https://kick.com/api/v2/channels/${encodeURIComponent(login)}/info`,
-          {},
-          3500,
-        );
-        const channel = payload as {
-          slug?: unknown;
-          user?: { username?: unknown; profile_pic?: unknown };
-        };
-        if (typeof channel.slug !== "string") return null;
-        const avatarUrl = channel.user?.profile_pic;
-
-        return {
-          login: channel.slug.toLowerCase(),
-          displayName:
-            typeof channel.user?.username === "string" && channel.user.username.trim()
-              ? channel.user.username.trim()
-              : channel.slug,
-          avatarUrl:
-            typeof avatarUrl === "string" && avatarUrl.startsWith("https://")
-              ? avatarUrl
-              : "",
-        };
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return profiles.filter((profile): profile is BotProfile => profile !== null);
-}
-
-function mergeUniqueLogins(current: string[], raw: string): string[] {
-  const nextLogins = splitBotLogins(raw);
-  if (nextLogins.length === 0) return current;
-
-  const seen = new Set(current);
-  const merged = [...current];
-
-  for (const login of nextLogins) {
-    if (seen.has(login)) continue;
-    seen.add(login);
-    merged.push(login);
-  }
-
-  return merged;
 }
 
 export default function ChatSetup() {
@@ -1194,7 +1053,7 @@ const [activeSection, setActiveSection] =
       requestedBotProfiles.add(login);
     }
 
-    void loadBotProfiles(missing).then((profiles) => {
+    void loadTwitchBotProfiles(missing).then((profiles) => {
       if (profiles.length === 0) return;
 
       setBotProfiles((current) => {

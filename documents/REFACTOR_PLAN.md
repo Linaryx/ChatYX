@@ -221,7 +221,19 @@ downstream blocks.
 2. **Bot profile lookup.** Move the Twitch and Kick fetchers (`:212-318`) into a
    `services/` module, removing the duplication with
    `src/components/setup/TwitchChannelField.tsx:189-204` and the repeated GQL
-   endpoint constant.
+   endpoint constant. **Done.** `src/services/setup/botProfiles.ts` owns the
+   logins helpers and both lookups;
+   `src/services/network/fetchJsonWithTimeout.ts` is the single timeout-and-JSON
+   helper that `TwitchChannelField` used to redeclare verbatim, and
+   `TWITCH_GQL_ENDPOINT` / `TWITCH_WEB_CLIENT_ID` moved to `config/twitch.ts`
+   where the summary field and the bot lookups now share them. The `@`-stripping
+   in `normalizeBotLogin` was deliberately preserved: `parseBotNames` in
+   `config/chatUrlParams` does not strip it, so the two are not interchangeable
+   and unifying them would change URL parsing. Verified in a browser: the Twitch
+   lookup resolves 35 display names and 33 avatars for the default list and the
+   Kick lookup resolves its entries; unknown logins degrade to a fallback chip
+   with no console error. The two chips still showing a letter fallback belong to
+   the *YouTube* bot list, which has never had a profile lookup.
 3. **Local font capability.** Move UA detection (`:158-175`) and font
    enumeration (`:1375-1398`) into a service that returns a typed status.
 4. **Value coercion.** Move `normalizeHexColor`, `toInt`, `toIntOrFalse`,

@@ -10,6 +10,15 @@ export const TWITCH_CONFIG = {
   TWITCH_OAUTH_URL: "https://id.twitch.tv/oauth2/token",
 };
 
+/**
+ * Public anonymous GQL endpoint and its well-known web client id. Shared by the
+ * setup bot-profile lookups and the channel summary field so the constants are
+ * not redeclared per caller.
+ */
+export const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
+export const TWITCH_WEB_CLIENT_ID =
+  import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
+
 export const FALLBACK_APIS = {
   badges_global: "https://api.ivr.fi/v2/twitch/badges/global",
   badges_channel: (channelName: string) =>

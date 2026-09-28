@@ -7,6 +7,8 @@ import {
   type JSX,
 } from "solid-js";
 import { networkClient } from "~/services/network/networkClient";
+import { TWITCH_GQL_ENDPOINT, TWITCH_WEB_CLIENT_ID } from "~/config/twitch";
+import { fetchJsonWithTimeout } from "~/services/network/fetchJsonWithTimeout";
 import { locale, t } from "~/i18n";
 import XIcon from "@hugeicons/core-free-icons/XIcon";
 import { PlatformGlyph } from "~/components/brand/PlatformGlyph";
@@ -59,9 +61,6 @@ type ChannelSuggestion = {
   avatarUrl: string;
 };
 
-const TWITCH_GQL_ENDPOINT = "https://gql.twitch.tv/gql";
-const TWITCH_WEB_CLIENT_ID =
-  import.meta.env.VITE_TWITCH_GQL_CLIENT_ID || "kimne78kx3ncx6brgo4mv6wki5h1ko";
 const SUMMARY_TIMEOUT_MS = 10000;
 const KICK_SEARCH_ENDPOINT = "https://ytwss.ruina.team/api/kick/channels";
 const KICK_SEARCH_DELAY_MS = 220;
@@ -189,36 +188,23 @@ function uniqueCount(values: Array<string | number | undefined | null>): number 
   return new Set(values.filter((value) => value !== undefined && value !== null)).size;
 }
 
-async function fetchJsonWithTimeout(
-  url: string,
-  init?: RequestInit,
-  timeoutMs = SUMMARY_TIMEOUT_MS,
-): Promise<unknown> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
-
 async function fetchTwitchGql(query: string, variables: Record<string, unknown>) {
-  const payload = await fetchJsonWithTimeout(TWITCH_GQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Client-ID": TWITCH_WEB_CLIENT_ID,
-      "Content-Type": "application/json",
+  const payload = await fetchJsonWithTimeout(
+    TWITCH_GQL_ENDPOINT,
+    {
+      method: "POST",
+      headers: {
+        "Client-ID": TWITCH_WEB_CLIENT_ID,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        operationName: "ChatYXSetupChannelSummary",
+        query,
+        variables,
+      }),
     },
-    body: JSON.stringify({
-      operationName: "ChatYXSetupChannelSummary",
-      query,
-      variables,
-    }),
-  });
+    SUMMARY_TIMEOUT_MS,
+  );
 
   return (payload as { data?: unknown })?.data;
 }
