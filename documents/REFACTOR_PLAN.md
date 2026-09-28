@@ -247,7 +247,14 @@ downstream blocks.
    Regular)`), and drops a whitespace-only family.
 4. **Value coercion.** Move `normalizeHexColor`, `toInt`, `toIntOrFalse`,
    `toSecondsOrFalse`, `toClampedInt`, `toFloat` (`:837-904`) into `config/`
-   next to the existing normalization in `chatUrlParams.ts`.
+   next to the existing normalization in `chatUrlParams.ts`. **Done.**
+   `src/config/formValues.ts` holds them at module scope instead of being
+   rebuilt inside the component on every render. `toIntOrFalse` and
+   `toSecondsOrFalse` were byte-identical, and `chatUrlParams` parses and
+   serializes its `intOrFalse` and `secondsOrFalse` kinds through the same code,
+   so both collapsed into `toPositiveIntOrFalse` with that premise pinned by a
+   test. New `tests/formValues.test.ts` also characterizes the form→URL→config
+   round trip, which is the contract step 5 must not break.
 5. **Config projection.** Move `buildConfig` (`:885-992`) and `buildChatUrl`
    (`:1012-1028`) into `config/`.
 6. **Preview synchronization.** Move the postMessage sender (`:627-632`), the

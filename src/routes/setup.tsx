@@ -46,6 +46,13 @@ import {
   loadLocalFontOptions,
   type LocalFontOption,
 } from "~/services/setup/localFonts";
+import {
+  normalizeHexColor,
+  toClampedInt,
+  toFloat,
+  toInt,
+  toPositiveIntOrFalse,
+} from "~/config/formValues";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
@@ -638,39 +645,6 @@ const [activeSection, setActiveSection] =
     if (bodyScrollRef) bodyScrollRef.scrollTop = viewScrollPositions[view];
   };
 
-  const normalizeHexColor = (raw: string, fallback: string, allowAlpha = false): string => {
-    const value = raw.trim();
-    const withHash = value.startsWith("#") ? value : `#${value}`;
-    const pattern = allowAlpha ? /^#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?$/ : /^#[0-9a-fA-F]{6}$/;
-    return pattern.test(withHash) ? withHash : fallback;
-  };
-
-  const toIntOrFalse = (raw: string): number | false => {
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) && n > 0 ? n : false;
-  };
-
-  const toSecondsOrFalse = (raw: string): number | false => {
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) && n > 0 ? n : false;
-  };
-
-  const toInt = (raw: string, fallback: number): number => {
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) ? n : fallback;
-  };
-
-  const toClampedInt = (
-    raw: string,
-    fallback: number,
-    min: number,
-    max: number,
-  ): number => {
-    const n = Number.parseInt(raw, 10);
-    const value = Number.isFinite(n) ? n : fallback;
-    return Math.min(Math.max(value, min), max);
-  };
-
   const previewFrameStyle = createMemo(() => {
     const radius = toClampedInt(
       overlayBackgroundRadius(),
@@ -680,11 +654,6 @@ const [activeSection, setActiveSection] =
     );
     return `${previewStageStyle()} border-radius: ${radius}px;`;
   });
-
-  const toFloat = (raw: string, fallback: number): number => {
-    const n = Number.parseFloat(raw);
-    return Number.isFinite(n) ? n : fallback;
-  };
 
   const buildConfig = (selectedChannel: string): ChatConfig => ({
     ...DEFAULT_CHAT_CONFIG,
@@ -707,9 +676,9 @@ const [activeSection, setActiveSection] =
       1000,
     ),
     fontCustom: fontCustom(),
-    shadow: toIntOrFalse(shadow()),
-    stroke: toIntOrFalse(stroke()),
-    fade: toSecondsOrFalse(fade()),
+    shadow: toPositiveIntOrFalse(shadow()),
+    stroke: toPositiveIntOrFalse(stroke()),
+    fade: toPositiveIntOrFalse(fade()),
     animation: animation(),
     messageSpeed: toClampedInt(
       messageSpeed(),
