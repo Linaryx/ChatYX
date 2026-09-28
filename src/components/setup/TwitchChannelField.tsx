@@ -8,6 +8,9 @@ import {
 } from "solid-js";
 import { networkClient } from "~/services/network/networkClient";
 import { locale, t } from "~/i18n";
+import XIcon from "@hugeicons/core-free-icons/XIcon";
+import { PlatformGlyph } from "~/components/brand/PlatformGlyph";
+import { Icon } from "~/components/ui/icon";
 import "./TwitchChannelField.css";
 
 type TwitchChannelFieldProps = {
@@ -452,19 +455,9 @@ function metricIcon(type: Metric["icon"]): JSX.Element {
 
   switch (type) {
     case "twitch":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0 1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
-        </svg>
-      );
+      return <PlatformGlyph name="twitch" />;
     case "sevenTv":
-      return (
-        <svg viewBox="0 0 28 20" aria-hidden="true">
-          <path d="M20.7465 5.48825 21.9799 3.33745 22.646 2.20024 21.4125 0.0494437V0H14.8259L17.2928 4.3016 17.9836 5.48825H20.7465Z" />
-          <path d="M7.15395 19.9258 14.5546 7.02104 15.4673 5.43884 13.0004 1.13724 12.3097 0.0247596H1.8995L0.666057 2.17556 0 3.31276 1.23344 5.46356V5.51301H9.12745L2.96025 16.267 2.09685 17.7998 3.33029 19.9506V20H7.15395" />
-          <path d="M17.4655 19.9257H21.2398L26.1736 11.3225 27.037 9.83924 25.8036 7.68844V7.63899H22.0046L19.5377 11.9406 19.365 12.262 16.8981 7.96038 16.7255 7.63899 14.2586 11.9406 13.5679 13.1272 17.2682 19.5796 17.4655 19.9257Z" />
-        </svg>
-      );
+      return <PlatformGlyph name="seven-tv" />;
     case "bttv":
     case "ffz":
     case "vip":
@@ -724,19 +717,7 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
             onClick={clearChannel}
             aria-label={t("setup.channel.remove", { platform: props.platformName ?? "Twitch" })}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
+            <Icon icon={XIcon} size={16} aria-hidden="true" />
           </button>
         </div>
       ) : (

@@ -33,13 +33,13 @@
     "vite-plugin-solid": "^2.11.14"
   },
   "dependencies": {
+    "@hugeicons/core-free-icons": "^4.3.5",
     "@kobalte/core": "^0.13.13",
     "@solid-primitives/i18n": "^2.2.1",
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^1.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-solid": "^1.41.0",
     "solid-js": "^1.9.15",
     "tailwind-merge": "^3.6.0"
   },

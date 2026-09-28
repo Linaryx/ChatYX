@@ -9,6 +9,7 @@ import {
   type JSX,
 } from "solid-js";
 import { Title } from "@solidjs/meta";
+import { PlatformGlyph } from "~/components/brand/PlatformGlyph";
 import { ColorPickerField } from "~/components/ColorPickerField";
 import { LanguageSwitcher } from "~/components/setup/LanguageSwitcher";
 import { locale, t } from "~/i18n";
@@ -32,6 +33,7 @@ import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
 import { TwitchChannelField } from "~/components/setup/TwitchChannelField";
 import { Button } from "~/components/ui/button";
+import { Icon } from "~/components/ui/icon";
 import { Input } from "~/components/ui/input";
 import { Slider } from "~/components/ui/slider";
 import {
@@ -62,9 +64,30 @@ import {
 } from "~/services/chat/preview";
 import { cn } from "~/lib/utils";
 import { isSetupSearchMatch } from "~/utils/setupSearch";
-import Monitor from "lucide-solid/icons/monitor";
-import Pause from "lucide-solid/icons/pause";
-import Play from "lucide-solid/icons/play";
+import Alert02Icon from "@hugeicons/core-free-icons/Alert02Icon";
+import ArrowLeft01Icon from "@hugeicons/core-free-icons/ArrowLeft01Icon";
+import ArrowRight01Icon from "@hugeicons/core-free-icons/ArrowRight01Icon";
+import ArrowUpRightStackIcon from "@hugeicons/core-free-icons/ArrowUpRightStackIcon";
+import Blockchain05Icon from "@hugeicons/core-free-icons/Blockchain05Icon";
+import BotMessageSquareIcon from "@hugeicons/core-free-icons/BotMessageSquareIcon";
+import ColorsIcon from "@hugeicons/core-free-icons/ColorsIcon";
+import Copy01Icon from "@hugeicons/core-free-icons/Copy01Icon";
+import DashboardSquare03Icon from "@hugeicons/core-free-icons/DashboardSquare03Icon";
+import GithubIcon from "@hugeicons/core-free-icons/GithubIcon";
+import LinkSquare01Icon from "@hugeicons/core-free-icons/LinkSquare01Icon";
+import LiveStreaming02Icon from "@hugeicons/core-free-icons/LiveStreaming02Icon";
+import MessageSquareMoreIcon from "@hugeicons/core-free-icons/MessageSquareMoreIcon";
+import MonitorIcon from "@hugeicons/core-free-icons/MonitorIcon";
+import PauseIcon from "@hugeicons/core-free-icons/PauseIcon";
+import PlayIcon from "@hugeicons/core-free-icons/PlayIcon";
+import RubberDuckIcon from "@hugeicons/core-free-icons/RubberDuckIcon";
+import SearchingIcon from "@hugeicons/core-free-icons/SearchingIcon";
+import SlidersHorizontalIcon from "@hugeicons/core-free-icons/SlidersHorizontalIcon";
+import TestTube01Icon from "@hugeicons/core-free-icons/TestTube01Icon";
+import TextIcon from "@hugeicons/core-free-icons/TextIcon";
+import TrashIcon from "@hugeicons/core-free-icons/TrashIcon";
+import VoiceCommentIcon from "@hugeicons/core-free-icons/VoiceCommentIcon";
+import XIcon from "@hugeicons/core-free-icons/XIcon";
 
 const eventColorPalette: ReadonlyArray<{
   readonly field: EventColorField;
@@ -85,8 +108,6 @@ const eventColorPalette: ReadonlyArray<{
   { field: "eventColorAnnOrange", label: () => t("setup.eventColorAnnOrange") },
 ];
 
-import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
-import X from "lucide-solid/icons/x";
 import "~/components/setup/SetupWorkspace.css";
 
 type BotProfile = {
@@ -2078,7 +2099,7 @@ const [activeSection, setActiveSection] =
           onClick={() => remove(login)}
           aria-label={`${ariaLabel()}: ${displayName()}`}
         >
-          <X size={16} aria-hidden="true" />
+          <Icon icon={XIcon} size={16} aria-hidden="true" />
         </button>
       </div>
     );
@@ -2107,7 +2128,7 @@ const [activeSection, setActiveSection] =
                 target="_blank"
                 rel="noreferrer"
               >
-                <span class="hgi-stroke hgi-alert-02" aria-hidden="true" />
+                <Icon icon={Alert02Icon} aria-hidden="true" />
                 {t("toolbar.reportIssue")}
               </a>
               <a
@@ -2117,7 +2138,7 @@ const [activeSection, setActiveSection] =
                 rel="noreferrer"
                 aria-label={t("toolbar.github")}
               >
-                <span class="hgi-stroke hgi-github" aria-hidden="true" />
+                <Icon icon={GithubIcon} aria-hidden="true" />
               </a>
               <a
                 class="setup-toolbar-icon-link"
@@ -2131,8 +2152,8 @@ const [activeSection, setActiveSection] =
             </div>
           </header>
           <div class="setup-view-switch" role="group" aria-label={t("common.workspace")}>
-            <button type="button" aria-pressed={mobileView() === "settings"} aria-controls="setup-settings" onClick={() => selectMobileView("settings")}><SlidersHorizontal size={16} aria-hidden="true" />{t("common.settings")}</button>
-            <button type="button" aria-pressed={mobileView() === "preview"} aria-controls="setup-preview" onClick={() => selectMobileView("preview")}><Monitor size={16} aria-hidden="true" />{t("common.preview")}</button>
+            <button type="button" aria-pressed={mobileView() === "settings"} aria-controls="setup-settings" onClick={() => selectMobileView("settings")}><Icon icon={SlidersHorizontalIcon} size={16} aria-hidden="true" />{t("common.settings")}</button>
+            <button type="button" aria-pressed={mobileView() === "preview"} aria-controls="setup-preview" onClick={() => selectMobileView("preview")}><Icon icon={MonitorIcon} size={16} aria-hidden="true" />{t("common.preview")}</button>
           </div>
           <main class="setup-body setup-pane-scroll" ref={bodyScrollRef}>
             <div class="setup-source-row">
@@ -2140,18 +2161,20 @@ const [activeSection, setActiveSection] =
               <div class="setup-connection-intro"><h2>{t("setup.connection")}</h2><p>{t("setup.connectionHint")}</p></div>
               <div class="setup-channel-field">
                 <span class="setup-field-label setup-platform-label">
-                  <svg class="setup-platform-logo setup-platform-logo--twitch" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0 1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
-                  </svg>
+                  <PlatformGlyph
+                    name="twitch"
+                    class="setup-platform-logo setup-platform-logo--twitch"
+                  />
                   Twitch
                 </span>
                 <TwitchChannelField value={channel()} onChange={setChannel} />
               </div>
               <div class="setup-channel-field">
                 <label class="setup-field-label setup-platform-label" for="setup-youtube">
-                  <svg class="setup-platform-logo setup-platform-logo--youtube" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M23.5 6.19a3.02 3.02 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.51A3.02 3.02 0 0 0 .5 6.19C0 8.07 0 12 0 12s0 3.93.5 5.81a3.02 3.02 0 0 0 2.123 2.136c1.872.509 9.377.509 9.377.509s7.505 0 9.377-.51a3.02 3.02 0 0 0 2.122-2.135C24 15.93 24 12 24 12s0-3.93-.5-5.81zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                  </svg>
+                  <PlatformGlyph
+                    name="youtube"
+                    class="setup-platform-logo setup-platform-logo--youtube"
+                  />
                   YouTube <span>{t("setup.optional")}</span>
                 </label>
                 <TwitchChannelField
@@ -2196,13 +2219,13 @@ const [activeSection, setActiveSection] =
                       copyStatus() === "success" && "setup-url-copy-button--success",
                     )}
                   >
-                    <span class="hgi-stroke hgi-copy-01 setup-export-icon" aria-hidden="true" />
+                    <Icon icon={Copy01Icon} class="setup-export-icon" aria-hidden="true" />
                     {copyStatus() === "success" ? t("setup.copied") : t("setup.copy")}
                   </Button>
-                  <Show when={generatedUrl()}><a class="setup-export-action setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label={t("setup.openOverlayNewTab")}><span class="hgi-stroke hgi-link-square-01 setup-export-icon" aria-hidden="true" /><span>{t("setup.open")}</span></a></Show>
+                  <Show when={generatedUrl()}><a class="setup-export-action setup-open-link" href={generatedUrl()} target="_blank" rel="noreferrer" aria-label={t("setup.openOverlayNewTab")}><Icon icon={LinkSquare01Icon} class="setup-export-icon" aria-hidden="true" /><span>{t("setup.open")}</span></a></Show>
                 </div>
                 <Button type="button" variant="outline" class="setup-export-action setup-reset-button" onClick={resetSettings}>
-                  <span class="hgi-stroke hgi-trash setup-export-icon" aria-hidden="true" />
+                  <Icon icon={TrashIcon} class="setup-export-icon" aria-hidden="true" />
                   {resetPending() ? t("setup.confirm") : t("setup.reset")}
                 </Button>
               </div>
@@ -2232,10 +2255,10 @@ const [activeSection, setActiveSection] =
                     onMouseDown={(e) => e.preventDefault()}
                   >
                     <Show when={!setupSearch()}>
-                      <span class="hgi-stroke hgi-searching" aria-hidden="true" />
+                      <Icon icon={SearchingIcon} aria-hidden="true" />
                     </Show>
                     <Show when={setupSearch()}>
-                      <span class="hgi-stroke hgi-x text-sm" aria-hidden="true" />
+                      <Icon icon={XIcon} class="text-sm" aria-hidden="true" />
                     </Show>
                   </button>
                   <label for="setup-settings-search" class="sr-only">{t("setup.searchSettings")}</label>
@@ -2250,8 +2273,8 @@ const [activeSection, setActiveSection] =
                   <Show when={setupSearch().length > 0}>
                     <div class="ml-auto flex shrink-0 items-center gap-1">
                       <span class="whitespace-nowrap text-xs tabular-nums text-muted-foreground" aria-live="polite">{setupSearchCounter()}</span>
-                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><span class="hgi-stroke hgi-arrow-left-01" aria-hidden="true" /></Button>
-                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><span class="hgi-stroke hgi-arrow-right-01" aria-hidden="true" /></Button>
+                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><Icon icon={ArrowLeft01Icon} aria-hidden="true" /></Button>
+                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><Icon icon={ArrowRight01Icon} aria-hidden="true" /></Button>
                     </div>
                   </Show>
                 </div>
@@ -2278,7 +2301,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-appearance"
                 title={t("setup.appearanceTitle")}
                 description={t("setup.appearanceDescription")}
-                icon="hgi-text"
+                icon={TextIcon}
                 hidden={activeSection() !== "appearance"}
               >
                 <div class="setup-field-group"><h3>{t("setup.messageFont")}</h3><ControlRows rows={appearanceRows.slice(0, 3)} /></div>
@@ -2289,7 +2312,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-styling"
                 title={t("setup.stylingTitle")}
                 description={t("setup.stylingDescription")}
-                icon="hgi-colors"
+                icon={ColorsIcon}
                 hidden={activeSection() !== "styling"}
               >
                 <div class="setup-field-group"><h3>{t("setup.textReadability")}</h3><ControlRows rows={stylingRows.slice(0, 3)} /></div>
@@ -2336,7 +2359,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-behavior"
                 title={t("setup.behaviorTitle")}
                 description={t("setup.behaviorDescription")}
-                icon="hgi-arrow-up-right-stack"
+                icon={ArrowUpRightStackIcon}
                 hidden={activeSection() !== "behavior"}
               >
                 <div class="setup-field-group"><h3>{t("setup.animationAndLinks")}</h3><ControlRows rows={behaviorRows} /><Show when={linkMode() === "highlight"}><ControlRows rows={[linkColorRow]} /></Show></div>
@@ -2348,7 +2371,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-content"
                 title={t("setup.contentTitle")}
                 description={t("setup.contentDescription")}
-                icon="hgi-dashboard-square-03"
+                icon={DashboardSquare03Icon}
                 hidden={activeSection() !== "content"}
               >
                 <div class="setup-field-group"><h3>{t("setup.messagesAndEvents")}</h3><ToggleRows rows={contentToggles} /></div>
@@ -2376,7 +2399,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-bots"
                 title={t("setup.botsTitle")}
                 description={t("setup.botsDescription")}
-                icon="hgi-bot-message-square"
+                icon={BotMessageSquareIcon}
                 hidden={activeSection() !== "bots"}
               >
                 <div class="setup-bot-row flex flex-col gap-2">
@@ -2530,7 +2553,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-tts"
                 title={t("setup.ttsTitle")}
                 description={t("setup.ttsDescription")}
-                icon="hgi-voice-comment"
+                icon={VoiceCommentIcon}
                 hidden={activeSection() !== "tts"}
               >
                 <ToggleRows rows={ttsToggles} />
@@ -2541,7 +2564,7 @@ const [activeSection, setActiveSection] =
                 id="setup-section-rte"
                 title={t("setup.rteTitle")}
                 description={t("setup.rteDescription")}
-                icon="hgi-blockchain-05"
+                icon={Blockchain05Icon}
                 hidden={activeSection() !== "rte"}
               >
                 <ToggleRows rows={rteToggles} />
@@ -2645,7 +2668,7 @@ const [activeSection, setActiveSection] =
                                   class={cn("setup-preview-selector-option", previewMode() === "live" && "setup-preview-selector-option--selected")}
                                   onClick={() => setPreviewMode("live")}
                                 >
-                                  <span class="hgi-stroke hgi-live-streaming-02 setup-preview-selector-icon" aria-hidden="true" />
+                                  <Icon icon={LiveStreaming02Icon} class="setup-preview-selector-icon" aria-hidden="true" />
                                    <span>{t("setup.channelChat")}</span>
                                 </button>
                                 <Show when={!isExternalOnly()}>
@@ -2657,7 +2680,7 @@ const [activeSection, setActiveSection] =
                                     class={cn("setup-preview-selector-option", previewMode() === "demo" && "setup-preview-selector-option--selected")}
                                     onClick={() => setPreviewMode("demo")}
                                   >
-                                    <span class="hgi-stroke hgi-test-tube-01 setup-preview-selector-icon" aria-hidden="true" />
+                                    <Icon icon={TestTube01Icon} class="setup-preview-selector-icon" aria-hidden="true" />
                                      <span>{t("setup.demo")}</span>
                                   </button>
                                 </Show>
@@ -2689,7 +2712,7 @@ const [activeSection, setActiveSection] =
                                     class={cn("setup-preview-selector-option", previewDemoKind() === "pasta" && "setup-preview-selector-option--selected")}
                                     onClick={() => setPreviewDemoKind("pasta")}
                                   >
-                                    <span class="hgi-stroke hgi-message-square-more setup-preview-selector-icon" aria-hidden="true" />
+                                    <Icon icon={MessageSquareMoreIcon} class="setup-preview-selector-icon" aria-hidden="true" />
                                      <span>{t("setup.messages")}</span>
                                   </button>
                                   <button
@@ -2701,7 +2724,7 @@ const [activeSection, setActiveSection] =
                                     class={cn("setup-preview-selector-option", previewDemoKind() === "emote" && "setup-preview-selector-option--selected")}
                                     onClick={() => setPreviewDemoKind("emote")}
                                   >
-                                    <span class="hgi-stroke hgi-rubber-duck setup-preview-selector-icon" aria-hidden="true" />
+                                    <Icon icon={RubberDuckIcon} class="setup-preview-selector-icon" aria-hidden="true" />
                                      <span>{t("setup.emotes")}</span>
                                   </button>
                                 </div>
@@ -2744,8 +2767,8 @@ const [activeSection, setActiveSection] =
                           onClick={() => setDemoPaused((value) => !value)}
                           aria-pressed={demoPaused()}
                         >
-                          <Show when={demoPaused()} fallback={<Pause size={14} aria-hidden="true" />}>
-                            <Play size={14} aria-hidden="true" />
+                          <Show when={demoPaused()} fallback={<Icon icon={PauseIcon} size={14} aria-hidden="true" />}>
+                            <Icon icon={PlayIcon} size={14} aria-hidden="true" />
                           </Show>
                            {demoPaused() ? t("setup.resume") : t("setup.pause")}
                         </button>

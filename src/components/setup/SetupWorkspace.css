@@ -186,10 +186,6 @@
   height: 1rem;
 }
 
-.setup-root :is(.hgi-stroke, svg) {
-  font-weight: normal;
-}
-
 .setup-report-issue:hover,
 .setup-toolbar-icon-link:hover {
   background: hsl(var(--muted) / 0.6);
