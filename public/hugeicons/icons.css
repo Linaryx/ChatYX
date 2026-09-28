@@ -9,6 +9,7 @@
 .hgi-stroke {
   font-family: "hugeicons-stroke-rounded" !important;
   font-style: normal;
+  font-weight: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   position: relative;
