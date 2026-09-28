@@ -1,4 +1,11 @@
-// Layout utilities for chat display
+/**
+ * Layout runtime for the chat overlay.
+ *
+ * Owns the container's layout stylesheet, its layout classes and its scroll
+ * behaviour. It is chat overlay infrastructure rather than a general helper:
+ * the stylesheet it publishes is written against `#chat_container` and
+ * `.chat_line`, and `ChatPresentationService` is its only owner.
+ */
 
 export interface LayoutOptions {
   horizontal: boolean;
@@ -158,7 +165,9 @@ export function isScrolledToEnd(
 }
 
 /**
- * Layout manager class
+ * Owns one overlay container's layout: the published stylesheet, the layout
+ * classes and the scroll behaviour, including the smooth follow that keeps
+ * velocity continuous while messages arrive.
  */
 export class LayoutManager {
   private container: HTMLElement;

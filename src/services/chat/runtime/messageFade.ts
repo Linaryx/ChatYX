@@ -1,4 +1,9 @@
-// Message fade utilities
+/**
+ * Message fade runtime for the chat overlay.
+ *
+ * Owns the fade timers and the `#chat-fade` stylesheet; `ChatPresentationService`
+ * is its only owner.
+ */
 
 export interface FadeOptions {
   enabled: boolean;

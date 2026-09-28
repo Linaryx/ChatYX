@@ -4,7 +4,7 @@ import {
   getScrollPosition,
   isScrolledToEnd,
   scrollToLatest,
-} from "../src/utils/ui/layoutUtils";
+} from "../src/services/chat/runtime/layoutManager";
 
 function createContainer(
   values: Partial<HTMLElement> = {},

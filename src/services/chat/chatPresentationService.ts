@@ -11,13 +11,13 @@ import { BotFilterService } from "../../utils/botFilter";
 import {
   MessageFadeManager,
   DEFAULT_FADE_OPTIONS,
-} from "../../utils/ui/fadeUtils";
-import type { FadeOptions } from "../../utils/ui/fadeUtils";
+} from "./runtime/messageFade";
+import type { FadeOptions } from "./runtime/messageFade";
 import {
   LayoutManager,
   DEFAULT_LAYOUT_OPTIONS,
-} from "../../utils/ui/layoutUtils";
-import type { LayoutOptions } from "../../utils/ui/layoutUtils";
+} from "./runtime/layoutManager";
+import type { LayoutOptions } from "./runtime/layoutManager";
 import {
   DEFAULT_ANIMATION_OPTIONS,
   getMessageEntryAnimationDuration,

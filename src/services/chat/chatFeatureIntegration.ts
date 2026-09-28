@@ -13,7 +13,6 @@ import { chatterinoBadgeService } from "../badges/chatterinoBadgeService";
 import { chatisBadgeService } from "../badges/chatisBadgeService";
 import { sevenTVEventApi } from "./seven-tv/eventApi";
 
-import { layoutManager } from "../../utils/ui/layoutManager";
 import type { SevenTVEventDispatch } from "./seven-tv/eventApi";
 
 const SEVENTV_RETRY_DELAY_MS = 5 * 60 * 1000;
@@ -43,10 +42,6 @@ export interface ChatFeatureIntegrationOptions {
 
   enableBits: boolean;
 
-  // Layout options
-  reverseLineOrder: boolean;
-  singleChatter?: string;
-
   // 7TV EventAPI
   enable7TVEventAPI: boolean;
 }
@@ -69,7 +64,6 @@ export class ChatFeatureIntegrationService {
       showChatterinoBadges: true,
       showChatisBadges: true,
       enableBits: true,
-      reverseLineOrder: false,
       enable7TVEventAPI: true,
       ...options,
     };
@@ -125,11 +119,6 @@ export class ChatFeatureIntegrationService {
         });
         if (!this.isCurrentGeneration(generation)) return;
       }
-
-      layoutManager.setOptions({
-        reverseLineOrder: this.options.reverseLineOrder,
-        singleChatter: this.options.singleChatter,
-      });
 
       this.initialized = true;
       log.info(
@@ -212,11 +201,6 @@ export class ChatFeatureIntegrationService {
 
   setOptions(options: Partial<ChatFeatureIntegrationOptions>): void {
     this.options = { ...this.options, ...options };
-
-    layoutManager.setOptions({
-      reverseLineOrder: this.options.reverseLineOrder,
-      singleChatter: this.options.singleChatter,
-    });
   }
 
   destroy(): void {
