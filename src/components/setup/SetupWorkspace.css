@@ -502,17 +502,40 @@
   color: hsl(var(--foreground));
 }
 
-.setup-nav-item--search-match {
-  outline: 1px solid #fff;
-  outline-offset: -1px;
+/* Matched section — centered vertical line in the accent color (no outline) */
+.setup-nav-item--search-match::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  translate: 0 -50%;
+  width: 3px;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: #ffd800;
 }
 
+/* Matched setting rows — thick vertical bar on the left instead of an outline */
 .setup-control-row.setup-search-match,
-.setup-switch-row.setup-search-match,
-.setup-field-group:has(> h3.setup-search-match) {
-  border-radius: 0.5rem;
-  outline: 1px solid #5db134;
-  outline-offset: 2px;
+.setup-switch-row.setup-search-match {
+  position: relative;
+}
+
+.setup-control-row.setup-search-match::before,
+.setup-switch-row.setup-search-match::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--setup-space-3));
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 999px;
+  background: #ffd800;
+}
+
+/* Keep a little breathing room when a result scrolls to the top */
+.setup-search-match {
+  scroll-margin-top: var(--setup-space-3);
 }
 
 .setup-sidebar-note {
