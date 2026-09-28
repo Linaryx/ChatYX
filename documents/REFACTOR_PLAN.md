@@ -25,7 +25,7 @@ series) following Conventional Commits.
 | 3 | Icon normalization | low | 1:1 glyph mapping, visual check | **done** |
 | 4 | UI primitives | low | visual check, existing tests | **done** |
 | 5 | Setup decomposition | high | setup/URL/import test suites | not started |
-| 6 | Chat presentation cleanup | high | render and emote test suites | not started |
+| 6 | Chat presentation cleanup | high | render and emote test suites | in progress — duplication removed; pipeline split and layer moves outstanding |
 | 7 | Dependency and dead-code cleanup | none-low | grep verification, build | in progress — dead modules and `YouTubeChatService` done; singleton lifecycle ownership outstanding |
 | 8 | Documentation and enforcement | low | full check | not started |
 
@@ -250,10 +250,16 @@ round-trips a config through export, import and preview unchanged.
 
 1. Remove the verified duplication: the second `codePointToCodeUnit` definition
    in `renderMessageContent.ts:213-225` and the byte-identical `escapeAttr`
-   against `emoteModifiers/html.ts:4-11`.
+   against `emoteModifiers/html.ts:4-11`. **Done.** `escapeAttr` now has a single
+   definition exported from `emoteModifiers/html.ts`, and
+   `codePointToCodeUnit` is hoisted to module scope. Protected by
+   `tests/renderMessageContent.test.ts` and `tests/messageTokenSnapshot.test.ts`,
+   both unchanged and passing.
 2. Split `renderMessageContent.ts` into tokenize, assemble and DOM-bind stages,
    injecting URL resolution rather than importing the network client, so the
-   renderer becomes testable without infrastructure.
+   renderer becomes testable without infrastructure. **Outstanding** — this is
+   the risky half, because emotes, cheers, mentions, 7TV paint and gigantified
+   lines all flow through this file.
 3. Move `LayoutManager` (`utils/ui/layoutUtils.ts:164`) and the fade manager
    (`utils/ui/fadeUtils.ts:105-186`) into the chat-overlay layer that owns their
    lifecycle, and resolve the two-classes-one-name problem.

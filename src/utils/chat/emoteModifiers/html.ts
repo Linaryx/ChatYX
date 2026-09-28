@@ -1,7 +1,7 @@
 import type { EmoteModifierEffect, EmoteSizeBox } from "./types";
 import { buildModifierStyleVars } from "./layout";
 
-function escapeAttr(value: string): string {
+export function escapeAttr(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

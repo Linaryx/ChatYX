@@ -15,6 +15,7 @@ import {
   attachZeroWidthOverlay,
   bindWideEmoteSizes,
   buildGigantifiedLine,
+  escapeAttr,
   getEmoteModifier,
   resolveEmoteModifiers,
   wrapEmoteModifiers,
@@ -29,13 +30,19 @@ export function escapeHtml(message: string): string {
     .replace(/(>)(?!\()/g, "&gt;");
 }
 
-function escapeAttr(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+/**
+ * Twitch reports emote and GIF ranges in Unicode code points, while string
+ * indices are UTF-16 code units.
+ */
+function codePointToCodeUnit(text: string, codePointIndex: number): number {
+  let currentCodePoint = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (currentCodePoint === codePointIndex) return i;
+    const charCode = text.charCodeAt(i);
+    if (charCode >= 0xd800 && charCode <= 0xdbff) i += 1;
+    currentCodePoint += 1;
+  }
+  return text.length;
 }
 
 function sanitizeImageUrl(value: string): string {
@@ -181,16 +188,6 @@ export function renderMessageWithEmotes(
   const replacements: Record<string, Replacement> = {};
 
   if (config.showGifs && message.gifs) {
-    const codePointToCodeUnit = (text: string, codePointIndex: number): number => {
-      let currentCodePoint = 0;
-      for (let i = 0; i < text.length; i++) {
-        if (currentCodePoint === codePointIndex) return i;
-        const charCode = text.charCodeAt(i);
-        if (charCode >= 0xd800 && charCode <= 0xdbff) i += 1;
-        currentCodePoint += 1;
-      }
-      return text.length;
-    };
     const gifScale = Number.isFinite(config.gifScale)
       ? Math.min(Math.max(config.gifScale, 0.25), 3)
       : 1;
@@ -210,20 +207,6 @@ export function renderMessageWithEmotes(
   }
 
   if (message.emotes && typeof message.emotes === "object") {
-    const codePointToCodeUnit = (
-      text: string,
-      codePointIndex: number,
-    ): number => {
-      let currentCodePoint = 0;
-      for (let i = 0; i < text.length; i++) {
-        if (currentCodePoint === codePointIndex) return i;
-        const charCode = text.charCodeAt(i);
-        if (charCode >= 0xd800 && charCode <= 0xdbff) i += 1;
-        currentCodePoint += 1;
-      }
-      return text.length;
-    };
-
     Object.entries(message.emotes as Record<string, string[]>).forEach(
       ([emoteId, positions]) => {
         if (!Array.isArray(positions)) return;
