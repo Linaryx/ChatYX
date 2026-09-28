@@ -1,4 +1,11 @@
-@import "tailwindcss";
+/* Scan only the app sources: automatic project-wide detection also walked
+   .codegraph (~10 MB) and public/ (~3 MB), which roughly doubled Tailwind's
+   CSS generation time and picked up false positives (e.g. a `.contents`
+   utility from indexed text). Add another `@source` here if templates ever
+   live outside src/ or index.html. */
+@import "tailwindcss" source(none);
+@source "../src";
+@source "../index.html";
 
 /* solidcn-tailwind-base:start */
 @theme inline {
