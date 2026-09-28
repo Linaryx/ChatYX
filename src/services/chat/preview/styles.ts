@@ -9,7 +9,7 @@ import {
   hasMessageEntryAnimation,
   injectAnimationStyles,
 } from "~/utils/ui/animationUtils";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 
 const PREVIEW_STYLE_IDS = [
   "chat-size-styles",

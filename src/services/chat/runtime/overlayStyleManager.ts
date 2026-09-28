@@ -1,4 +1,4 @@
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import {
   generateShadowStyles,
   generateSizeStyles,

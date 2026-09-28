@@ -1,4 +1,4 @@
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import type { PreviewDemoKind } from "./messages";
 
 export const CHAT_PREVIEW_CONFIG_MESSAGE = "chatyx:preview-config";

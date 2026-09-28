@@ -7,7 +7,7 @@ import {
   Switch,
   type JSX,
 } from "solid-js";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import { hasMultipleChatSources, normalizeFontWeight } from "~/config/chatUrlParams";
 import {
   sevenTVCosmeticsService,

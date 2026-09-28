@@ -4,7 +4,7 @@ import {
   type TwitchPredictionEvent,
   type TwitchPredictionsClient,
 } from "~/services/predictions/twitchPredictions";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 
 export type PredictionControllerHooks = {
   onPredictionChange: (prediction: TwitchPredictionEvent | null) => void;

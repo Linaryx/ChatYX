@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import type { TwitchMessage, ChatPresentationService } from "~/services/chat";
 import { renderMessageWithEmotes } from "./renderMessageContent";
 

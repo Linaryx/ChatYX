@@ -18,7 +18,7 @@ import {
   hasMessageEntryAnimation,
 } from "~/utils/ui/animationUtils";
 import { log, LOG_CATEGORIES } from "~/utils/logger";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import {
   ChatCommandFeedback,
   CHATYX_DEVELOPER_CHANNEL,

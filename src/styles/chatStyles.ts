@@ -1,4 +1,4 @@
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import { normalizeFontWeight } from "~/config/chatUrlParams";
 
 // Size presets (v2 parity)

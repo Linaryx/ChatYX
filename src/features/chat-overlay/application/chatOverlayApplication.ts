@@ -3,7 +3,7 @@ import {
   type PreviewDemoKind,
 } from "~/services/chat/preview";
 import type { TwitchPredictionEvent } from "~/services/predictions/twitchPredictions";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import type { PredictionControllerHooks } from "./predictionController";
 import type { ChatRuntimeHooks } from "./runtimeHooks";
 import {

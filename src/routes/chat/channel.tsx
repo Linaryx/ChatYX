@@ -17,7 +17,7 @@ import {
 } from "~/services/chat";
 import type { TwitchPredictionEvent } from "~/services/predictions/twitchPredictions";
 import "~/styles/chat.css";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import type { PreviewDemoKind } from "~/services/chat/preview";
 import { DEFAULT_ANIMATION_OPTIONS } from "~/utils/ui/animationUtils";
 import {

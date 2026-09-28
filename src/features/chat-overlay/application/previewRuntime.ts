@@ -21,7 +21,7 @@ import {
   hasMessageEntryAnimation,
   messageSpeedToIntervalMs,
 } from "~/utils/ui/animationUtils";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 import type { ChatRuntimeHooks } from "./runtimeHooks";
 
 const CHANNEL_RESOLUTION_TIMEOUT_MS = 8_000;

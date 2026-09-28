@@ -1,7 +1,7 @@
 import type { ChatPresentationService } from "~/services/chat/chatPresentationService";
 import type { MessageUpdater } from "~/services/chat/runtime/messageQueueManager";
 import type { ChannelIdentity } from "~/services/chat/runtime/channelIdentityResolver";
-import type { ChatConfig } from "~/utils/chat";
+import type { ChatConfig } from "~/config/chatUrlParams";
 
 export type ChatCommandStatus = {
   text: string;
