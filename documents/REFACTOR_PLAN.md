@@ -24,7 +24,7 @@ series) following Conventional Commits.
 | 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | **done** |
 | 3 | Icon normalization | low | 1:1 glyph mapping, visual check | **done** |
 | 4 | UI primitives | low | visual check, existing tests | **done** |
-| 5 | Setup decomposition | high | setup/URL/import test suites | in progress — steps 1–8 done, step 9 partly done |
+| 5 | Setup decomposition | high | setup/URL/import test suites | **done** — all nine steps |
 | 6 | Chat presentation cleanup | high | render and emote test suites | in progress — steps 1, 3 (partly), 5 and 6 done; render pipeline split outstanding |
 | 7 | Dependency and dead-code cleanup | none-low | grep verification, build | **done** |
 | 8 | Documentation and enforcement | low | full check | **done** |
@@ -347,8 +347,19 @@ downstream blocks.
    (`behavior` 2 control rows and 8 switches, `tts` 2, `rte` 2, `appearance` 8,
    `content` 19 switches), toggling a switch changes the generated URL in every
    section that has one, the settings search still reports 8 matches across the
-   extracted rows, and there is no console error. **Outstanding:** the preview
-   controls block (`:2553-2753`).
+   extracted rows, and there is no console error.
+
+   The preview controls moved to `src/components/setup/PreviewControls.tsx`,
+   which also took over the selection thumbs — the refs, the two thumb-style
+   signals, the measurement helper and the resize observer. Those belong with the
+   markup they measure: leaving them in the route would have spread the
+   coordination across a fifteen-prop boundary instead of reducing it. Verified in
+   a browser: four stage swatches with the pressed state tracking the click, the
+   custom colour picker appearing only for the custom backdrop, both selection
+   thumbs measured (`translateY(40px)` and `translateY(0)`, height `36px`), and
+   the pause control toggling its pressed state, with no console error.
+
+   `setup.tsx` went from 2779 lines at the start of this phase to 1686.
 
 **Exit criteria after each step:** `bun run check` passes and the setup page
 round-trips a config through export, import and preview unchanged.
