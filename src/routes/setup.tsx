@@ -41,6 +41,11 @@ import {
   mergeUniqueLogins,
   type BotProfile,
 } from "~/services/setup/botProfiles";
+import {
+  detectLocalFontBrowser,
+  loadLocalFontOptions,
+  type LocalFontOption,
+} from "~/services/setup/localFonts";
 import { SetupNumberField } from "~/components/setup/SetupNumberField";
 import { SetupSelect } from "~/components/setup/SetupSelect";
 import { SetupSwitch } from "~/components/setup/SetupSwitch";
@@ -123,22 +128,6 @@ const eventColorPalette: ReadonlyArray<{
 
 import "~/components/setup/SetupWorkspace.css";
 
-type LocalFontData = {
-  family: string;
-  fullName?: string;
-  postscriptName?: string;
-  style?: string;
-};
-
-type LocalFontOption = {
-  family: string;
-  styles: string[];
-};
-
-type LocalFontWindow = Window & {
-  queryLocalFonts?: () => Promise<LocalFontData[]>;
-};
-
 type LocalFontStatus =
   | { kind: "idle" }
   | { kind: "available"; browser: string }
@@ -147,45 +136,6 @@ type LocalFontStatus =
   | { kind: "found"; count: number }
   | { kind: "empty" }
   | { kind: "error" };
-
-function detectLocalFontBrowser(): string | null {
-  if (typeof window === "undefined" || typeof navigator === "undefined") {
-    return null;
-  }
-
-  const hasApi =
-    typeof (window as LocalFontWindow).queryLocalFonts === "function";
-  if (!hasApi) return null;
-
-  const ua = navigator.userAgent;
-  const vendor = navigator.vendor || "";
-
-  if (/Edg\//.test(ua)) return "Edge";
-  if (/(OPR|Opera)\//.test(ua)) return "Opera";
-  if (/Chrome\//.test(ua) && vendor.includes("Google")) return "Chrome";
-
-  return null;
-}
-
-function normalizeLocalFonts(fonts: LocalFontData[]): LocalFontOption[] {
-  const families = new Map<string, Set<string>>();
-
-  for (const font of fonts) {
-    const family = font.family?.trim();
-    if (!family) continue;
-
-    const styles = families.get(family) ?? new Set<string>();
-    if (font.style) styles.add(font.style);
-    families.set(family, styles);
-  }
-
-  return Array.from(families.entries())
-    .map(([family, styles]) => ({
-      family,
-      styles: Array.from(styles).sort((a, b) => a.localeCompare(b)),
-    }))
-    .sort((a, b) => a.family.localeCompare(b.family));
-}
 
 export default function ChatSetup() {
   const [channel, setChannel] = createSignal(
@@ -1227,8 +1177,7 @@ const [activeSection, setActiveSection] =
   });
 
   const loadLocalFonts = async () => {
-    const queryLocalFonts = (window as LocalFontWindow).queryLocalFonts;
-    if (!localFontBrowser() || typeof queryLocalFonts !== "function") {
+    if (!localFontBrowser()) {
       setLocalFontStatus({ kind: "unsupported" });
       return;
     }
@@ -1236,19 +1185,19 @@ const [activeSection, setActiveSection] =
     setIsLoadingLocalFonts(true);
     setLocalFontStatus({ kind: "loading" });
 
-    try {
-      const fonts = normalizeLocalFonts(await queryLocalFonts());
-      setLocalFonts(fonts);
-      setLocalFontStatus(
-        fonts.length > 0
-          ? { kind: "found", count: fonts.length }
-          : { kind: "empty" },
-      );
-    } catch {
+    const result = await loadLocalFontOptions();
+    if (result.kind === "found") {
+      setLocalFonts(result.fonts);
+      setLocalFontStatus({ kind: "found", count: result.fonts.length });
+    } else if (result.kind === "empty") {
+      setLocalFontStatus({ kind: "empty" });
+    } else if (result.kind === "unsupported") {
+      setLocalFontStatus({ kind: "unsupported" });
+    } else {
       setLocalFontStatus({ kind: "error" });
-    } finally {
-      setIsLoadingLocalFonts(false);
     }
+
+    setIsLoadingLocalFonts(false);
   };
 
   const appearanceRows: ControlRow[] = [

@@ -236,6 +236,15 @@ downstream blocks.
    the *YouTube* bot list, which has never had a profile lookup.
 3. **Local font capability.** Move UA detection (`:158-175`) and font
    enumeration (`:1375-1398`) into a service that returns a typed status.
+   **Done.** `src/services/setup/localFonts.ts` owns the browser sniff, the
+   per-family normalization and `loadLocalFontOptions()`, which never rejects:
+   an absent API becomes `unsupported`, a denied permission prompt becomes
+   `error`, and an empty list becomes `empty`. The route keeps only its UI status
+   signal and maps the result onto it. Verified in a browser twice: against the
+   real API the row renders, the button enables and enumeration degrades to the
+   `empty` status with no console error; against an injected fake the list
+   reports two families, groups and sorts their styles (`Alpha Sans (Bold,
+   Regular)`), and drops a whitespace-only family.
 4. **Value coercion.** Move `normalizeHexColor`, `toInt`, `toIntOrFalse`,
    `toSecondsOrFalse`, `toClampedInt`, `toFloat` (`:837-904`) into `config/`
    next to the existing normalization in `chatUrlParams.ts`.
