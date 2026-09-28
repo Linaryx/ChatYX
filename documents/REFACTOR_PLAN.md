@@ -18,16 +18,16 @@ series) following Conventional Commits.
 
 ## Phase map
 
-| Phase | Focus | Risk | Primary protection |
-| --- | --- | --- | --- |
-| 1 | Guard rails | low | new characterization tests |
-| 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests |
-| 3 | Icon normalization | low | 1:1 glyph mapping, visual check |
-| 4 | UI primitives | low | visual check, existing tests |
-| 5 | Setup decomposition | high | setup/URL/import test suites |
-| 6 | Chat presentation cleanup | high | render and emote test suites |
-| 7 | Dependency and dead-code cleanup | none-low | grep verification, build |
-| 8 | Documentation and enforcement | low | full check |
+| Phase | Focus | Risk | Primary protection | Status |
+| --- | --- | --- | --- | --- |
+| 1 | Guard rails | low | new characterization tests | in progress — `ChatBadges` reactivity fixed; remaining characterization tests outstanding |
+| 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | not started |
+| 3 | Icon normalization | low | 1:1 glyph mapping, visual check | **done** |
+| 4 | UI primitives | low | visual check, existing tests | not started |
+| 5 | Setup decomposition | high | setup/URL/import test suites | not started |
+| 6 | Chat presentation cleanup | high | render and emote test suites | not started |
+| 7 | Dependency and dead-code cleanup | none-low | grep verification, build | not started |
+| 8 | Documentation and enforcement | low | full check | not started |
 
 ---
 
@@ -123,12 +123,25 @@ Solid wrapper.
 6. Only after migration: delete `public/hugeicons/` (964 KB woff2 plus the
    420 KB stylesheet), remove the `index.html:9` stylesheet link, and remove
    the `.hgi-stroke` rule at `SetupWorkspace.css:189`.
-7. Remove the unused `lucide-solid` dependency, since the project converges on
-   one general-purpose UI icon library.
+7. Migrate the five `lucide-solid` icons (`Monitor`, `Pause`, `Play`,
+   `SlidersHorizontal`, `X` — deep subpath imports in `setup.tsx`) to their
+   Hugeicons equivalents and then remove the dependency. The project converges
+   on one general-purpose UI icon library. Note: an early audit pass reported
+   `lucide-solid` as unused; it was in fact in use through subpath imports.
 
 **Exit criteria:** no `hgi-` string remains in `src/`, no icon font is shipped,
 `grep -r "lucide" src` is empty, the production build succeeds, and the setup
 page and overlay render identically.
+
+**Outcome:** complete. The `Icon` primitive lives in
+`src/components/ui/icon.tsx`; monochrome brand glyphs moved to
+`src/components/brand/PlatformGlyph.tsx`, which removed the Twitch path data
+duplicated between `setup.tsx` and `TwitchChannelField.tsx`. Custom event,
+reply, role and sparkline graphics stay inline per section 9 because they are
+bespoke visuals, not UI icons. `public/hugeicons/` and `lucide-solid` are gone;
+`dist` is about 1.35 MB smaller; lint, typecheck, 336 tests and the production
+build all pass. A glyph-for-glyph comparison page was generated from the
+pre-migration font restored out of git and resolved 21/21 glyphs with no gaps.
 
 **Commits:** `refactor(icons): add typed icon component`,
 `refactor(icons): replace icon font with package icons`,
