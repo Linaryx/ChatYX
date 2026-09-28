@@ -6,4 +6,20 @@ describe("setup settings search", () => {
     expect(isSetupSearchMatch("прокси", "RTE прокси для эмоутов и бейджей")).toBe(true);
     expect(isSetupSearchMatch("прокси", "Параметры роли, опции качества и список иконок")).toBe(false);
   });
+
+  test("tolerates a single extra letter inside a word", () => {
+    expect(isSetupSearchMatch("пркси", "RTE прокси")).toBe(true);
+  });
+
+  test("rejects letters scattered across an unrelated word", () => {
+    expect(isSetupSearchMatch("сти", "Систематика настроек")).toBe(false);
+  });
+
+  test("still matches plain substrings", () => {
+    expect(isSetupSearchMatch("бейдж", "Скрыть все бейджи")).toBe(true);
+  });
+
+  test("ignores queries shorter than three characters", () => {
+    expect(isSetupSearchMatch("бе", "Скрыть все бейджи")).toBe(false);
+  });
 });
