@@ -286,7 +286,16 @@ downstream blocks.
    unreliable to drive from outside.
 7. **Document style lock.** Move the `documentElement`/`body`/`#root` style
    handling and reduced-motion listener (`:634-684`) into a lifecycle-owned
-   helper.
+   helper. **Done.** `src/features/setup/setupDocument.ts` exports
+   `lockSetupDocument()`, which returns its own release function and restores
+   exactly the captured values, and `watchReducedMotion(callback)`, which reports
+   the current preference immediately so the route needs no separate initial
+   read. Verified in a browser: the lock is applied on setup, `/status` loaded
+   directly does not touch those styles, a client-side route change releases the
+   lock, and a context created with `reducedMotion: "reduce"` shows the demo
+   already paused on mount. Note for the record: `/` renders the same setup
+   component (`src/index.tsx:21`), so a link to `/` legitimately keeps the lock —
+   an early check misread that as a leak.
 8. **Settings search.** Move DOM query, match set, counter and highlight
    (`:686-731`) into `features/setup/`, keeping `utils/setupSearch.ts` as the
    pure matcher.

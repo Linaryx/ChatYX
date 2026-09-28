@@ -82,6 +82,10 @@ import {
 } from "~/utils/ui/animationUtils";
 import { getChatPreviewSessionKey } from "~/services/chat/preview";
 import { createPreviewSynchronizer } from "~/features/setup/previewSync";
+import {
+  lockSetupDocument,
+  watchReducedMotion,
+} from "~/features/setup/setupDocument";
 import { cn } from "~/lib/utils";
 import { isSetupSearchMatch } from "~/utils/setupSearch";
 import Alert02Icon from "@hugeicons/core-free-icons/Alert02Icon";
@@ -434,54 +438,21 @@ export default function ChatSetup() {
   });
 
   onMount(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById("root");
-    const prev = {
-      htmlBg: html.style.background,
-      bodyBg: body.style.background,
-      htmlOverflow: html.style.overflow,
-      bodyOverflow: body.style.overflow,
-      bodyHeight: body.style.height,
-      rootOverflow: root?.style.overflow ?? "",
-      rootHeight: root?.style.height ?? "",
-    };
+    const releaseDocumentLock = lockSetupDocument();
+    const stopMotionWatch = watchReducedMotion((matches) => {
+      setReducedMotion(matches);
+      if (matches) setDemoPaused(true);
+    });
+
     const supportedBrowser = detectLocalFontBrowser();
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const syncMotionPreference = () => {
-      setReducedMotion(motionQuery.matches);
-      if (motionQuery.matches) setDemoPaused(true);
-    };
-    syncMotionPreference();
-    motionQuery.addEventListener("change", syncMotionPreference);
-
-    // Lock document scroll — setup owns scrolling in fixed columns
-    html.style.background = "#09090b";
-    html.style.overflow = "hidden";
-    body.style.background = "#09090b";
-    body.style.overflow = "hidden";
-    body.style.height = "100%";
-    if (root) {
-      root.style.overflow = "hidden";
-      root.style.height = "100%";
-    }
-
     if (supportedBrowser) {
       setLocalFontBrowser(supportedBrowser);
       setLocalFontStatus({ kind: "available", browser: supportedBrowser });
     }
 
     onCleanup(() => {
-      motionQuery.removeEventListener("change", syncMotionPreference);
-      html.style.background = prev.htmlBg;
-      html.style.overflow = prev.htmlOverflow;
-      body.style.background = prev.bodyBg;
-      body.style.overflow = prev.bodyOverflow;
-      body.style.height = prev.bodyHeight;
-      if (root) {
-        root.style.overflow = prev.rootOverflow;
-        root.style.height = prev.rootHeight;
-      }
+      stopMotionWatch();
+      releaseDocumentLock();
     });
   });
 
