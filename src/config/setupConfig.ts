@@ -29,7 +29,7 @@ import {
   toInt,
   toPositiveIntOrFalse,
 } from "./formValues";
-import { MAX_MESSAGE_SPEED, MIN_MESSAGE_SPEED } from "../utils/ui/animationUtils";
+import { MAX_MESSAGE_SPEED, MIN_MESSAGE_SPEED } from "./chatAnimation";
 import { getAppBaseUrl } from "../utils/appBase";
 
 /** Raw setup-form values, before any coercion. */

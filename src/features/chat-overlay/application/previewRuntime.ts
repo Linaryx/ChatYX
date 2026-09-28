@@ -20,7 +20,7 @@ import {
   getAnimationScrollBehavior,
   hasMessageEntryAnimation,
   messageSpeedToIntervalMs,
-} from "~/utils/ui/animationUtils";
+} from "~/config/chatAnimation";
 import type { ChatConfig } from "~/config/chatUrlParams";
 import type { ChatRuntimeHooks } from "./runtimeHooks";
 

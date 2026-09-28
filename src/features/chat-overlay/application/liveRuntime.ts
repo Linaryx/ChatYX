@@ -17,7 +17,7 @@ import { fetchRecentMessages } from "~/services/chat/twitch/recentMessagesServic
 import {
   getAnimationScrollBehavior,
   hasMessageEntryAnimation,
-} from "~/utils/ui/animationUtils";
+} from "~/config/chatAnimation";
 import { log, LOG_CATEGORIES } from "~/utils/logger";
 import type { ChatConfig } from "~/config/chatUrlParams";
 import {

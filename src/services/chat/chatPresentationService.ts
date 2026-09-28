@@ -22,9 +22,9 @@ import {
   DEFAULT_ANIMATION_OPTIONS,
   getMessageEntryAnimationDuration,
   hasMessageEntryAnimation,
-  injectAnimationStyles,
-} from "../../utils/ui/animationUtils";
-import type { AnimationOptions } from "../../utils/ui/animationUtils";
+} from "../../config/chatAnimation";
+import { injectAnimationStyles } from "./runtime/animationStyles";
+import type { AnimationOptions } from "../../config/chatAnimation";
 import { parseBotNames, type ChatConfig } from "../../config/chatUrlParams";
 import { log, LOG_CATEGORIES } from "../../utils/logger";
 

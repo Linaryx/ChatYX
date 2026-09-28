@@ -20,14 +20,14 @@ series) following Conventional Commits.
 
 | Phase | Focus | Risk | Primary protection | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Guard rails | low | new characterization tests | in progress — `ChatBadges` reactivity fixed; remaining characterization tests outstanding |
-| 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | in progress — dead tokens and the `--border` collision done; `chatStyles.ts` preset conversion outstanding |
+| 1 | Guard rails | low | new characterization tests | partly done — `ChatBadges` reactivity fixed; pure-logic characterization added where no DOM is needed; component-render tests deferred by decision |
+| 2 | Design tokens | low-medium | visual check, `chatEventStyles` tests | **done** |
 | 3 | Icon normalization | low | 1:1 glyph mapping, visual check | **done** |
 | 4 | UI primitives | low | visual check, existing tests | **done** |
-| 5 | Setup decomposition | high | setup/URL/import test suites | in progress — step 1 of 9 (storage adapter) done |
-| 6 | Chat presentation cleanup | high | render and emote test suites | in progress — duplication removed; pipeline split and layer moves outstanding |
-| 7 | Dependency and dead-code cleanup | none-low | grep verification, build | in progress — dead modules, `YouTubeChatService` and singleton lifecycle done; `!important` re-check outstanding |
-| 8 | Documentation and enforcement | low | full check | not started |
+| 5 | Setup decomposition | high | setup/URL/import test suites | in progress — steps 1–8 done, step 9 partly done |
+| 6 | Chat presentation cleanup | high | render and emote test suites | in progress — steps 1, 3 (partly), 5 and 6 done; render pipeline split outstanding |
+| 7 | Dependency and dead-code cleanup | none-low | grep verification, build | **done** |
+| 8 | Documentation and enforcement | low | full check | **done** |
 
 Visual verification is available through a local Playwright install kept
 outside the repository (`%TEMP%\opencode\pw`), which captures the setup page and
@@ -373,7 +373,15 @@ round-trips a config through export, import and preview unchanged.
    (`utils/ui/fadeUtils.ts:105-186`) into the chat-overlay layer that owns their
    lifecycle, and resolve the two-classes-one-name problem.
 4. Split `utils/ui/animationUtils.ts` so config constants live in `config/` and
-   CSS generation lives with the overlay runtime.
+   CSS generation lives with the overlay runtime. **Done.**
+   `src/config/chatAnimation.ts` holds the modes, the speed bounds and the pure
+   mappings, with no DOM access, so the URL contract and the setup form no longer
+   depend on a module that touches `document`;
+   `src/services/chat/runtime/animationStyles.ts` holds the stylesheet generation
+   and injection. The module is gone and its test moved to
+   `tests/chatAnimation.test.ts`, importing the pure half from config and the
+   generator from the runtime. Verified in a browser: `flow` and `fade` still
+   animate and clean up with 0 rows stuck and no console error.
 5. Move `utils/chat/badgePriority.ts` next to `ChatBadges.tsx`, and move
    `utils/ui/layoutManager.ts` with its feature integration. **Partly done.**
    `badgePriority.ts` moved to `src/components/chat/badgePriority.ts` with
@@ -466,12 +474,21 @@ cache outlives the runtime that populated it.
 
 1. Update `documents/ARCHITECTURE.md` with the layer boundaries that the audit
    verified are already holding, and the icon and token strategies decided in
-   phases 2 and 3.
+   phases 2 and 3. **Done** — new "Setup feature" and "Icons and design tokens"
+   sections record the setup module map, the rule that the overlay URL is a public
+   contract, the one exception to the dependency direction (a config module may
+   depend on a dependency-free service leaf), the icon package and its subpath
+   import rule, and the two kinds of drawing that stay inline.
 2. Update `documents/DESIGN.md` with the token contract and the rule that
-   runtime presentation values are passed as custom properties.
+   runtime presentation values are passed as custom properties. **Done** — a new
+   "Token Contract" section states the two rules, names the allowed exceptions and
+   records that `chatStyles.ts` is the last remaining exception, with the note
+   that its table is also read by JS so the conversion publishes properties rather
+   than deleting it.
 3. Record the allowed exceptions: provider cosmetics and emote modifiers may
    generate CSS at an integration boundary; brand assets are not UI icons.
-4. Run the full verification suite.
+   **Done** in both documents.
+4. Run the full verification suite. **Done** — `bun run check` passes.
 
 **Commit:** `docs(architecture): document ui and token boundaries`
 

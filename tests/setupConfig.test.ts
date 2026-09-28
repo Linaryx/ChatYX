@@ -10,7 +10,7 @@ import {
   buildSetupConfig,
   type SetupFormState,
 } from "../src/config/setupConfig";
-import { MIN_MESSAGE_SPEED } from "../src/utils/ui/animationUtils";
+import { MIN_MESSAGE_SPEED } from "../src/config/chatAnimation";
 
 /** Mirrors how the route seeds an `intOrFalse` field as a form string. */
 const optionalIntToForm = (value: number | false): string =>

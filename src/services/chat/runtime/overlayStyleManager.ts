@@ -7,8 +7,8 @@ import {
 import {
   getMessageEntryAnimationDuration,
   hasMessageEntryAnimation,
-  updateAnimationStyles,
-} from "~/utils/ui/animationUtils";
+} from "~/config/chatAnimation";
+import { updateAnimationStyles } from "./animationStyles";
 
 function setRootAttribute(name: string, enabled: boolean) {
   const root = document.documentElement;

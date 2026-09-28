@@ -80,7 +80,7 @@ import {
   MAX_MESSAGE_SPEED,
   MIN_MESSAGE_SPEED,
   messageSpeedToIntervalMs,
-} from "~/utils/ui/animationUtils";
+} from "~/config/chatAnimation";
 import { getChatPreviewSessionKey } from "~/services/chat/preview";
 import { createPreviewSynchronizer } from "~/features/setup/previewSync";
 import {
