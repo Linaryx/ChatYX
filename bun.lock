@@ -6,6 +6,7 @@
       "name": "chatyx",
       "dependencies": {
         "@hugeicons/core-free-icons": "^4.3.5",
+        "@hugeicons/solid-js": "^1.0.0",
         "@kobalte/core": "^0.13.13",
         "@solid-primitives/i18n": "^2.2.1",
         "@solidjs/meta": "^0.29.4",
@@ -88,6 +89,8 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@hugeicons/core-free-icons": ["@hugeicons/core-free-icons@4.3.5", "", {}, "sha512-Sv+NjHRPnQk+yZsGCMcGznCHdTfJR9PMMOEKcJYAQU4gy90dmlc9PwdtvYOImBZIjiheMsTLL5eMn2DmHxUiUg=="],
+
+    "@hugeicons/solid-js": ["@hugeicons/solid-js@1.0.0", "", { "peerDependencies": { "solid-js": "^1.8.0" } }, "sha512-GrcS7YlZVELwXljQZIB5LvcvVQevy1f4rUn3tP/UvB8qj1Wu9IP3aEQH9Y4OAyhStZTXA3T1mtvzeaHnaTH5dg=="],
 
     "@internationalized/number": ["@internationalized/number@3.6.5", "", { "dependencies": { "@swc/helpers": "^0.5.0" } }, "sha512-6hY4Kl4HPBvtfS62asS/R22JzNNy8vi/Ssev7x6EobfCp+9QIB2hKvI2EtbdJ0VSQacxVNtqhE/NmF/NZ0gm6g=="],
 
