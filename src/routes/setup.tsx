@@ -697,6 +697,11 @@ const [activeSection, setActiveSection] =
       return id ? [id] : [];
     }),
   ));
+  const setupSearchCounter = createMemo(() => {
+    const total = setupSearchResults().length;
+    if (total === 0) return "0";
+    return `${Math.min(setupSearchIndex(), total - 1) + 1} / ${total}`;
+  });
   const focusSearchResult = (index: number) => {
     const results = setupSearchResults();
     if (results.length === 0) return;
@@ -2181,14 +2186,7 @@ const [activeSection, setActiveSection] =
                 <SetupNav active={activeSection()} onSelect={scrollToSection} matchedSections={matchedSearchSections()} />
             </aside>
 
-            <div
-              id="setup-settings"
-              tabIndex={-1}
-              ref={(el) => {
-                settingsScrollRef = el;
-              }}
-              class="setup-settings setup-pane-scroll"
-            >
+            <div class="setup-settings-column">
               <div class="setup-section-select">
                 <label for="setup-section-picker" class="setup-field-label">{t("setup.settingsSection")}</label>
                 <SetupSelect id="setup-section-picker" value={activeSection()} onChange={(event) => scrollToSection(event.currentTarget.value as SetupSectionId)}>
@@ -2196,7 +2194,7 @@ const [activeSection, setActiveSection] =
                 </SetupSelect>
               </div>
 
-<div class="setup-field-group">
+              <div class="setup-settings-search">
                 <div class="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background pl-2 pr-1 transition-colors focus-within:border-white focus-within:shadow-[inset_0_0_0_1px_white]">
                   <button
                     type="button"
@@ -2221,14 +2219,27 @@ const [activeSection, setActiveSection] =
                     placeholder={t("setup.searchSettings")}
                     class="h-7 min-w-0 flex-1 appearance-none border-0 bg-transparent px-0 text-sm text-foreground outline-none ring-0 placeholder:text-muted-foreground focus:border-0 focus:outline-none focus:ring-0"
                   />
-                  <div class="ml-auto flex shrink-0 items-center gap-1">
-                    <span class="whitespace-nowrap text-xs text-muted-foreground">{t("setup.searchResults", { count: setupSearchResults().length })}</span>
-                    <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><span class="hgi-stroke hgi-arrow-left-01" aria-hidden="true" /></Button>
-                    <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><span class="hgi-stroke hgi-arrow-right-01" aria-hidden="true" /></Button>
-                  </div>
+                  <Show when={setupSearch().length > 0}>
+                    <div class="ml-auto flex shrink-0 items-center gap-1">
+                      <span class="whitespace-nowrap text-xs tabular-nums text-muted-foreground" aria-live="polite">{setupSearchCounter()}</span>
+                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() - 1)} aria-label={t("setup.searchPrevious")}><span class="hgi-stroke hgi-arrow-left-01" aria-hidden="true" /></Button>
+                      <Button type="button" size="icon" variant="outline" class="size-7" disabled={setupSearchResults().length === 0} onClick={() => focusSearchResult(setupSearchIndex() + 1)} aria-label={t("setup.searchNext")}><span class="hgi-stroke hgi-arrow-right-01" aria-hidden="true" /></Button>
+                    </div>
+                  </Show>
                 </div>
               </div>
 
+              <div
+                id="setup-settings"
+                tabIndex={-1}
+                class="setup-settings"
+              >
+              <div
+                class="setup-settings-scroll setup-pane-scroll"
+                ref={(el) => {
+                  settingsScrollRef = el;
+                }}
+              >
               <SetupImportCard
                 hidden={activeSection() !== "import"}
                 onImport={importSettings}
@@ -2472,6 +2483,8 @@ const [activeSection, setActiveSection] =
               >
                 <ToggleRows rows={rteToggles} />
               </SectionCard>
+            </div>
+            </div>
             </div>
 
             <div id="setup-preview" tabIndex={-1} class="setup-preview-pane setup-pane-scroll min-h-0 min-w-0 overflow-y-auto overscroll-contain min-[1100px]:h-full">
