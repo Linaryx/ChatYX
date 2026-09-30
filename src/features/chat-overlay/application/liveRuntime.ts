@@ -28,6 +28,11 @@ import {
   parseChatRefreshScope,
   parseTestMessageCount,
 } from "./chatCommandService";
+import {
+  collectTestMessageEmotes,
+  createTestMessages,
+  TWITCH_SAMPLE_EMOTES,
+} from "../model/testMessages";
 import { createBrowserRteRuntime } from "~/services/chat/rte/browserRuntime";
 import type { RteRuntime } from "~/services/chat/rte/runtimeController";
 import {
@@ -540,7 +545,7 @@ export class LiveChatRuntime {
         this.commandFeedback.showNotice("Связь с ChatYX работает");
         break;
       case "test":
-        this.appendTestMessages(message, parseTestMessageCount(command.args));
+        this.appendTestMessages(parseTestMessageCount(command.args));
         break;
       case "tts":
         this.rteRuntime.handleAuthorizedCommand(command.args, message);
@@ -569,32 +574,16 @@ export class LiveChatRuntime {
     }
   }
 
-  private appendTestMessages(source: TwitchMessage, count: number): void {
-    const samples = [
-      "Тестовое сообщение ChatYX",
-      "Проверяем длинную строку, переносы и скорость появления сообщений",
-      "Kappa Keepo PogChamp",
-      "@moderator команда работает",
-    ];
+  private appendTestMessages(count: number): void {
+    const messages = createTestMessages({
+      count,
+      emotes: collectTestMessageEmotes(
+        emoteService.getAllEmotes(this.activeChannelId),
+        TWITCH_SAMPLE_EMOTES,
+      ),
+    });
 
-    for (let index = 0; index < count; index += 1) {
-      const message: TwitchMessage = {
-        ...source,
-        id: `chatyx-test-${Date.now()}-${index}`,
-        username: `chatyx_test_${index + 1}`,
-        displayName: `ChatYX Test ${index + 1}`,
-        message: samples[index % samples.length],
-        badges: [],
-        emotes: {},
-        isModerator: false,
-        isSubscriber: false,
-        timestamp: new Date(),
-        userId: undefined,
-        reply: undefined,
-        tokenSnapshot: undefined,
-        emoteSnapshot: undefined,
-      };
-
+    for (const message of messages) {
       void this.prepareMessageForDisplay(message).then((prepared) => {
         if (prepared) this.appendMessage(prepared);
       });
