@@ -29,6 +29,7 @@ describe("chat URL params", () => {
       "twirbot,fossabot,botrix,kickbot",
     );
     expect(DEFAULT_CHAT_CONFIG.bots).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.recentMessages).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.showGifs).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.gifScale).toBe(1);
   });
@@ -75,7 +76,7 @@ describe("chat URL params", () => {
       overlayPadding: 12,
       bots: true,
       fade: false,
-      recentMessages: false,
+      recentMessages: true,
       shadow: false,
       lineHeight: 125,
       fontWeight: 700,
@@ -110,7 +111,7 @@ describe("chat URL params", () => {
     expect(params.get("bgp")).toBe("12");
     expect(params.get("b")).toBe("true");
     expect(params.get("fd")).toBe("0");
-    expect(params.get("rm")).toBe("false");
+    expect(params.get("rm")).toBe("true");
     expect(params.get("sh")).toBe("0");
     expect(params.get("lh")).toBe("125");
     expect(params.get("fw")).toBe("700");
@@ -326,10 +327,10 @@ describe("chat URL params", () => {
     ).toBe(true);
   });
 
-  test("enables the configured RTE integrations by default", () => {
+  test("keeps the RTE TTS providers off by default", () => {
     expect(DEFAULT_CHAT_CONFIG.rteProxy).toBe(false);
-    expect(DEFAULT_CHAT_CONFIG.rteAzureTts).toBe(true);
-    expect(DEFAULT_CHAT_CONFIG.rteChatIsTts).toBe(true);
+    expect(DEFAULT_CHAT_CONFIG.rteAzureTts).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.rteChatIsTts).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.rteReyohohoBadge).toBe(true);
     expect(DEFAULT_CHAT_CONFIG.rteCustomCosmetics).toBe(true);
     expect(DEFAULT_CHAT_CONFIG.ttsReadChat).toBe(false);
@@ -393,8 +394,8 @@ describe("chat URL params", () => {
 
     const params = chatConfigToSearchParams(cfg);
     expect(params.get("rtep")).toBe("true");
-    expect(params.get("aztts")).toBeNull();
-    expect(params.get("rtetts")).toBeNull();
+    expect(params.get("aztts")).toBe("true");
+    expect(params.get("rtetts")).toBe("true");
     expect(params.get("rtebadge")).toBeNull();
     expect(params.get("rtecosmetics")).toBeNull();
     expect(parseChatConfigFromSearchParams(params)).toEqual(cfg);
