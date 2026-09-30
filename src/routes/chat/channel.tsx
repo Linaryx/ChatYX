@@ -28,6 +28,7 @@ import {
   createLoadingBackground,
   createOverlayRootStyle,
   createSurfaceStyle,
+  shouldShowPrediction,
 } from "~/features/chat-overlay";
 
 function parsePreviewDemoKind(raw: string | null): PreviewDemoKind {
@@ -106,7 +107,10 @@ export default function ChatOverlay() {
     () => Boolean((config() ?? runtimeConfig).showPredictions) && Boolean(channel),
   );
   const hasPredictionBar = createMemo(
-    () => showPredictionsBar() && Boolean(prediction()),
+    () => shouldShowPrediction(
+      prediction(),
+      (config() ?? runtimeConfig).showPredictionsOnlyWhileActive,
+    ) && showPredictionsBar(),
   );
   const removeMessageById = (messageId: string) => {
     setMessages((current) =>

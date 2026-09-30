@@ -15,6 +15,8 @@ export type ContentTogglesSource = {
   setShowGifs: (value: boolean) => void;
   showPredictions: () => boolean;
   setShowPredictions: (value: boolean) => void;
+  showPredictionsOnlyWhileActive: () => boolean;
+  setShowPredictionsOnlyWhileActive: (value: boolean) => void;
   commands: () => boolean;
   setCommands: (value: boolean) => void;
   show7tvUnlisted: () => boolean;
@@ -51,6 +53,8 @@ export function createContentToggles(source: ContentTogglesSource): ToggleRow[] 
     setShowGifs,
     showPredictions,
     setShowPredictions,
+    showPredictionsOnlyWhileActive,
+    setShowPredictionsOnlyWhileActive,
     commands,
     setCommands,
     show7tvUnlisted,
@@ -90,6 +94,12 @@ export function createContentToggles(source: ContentTogglesSource): ToggleRow[] 
       checked: showPredictions,
       onChange: setShowPredictions,
       hint: () => t("setup.showPredictionsHint"),
+    },
+    {
+      label: () => t("setup.showPredictionsOnlyWhileActive"),
+      checked: showPredictionsOnlyWhileActive,
+      onChange: setShowPredictionsOnlyWhileActive,
+      hint: () => t("setup.showPredictionsOnlyWhileActiveHint"),
     },
     {
       label: () => t("setup.showCommands"),

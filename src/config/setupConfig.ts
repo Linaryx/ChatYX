@@ -92,6 +92,7 @@ export type SetupFormState = {
   showChannelPointRewards: boolean;
   showGigantifiedEmotes: boolean;
   showPredictions: boolean;
+  showPredictionsOnlyWhileActive: boolean;
   linkMode: LinkDisplayMode;
   linkColor: string;
   usersColorEnabled: boolean;
@@ -213,6 +214,7 @@ export function buildSetupConfig(
     showChannelPointRewards: form.showChannelPointRewards,
     showGigantifiedEmotes: form.showGigantifiedEmotes,
     showPredictions: form.showPredictions,
+    showPredictionsOnlyWhileActive: form.showPredictionsOnlyWhileActive,
     linkMode: form.linkMode,
     linkColor: normalizeHexColor(form.linkColor, DEFAULT_CHAT_CONFIG.linkColor),
     usersColor: form.usersColorEnabled

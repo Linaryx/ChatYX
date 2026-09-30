@@ -83,6 +83,7 @@ export function applySetupImport(
   if (patch.twitchEventBold !== undefined) setters.twitchEventBold(patch.twitchEventBold);
   if (patch.twitchEventItalic !== undefined) setters.twitchEventItalic(patch.twitchEventItalic);
   if (patch.showPredictions !== undefined) setters.showPredictions(patch.showPredictions);
+  if (patch.showPredictionsOnlyWhileActive !== undefined) setters.showPredictionsOnlyWhileActive(patch.showPredictionsOnlyWhileActive);
   if (patch.linkMode !== undefined) setters.linkMode(patch.linkMode);
   if (patch.linkColor !== undefined) setters.linkColor(patch.linkColor);
   if (patch.usersColor !== undefined) setters.usersColor(patch.usersColor);

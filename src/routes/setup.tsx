@@ -402,6 +402,9 @@ export default function ChatSetup() {
   const [showPredictions, setShowPredictions] = createSignal(
     DEFAULT_CHAT_CONFIG.showPredictions,
   );
+  const [showPredictionsOnlyWhileActive, setShowPredictionsOnlyWhileActive] = createSignal(
+    DEFAULT_CHAT_CONFIG.showPredictionsOnlyWhileActive,
+  );
   const [linkMode, setLinkMode] = createSignal<LinkDisplayMode>(
     DEFAULT_CHAT_CONFIG.linkMode,
   );
@@ -569,6 +572,7 @@ const [activeSection, setActiveSection] =
       twitchEventBold: setTwitchEventBold,
       twitchEventItalic: setTwitchEventItalic,
       showPredictions: setShowPredictions,
+      showPredictionsOnlyWhileActive: setShowPredictionsOnlyWhileActive,
       linkMode: setLinkMode,
       linkColor: setLinkColor,
       usersColor: setUsersColor,
@@ -669,6 +673,7 @@ const [activeSection, setActiveSection] =
     showChannelPointRewards: showChannelPointRewards(),
     showGigantifiedEmotes: showGigantifiedEmotes(),
     showPredictions: showPredictions(),
+    showPredictionsOnlyWhileActive: showPredictionsOnlyWhileActive(),
     linkMode: linkMode(),
     linkColor: linkColor(),
     usersColorEnabled: usersColorEnabled(),
@@ -1133,6 +1138,8 @@ const [activeSection, setActiveSection] =
     setShowGifs,
     showPredictions,
     setShowPredictions,
+    showPredictionsOnlyWhileActive,
+    setShowPredictionsOnlyWhileActive,
     commands,
     setCommands,
     show7tvUnlisted,

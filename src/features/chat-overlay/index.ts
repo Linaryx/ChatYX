@@ -14,3 +14,4 @@ export {
   createOverlayRootStyle,
   createSurfaceStyle,
 } from "./model/overlayStyles";
+export { shouldShowPrediction } from "./model/predictionVisibility";

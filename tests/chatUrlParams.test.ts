@@ -306,8 +306,9 @@ describe("chat URL params", () => {
     ).toBe("normal");
   });
 
-  test("parses predictions aliases and defaults to off", () => {
+  test("parses prediction settings and defaults to showing all statuses", () => {
     expect(DEFAULT_CHAT_CONFIG.showPredictions).toBe(false);
+    expect(DEFAULT_CHAT_CONFIG.showPredictionsOnlyWhileActive).toBe(false);
     expect(
       parseChatConfigFromSearchParams(new URLSearchParams("pred=true"))
         .showPredictions,
@@ -319,6 +320,10 @@ describe("chat URL params", () => {
     expect(
       parseChatConfigFromSearchParams(new URLSearchParams()).showPredictions,
     ).toBe(false);
+    expect(
+      parseChatConfigFromSearchParams(new URLSearchParams("predactive=true"))
+        .showPredictionsOnlyWhileActive,
+    ).toBe(true);
   });
 
   test("enables the configured RTE integrations by default", () => {

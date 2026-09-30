@@ -21,10 +21,13 @@ body {
   z-index: 50;
 }
 
-#chat_chrome.has-prediction #chat_container {
-  top: calc(
+#chat_chrome.has-prediction {
+  padding-top: calc(
     58px + var(--chat-surface-padding, 10px) + var(--chat-surface-padding, 10px)
   );
+}
+
+#chat_chrome.has-prediction #chat_container {
   position: relative;
   z-index: 1;
 }

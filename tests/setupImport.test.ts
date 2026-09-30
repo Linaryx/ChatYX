@@ -33,7 +33,7 @@ const nativeConfig: ChatConfig = {
    highlightTwitchEvents: true, eventColorDefault: "#abcdef", eventColorOpacity: 0,
    twitchEventBold: false, twitchEventItalic: true,
   showHighlightedMessages: false, showChannelPointRewards: false,
-  showGigantifiedEmotes: false, showPredictions: true,
+   showGigantifiedEmotes: false, showPredictions: true, showPredictionsOnlyWhileActive: true,
   linkMode: "highlight", linkColor: "#fedcba", hideLinkRewards: false,
   rteProxy: true, rteAzureTts: true, rteChatIsTts: true,
   rteReyohohoBadge: true, rteCustomCosmetics: true,

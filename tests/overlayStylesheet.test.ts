@@ -5,6 +5,7 @@ import {
   OVERLAY_ATTRIBUTES,
   OVERLAY_STYLE_PROPERTIES,
 } from "../src/styles/chatStyles";
+import { createChromeStyle } from "../src/features/chat-overlay";
 
 const chatCss = await Bun.file(
   new URL("../src/styles/chat.css", import.meta.url),
@@ -57,8 +58,9 @@ test("the stylesheet no longer depends on generated style elements", () => {
 });
 
 test("prediction bars reserve space above the message container", () => {
-  expect(chatCss).toContain("#chat_chrome.has-prediction #chat_container");
+  expect(chatCss).toContain("#chat_chrome.has-prediction {\n  padding-top: calc(");
   expect(chatCss).toContain("58px + var(--chat-surface-padding, 10px)");
+  expect(createChromeStyle()).not.toHaveProperty("padding");
 });
 
 test("event labels and icons keep the opaque event color", () => {

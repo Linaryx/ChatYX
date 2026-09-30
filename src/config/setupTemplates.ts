@@ -33,6 +33,7 @@ type VisualSettingKey =
   | "showGigantifiedEmotes"
   | "showHighlightedMessages"
   | "showPredictions"
+  | "showPredictionsOnlyWhileActive"
   | "size"
   | "smallCaps"
   | "stroke"
@@ -101,6 +102,7 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       showGigantifiedEmotes: DEFAULT_CHAT_CONFIG.showGigantifiedEmotes,
       showHighlightedMessages: DEFAULT_CHAT_CONFIG.showHighlightedMessages,
       showPredictions: DEFAULT_CHAT_CONFIG.showPredictions,
+      showPredictionsOnlyWhileActive: DEFAULT_CHAT_CONFIG.showPredictionsOnlyWhileActive,
       size: DEFAULT_CHAT_CONFIG.size,
       smallCaps: DEFAULT_CHAT_CONFIG.smallCaps,
       stroke: DEFAULT_CHAT_CONFIG.stroke,
@@ -138,6 +140,7 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       showGigantifiedEmotes: true,
       showHighlightedMessages: false,
       showPredictions: false,
+      showPredictionsOnlyWhileActive: false,
       size: 1,
       smallCaps: true,
       stroke: false,
@@ -180,7 +183,7 @@ export function toVisualSetupPatch<T extends Partial<Record<VisualSettingKey, un
     "animation",
     "emoteScale", "font", "fontCustom", "fontWeight", "gifScale", "highlightTwitchEvents", "lineHeight", "linkColor", "linkMode", "nickFontWeight",
     "overlayBackgroundColor", "overlayBackgroundOpacity", "overlayBackgroundRadius", "overlayBorderWidth", "overlayBorderColor",
-    "overlayPadding", "platformMarker", "shadow", "showChannelPointRewards", "showGifs", "showGigantifiedEmotes", "showHighlightedMessages", "showPredictions", "size", "smallCaps", "stroke",
+    "overlayPadding", "platformMarker", "shadow", "showChannelPointRewards", "showGifs", "showGigantifiedEmotes", "showHighlightedMessages", "showPredictions", "showPredictionsOnlyWhileActive", "size", "smallCaps", "stroke",
     "eventColorDefault", "eventColorFirst", "eventColorHighlight", "eventColorReward", "eventColorSubscription", "eventColorRaid", "eventColorStreak", "eventColorPowerUp", "eventColorAnnPrimary", "eventColorAnnPurple", "eventColorAnnBlue", "eventColorAnnGreen", "eventColorAnnOrange", "eventColorOpacity", "twitchEventBold", "twitchEventItalic", "usersColor",
   ];
 

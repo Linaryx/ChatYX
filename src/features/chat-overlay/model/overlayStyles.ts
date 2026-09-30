@@ -72,7 +72,6 @@ export function createChromeStyle() {
     "max-height": "100%",
     display: "block",
     "flex-shrink": "1",
-    padding: "0",
     "box-sizing": "border-box",
     "pointer-events": "none",
     overflow: "hidden",

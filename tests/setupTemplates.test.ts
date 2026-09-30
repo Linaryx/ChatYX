@@ -64,6 +64,7 @@ test("built-in templates keep both standard and atom presets", () => {
     showGigantifiedEmotes: true,
     showHighlightedMessages: false,
     showPredictions: false,
+    showPredictionsOnlyWhileActive: false,
     size: 1,
     smallCaps: true,
     stroke: false,

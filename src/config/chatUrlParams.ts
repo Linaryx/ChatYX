@@ -84,6 +84,7 @@ export interface ChatConfig extends EventColorConfig {
   showChannelPointRewards: boolean;
   showGigantifiedEmotes: boolean;
   showPredictions: boolean;
+  showPredictionsOnlyWhileActive: boolean;
   linkMode: LinkDisplayMode;
   linkColor: string;
   usersColor: string;
@@ -168,6 +169,7 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   showChannelPointRewards: true,
   showGigantifiedEmotes: true,
   showPredictions: false,
+  showPredictionsOnlyWhileActive: false,
   linkMode: "normal",
   linkColor: "#53b7ff",
   usersColor: "",
@@ -486,6 +488,11 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
     query: "pred",
     kind: "bool",
     aliases: ["predictions", "show_predictions"],
+  },
+  showPredictionsOnlyWhileActive: {
+    query: "predactive",
+    kind: "bool",
+    aliases: ["predictions_active_only", "show_predictions_only_while_active"],
   },
   linkMode: {
     query: "links",

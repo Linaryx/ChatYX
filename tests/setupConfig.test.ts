@@ -77,6 +77,7 @@ function createForm(overrides: Partial<SetupFormState> = {}): SetupFormState {
     showChannelPointRewards: DEFAULT_CHAT_CONFIG.showChannelPointRewards,
     showGigantifiedEmotes: DEFAULT_CHAT_CONFIG.showGigantifiedEmotes,
     showPredictions: DEFAULT_CHAT_CONFIG.showPredictions,
+    showPredictionsOnlyWhileActive: DEFAULT_CHAT_CONFIG.showPredictionsOnlyWhileActive,
     linkMode: DEFAULT_CHAT_CONFIG.linkMode,
     linkColor: DEFAULT_CHAT_CONFIG.linkColor,
     usersColorEnabled: false,
