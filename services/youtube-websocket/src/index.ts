@@ -8,9 +8,11 @@ import { getYouTubeProxyUrl, resolveLiveVideoIds } from "./youtube";
 import { searchKickChannels } from "./kickSearch";
 import { resolveWebSocketRoute, type SourceRoute, type WebSocketRoute } from "./routes";
 import {
+  hasForwardedHeaders,
   resolveBridgeLimits,
   resolveClientIp,
   SourceGuard,
+  trustsForwardedHeaders,
   type GuardDecision,
   type SocketAdmission,
 } from "./guard";
@@ -169,6 +171,26 @@ function admissionFor(route: WebSocketRoute): SocketAdmission {
   };
 }
 
+let warnedAboutIgnoredProxyHeaders = false;
+
+/**
+ * A proxy the operator did not declare would silently turn per-IP limits into
+ * one global limit, so say it once instead of failing quietly.
+ */
+function noteIgnoredProxyHeaders(
+  request: Request,
+  socketAddress: string | undefined,
+): void {
+  if (warnedAboutIgnoredProxyHeaders) return;
+  if (trustsForwardedHeaders(socketAddress, limits.trustProxy)) return;
+  if (!hasForwardedHeaders(request.headers)) return;
+  warnedAboutIgnoredProxyHeaders = true;
+  console.warn(
+    "[chat-sources] client-IP headers are present but ignored because the peer " +
+      "address is public; set TRUST_PROXY=1 if a proxy forwards traffic to this bridge",
+  );
+}
+
 const server = Bun.serve<WebSocketData>({
   port,
   hostname,
@@ -242,11 +264,9 @@ const server = Bun.serve<WebSocketData>({
     }
 
     const { route } = resolved;
-    const ip = resolveClientIp(
-      request.headers,
-      serverInstance.requestIP(request)?.address,
-      limits.trustProxy,
-    );
+    const socketAddress = serverInstance.requestIP(request)?.address;
+    noteIgnoredProxyHeaders(request, socketAddress);
+    const ip = resolveClientIp(request.headers, socketAddress, limits.trustProxy);
     const upgradeDecision = guard.checkUpgrade(ip);
     if (!upgradeDecision.allowed) return rejectionResponse(upgradeDecision, origin);
 

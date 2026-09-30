@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+  hasForwardedHeaders,
   isOriginAllowed,
+  isPrivateClientAddress,
   normalizeClientIp,
   resolveBridgeLimits,
   resolveClientIp,
@@ -23,7 +25,7 @@ function testLimits(overrides: Partial<BridgeLimits> = {}): BridgeLimits {
     globalNewSourceRate: { capacity: 2, refillPerSecond: 0 },
     searchRate: { capacity: 1, refillPerSecond: 0 },
     idleTimeoutSeconds: 120,
-    trustProxy: false,
+    trustProxy: "never",
     allowedOrigins: [],
     ...overrides,
   };
@@ -43,15 +45,15 @@ describe("bridge limits config", () => {
   test("uses the documented defaults", () => {
     const limits = resolveBridgeLimits({});
 
-    expect(limits.maxConnectionsPerIp).toBe(16);
-    expect(limits.maxSourcesPerIp).toBe(8);
+    expect(limits.maxConnectionsPerIp).toBe(32);
+    expect(limits.maxSourcesPerIp).toBe(16);
     expect(limits.maxSources).toBe(500);
     expect(limits.maxClientsPerSource).toBe(200);
     expect(limits.maxChannelNameLength).toBe(64);
     expect(limits.idleTimeoutSeconds).toBe(120);
-    expect(limits.trustProxy).toBe(false);
+    expect(limits.trustProxy).toBe("auto");
     expect(limits.allowedOrigins).toEqual([]);
-    expect(limits.upgradeRate.refillPerSecond).toBe(1);
+    expect(limits.upgradeRate.refillPerSecond).toBe(2);
   });
 
   test("reads overrides and ignores nonsense values", () => {
@@ -69,8 +71,15 @@ describe("bridge limits config", () => {
     expect(limits.upgradeRate.refillPerSecond).toBe(10);
     expect(limits.upgradeRate.capacity).toBe(300);
     expect(limits.idleTimeoutSeconds).toBe(120);
-    expect(limits.trustProxy).toBe(true);
+    expect(limits.trustProxy).toBe("always");
     expect(limits.allowedOrigins).toEqual(["https://example.com", "https://chat.example.com"]);
+  });
+
+  test("reads the disabled and automatic proxy modes", () => {
+    expect(resolveBridgeLimits({ TRUST_PROXY: "0" }).trustProxy).toBe("never");
+    expect(resolveBridgeLimits({ TRUST_PROXY: "auto" }).trustProxy).toBe("auto");
+    expect(resolveBridgeLimits({ TRUST_PROXY: "" }).trustProxy).toBe("auto");
+    expect(resolveBridgeLimits({ TRUST_PROXY: "maybe" }).trustProxy).toBe("auto");
   });
 });
 
@@ -83,11 +92,50 @@ describe("client address resolution", () => {
     expect(normalizeClientIp(undefined)).toBe("unknown");
   });
 
-  test("prefers the socket address unless a proxy is trusted", () => {
+  test("recognizes the private ranges a proxy connects from", () => {
+    for (const ip of [
+      "127.0.0.1",
+      "10.0.0.5",
+      "172.16.3.4",
+      "172.31.255.1",
+      "192.168.1.10",
+      "169.254.1.1",
+      "::1",
+      "fd00::1",
+      "fe80::1",
+    ]) {
+      expect(isPrivateClientAddress(ip)).toBe(true);
+    }
+
+    for (const ip of [
+      "8.8.8.8",
+      "203.0.113.7",
+      "172.32.0.1",
+      "172.15.0.1",
+      "192.169.1.1",
+      "100.64.0.1",
+      "2001:db8::1",
+      "unknown",
+    ]) {
+      expect(isPrivateClientAddress(ip)).toBe(false);
+    }
+  });
+
+  test("ignores forwarded headers unless a proxy is trusted", () => {
     const headers = new Headers({ "x-forwarded-for": "1.2.3.4, 198.51.100.9" });
 
-    expect(resolveClientIp(headers, "203.0.113.7", false)).toBe("203.0.113.7");
-    expect(resolveClientIp(headers, "203.0.113.7", true)).toBe("198.51.100.9");
+    expect(resolveClientIp(headers, "203.0.113.7", "never")).toBe("203.0.113.7");
+    expect(resolveClientIp(headers, "198.51.100.9", "never")).toBe("198.51.100.9");
+    expect(resolveClientIp(headers, "203.0.113.7", "always")).toBe("198.51.100.9");
+  });
+
+  test("trusts forwarded headers in auto mode only from a private peer", () => {
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.9" });
+
+    expect(resolveClientIp(headers, "10.42.0.7", "auto")).toBe("203.0.113.9");
+    expect(resolveClientIp(headers, "127.0.0.1", "auto")).toBe("203.0.113.9");
+    expect(resolveClientIp(headers, "203.0.113.7", "auto")).toBe("203.0.113.7");
+    expect(resolveClientIp(new Headers(), "10.42.0.7", "auto")).toBe("10.42.0.7");
   });
 
   test("accepts the dedicated proxy headers first", () => {
@@ -96,7 +144,9 @@ describe("client address resolution", () => {
       "x-forwarded-for": "1.2.3.4",
     });
 
-    expect(resolveClientIp(headers, "127.0.0.1", true)).toBe("198.51.100.1");
+    expect(resolveClientIp(headers, "127.0.0.1", "always")).toBe("198.51.100.1");
+    expect(hasForwardedHeaders(headers)).toBe(true);
+    expect(hasForwardedHeaders(new Headers())).toBe(false);
   });
 });
 

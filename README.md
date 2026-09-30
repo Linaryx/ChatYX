@@ -473,13 +473,13 @@ http://localhost:9905/health
 | `HOST` | Host Bun server |
 | `PORT` | Порт bridge |
 | `YOUTUBE_PROXY_URL` | Необязательный proxy для YouTube requests |
-| `MAX_CONNECTIONS_PER_IP` | Лимит одновременных WebSocket с одного IP (по умолчанию `16`) |
-| `MAX_SOURCES_PER_IP` | Лимит одновременных подписок на каналы с одного IP (`8`) |
+| `MAX_CONNECTIONS_PER_IP` | Лимит одновременных WebSocket с одного IP (по умолчанию `32`) |
+| `MAX_SOURCES_PER_IP` | Лимит одновременных подписок на каналы с одного IP (`16`) |
 | `MAX_SOURCES` | Сколько разных каналов bridge ведёт одновременно (`500`) |
 | `MAX_CLIENTS_PER_SOURCE` | Сколько browser source делят один канал (`200`) |
-| `UPGRADES_PER_MINUTE_PER_IP` | Лимит попыток подключения с одного IP (`60`) |
-| `NEW_SOURCES_PER_HOUR_PER_IP` | Сколько новых каналов может запустить один IP (`120`) |
-| `TRUST_PROXY` | Читать реальный IP из forwarded headers (`false`) |
+| `UPGRADES_PER_MINUTE_PER_IP` | Лимит попыток подключения с одного IP (`120`) |
+| `NEW_SOURCES_PER_HOUR_PER_IP` | Сколько новых каналов может запустить один IP (`240`) |
+| `TRUST_PROXY` | Откуда брать IP клиента: `auto` (по умолчанию), `1`, `0` |
 | `ALLOWED_ORIGINS` | Список разрешённых origin через запятую (пусто — все) |
 
 Полный список лимитов, их поведение и коды ошибок описаны в
@@ -491,8 +491,10 @@ http://localhost:9905/health
 YOUTUBE_PROXY_URL=http://proxy.example:1080 bun run sources:start
 ```
 
-За обратным прокси, который терминирует TLS, включи `TRUST_PROXY=1`, иначе все
-клиенты будут считаться одним IP.
+За прокси или балансировщиком (в том числе на Northflank) ничего настраивать не
+нужно: по умолчанию `TRUST_PROXY=auto` берёт IP клиента из forwarded-заголовков,
+когда соединение приходит с приватного адреса. `TRUST_PROXY=1` нужен только если
+прокси обращается к bridge по публичному адресу.
 
 ### Docker
 

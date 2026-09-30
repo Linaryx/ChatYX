@@ -14,6 +14,8 @@ import {
 } from "./limits";
 import type { SourceCapacityIssue } from "./source-registry";
 
+export type TrustProxyMode = "auto" | "always" | "never";
+
 export type BridgeLimits = {
   /** Concurrent WebSockets from one client IP. */
   readonly maxConnectionsPerIp: number;
@@ -34,7 +36,11 @@ export type BridgeLimits = {
   readonly globalNewSourceRate: RateLimitOptions;
   readonly searchRate: RateLimitOptions;
   readonly idleTimeoutSeconds: number;
-  readonly trustProxy: boolean;
+  /**
+   * `auto` (default) trusts forwarded headers only when the peer is a private
+   * address, `always` trusts them from anywhere, `never` ignores them.
+   */
+  readonly trustProxy: TrustProxyMode;
   readonly allowedOrigins: readonly string[];
 };
 
@@ -58,18 +64,23 @@ export type SocketAdmission = {
   readonly capacityIssue?: SourceCapacityIssue | null;
 };
 
+/**
+ * Defaults aim at real use: one OBS browser source plus the setup preview, on a
+ * connection that may be shared (a household, an office, mobile carrier NAT).
+ * They are generous for that shape and still bound what one client can burn.
+ */
 const DEFAULTS = {
-  maxConnectionsPerIp: 16,
-  maxSourcesPerIp: 8,
+  maxConnectionsPerIp: 32,
+  maxSourcesPerIp: 16,
   maxConnections: 4096,
   maxLegacyConnections: 100,
   maxSources: 500,
   maxClientsPerSource: 200,
   maxChannelNameLength: 64,
-  upgradesPerMinutePerIp: 60,
-  newSourcesPerHourPerIp: 120,
+  upgradesPerMinutePerIp: 120,
+  newSourcesPerHourPerIp: 240,
   newSourcesPerMinute: 120,
-  searchesPerMinutePerIp: 60,
+  searchesPerMinutePerIp: 120,
   idleTimeoutSeconds: 120,
 } as const;
 
@@ -107,13 +118,13 @@ function readInt(
   return Math.min(parsed, maximum);
 }
 
-function readFlag(env: BridgeLimitsEnv, name: string, fallback: boolean): boolean {
-  const raw = env[name]?.trim().toLowerCase();
-  if (!raw) return fallback;
-  if (["1", "true", "yes", "on"].includes(raw)) return true;
-  if (["0", "false", "no", "off"].includes(raw)) return false;
-  console.warn(`[chat-sources] ignoring invalid ${name}="${raw}"`);
-  return fallback;
+function readTrustProxy(env: BridgeLimitsEnv): TrustProxyMode {
+  const raw = env.TRUST_PROXY?.trim().toLowerCase();
+  if (!raw || raw === "auto") return "auto";
+  if (["1", "true", "yes", "on"].includes(raw)) return "always";
+  if (["0", "false", "no", "off"].includes(raw)) return "never";
+  console.warn(`[chat-sources] ignoring invalid TRUST_PROXY="${raw}"`);
+  return "auto";
 }
 
 function readList(env: BridgeLimitsEnv, name: string): readonly string[] {
@@ -164,7 +175,7 @@ export function resolveBridgeLimits(env: BridgeLimitsEnv = process.env): BridgeL
       10,
       3600,
     ),
-    trustProxy: readFlag(env, "TRUST_PROXY", false),
+    trustProxy: readTrustProxy(env),
     allowedOrigins: readList(env, "ALLOWED_ORIGINS"),
   };
 }
@@ -188,25 +199,66 @@ function lastForwardedFor(value: string | null): string {
   return parts[parts.length - 1]?.trim() ?? "";
 }
 
+/** Loopback, link-local, and the RFC 1918 / ULA ranges a proxy lives in. */
+export function isPrivateClientAddress(ip: string): boolean {
+  if (!ip || ip === "unknown") return false;
+  if (ip === "::1" || ip === "0:0:0:0:0:0:0:1") return true;
+  if (/^f[cd][0-9a-f]{2}:/.test(ip)) return true;
+  if (/^fe80:/.test(ip)) return true;
+
+  const octets = ip.split(".").map(Number);
+  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet))) return false;
+  const [first = -1, second = -1] = octets;
+  return (
+    first === 10 ||
+    first === 127 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 169 && second === 254)
+  );
+}
+
+export function hasForwardedHeaders(headers: Headers): boolean {
+  return Boolean(
+    headers.get("cf-connecting-ip") ||
+      headers.get("x-real-ip") ||
+      headers.get("x-forwarded-for"),
+  );
+}
+
 /**
- * The socket address is the real peer unless the bridge sits behind a proxy the
- * operator trusts (`TRUST_PROXY`), in which case the last hop of the forwarded
- * chain wins: every proxy appends the peer it saw, so earlier entries are
- * client-controlled.
+ * The socket address is the real peer unless a proxy sits in front. `auto`
+ * (the default) trusts the forwarded chain only when the peer is a private
+ * address, which is where a load balancer or an in-cluster ingress connects
+ * from; a public peer means a direct client, whose headers are its own claims.
+ * `always`/`never` force the decision.
+ *
+ * The chain is read right-to-left (`cf-connecting-ip`, then `x-real-ip`, then
+ * the last `x-forwarded-for` entry): every proxy appends the peer it saw, so
+ * earlier entries are client-controlled.
  */
 export function resolveClientIp(
   headers: Headers,
   socketAddress: string | undefined,
-  trustProxy: boolean,
+  trustProxy: TrustProxyMode,
 ): string {
-  if (trustProxy) {
-    const forwarded =
-      headers.get("cf-connecting-ip") ||
-      headers.get("x-real-ip") ||
-      lastForwardedFor(headers.get("x-forwarded-for"));
-    if (forwarded) return normalizeClientIp(forwarded);
-  }
-  return normalizeClientIp(socketAddress);
+  const peer = normalizeClientIp(socketAddress);
+  if (!trustsForwardedHeaders(peer, trustProxy)) return peer;
+
+  const forwarded =
+    headers.get("cf-connecting-ip") ||
+    headers.get("x-real-ip") ||
+    lastForwardedFor(headers.get("x-forwarded-for"));
+  return forwarded ? normalizeClientIp(forwarded) : peer;
+}
+
+export function trustsForwardedHeaders(
+  socketAddress: string | undefined,
+  trustProxy: TrustProxyMode,
+): boolean {
+  if (trustProxy === "always") return true;
+  if (trustProxy === "never") return false;
+  return isPrivateClientAddress(normalizeClientIp(socketAddress));
 }
 
 /**

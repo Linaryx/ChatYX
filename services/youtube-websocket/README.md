@@ -58,45 +58,72 @@ of dropping chat.
 ## Limits and abuse protection
 
 Every subscription costs upstream work, so the bridge puts a ceiling on what a
-single client, and the bridge as a whole, may consume. Defaults follow the real
-use case: one OBS browser source, occasionally two, plus the setup preview.
+single client, and the bridge as a whole, may consume. Defaults are sized for
+real use — one OBS browser source plus the setup preview, on a connection that
+may be shared by a household or an office — and every limit is env-overridable.
 
-| Variable | Default | Purpose |
+| Variable | Default | What the default allows |
 |---|---|---|
-| `MAX_CONNECTIONS_PER_IP` | `16` | Concurrent WebSockets from one client IP |
-| `MAX_SOURCES_PER_IP` | `8` | Concurrent channel subscriptions from one client IP |
+| `MAX_CONNECTIONS_PER_IP` | `32` | Concurrent WebSockets from one client IP |
+| `MAX_SOURCES_PER_IP` | `16` | Concurrent channel subscriptions from one client IP |
 | `MAX_CONNECTIONS` | `4096` | Concurrent WebSockets across the bridge |
 | `MAX_SOURCES` | `500` | Distinct channels followed at once |
 | `MAX_CLIENTS_PER_SOURCE` | `200` | Browser sources sharing one channel |
 | `MAX_LEGACY_CONNECTIONS` | `100` | Concurrent `/c/` and `/s/` links, which start their own upstream sessions |
 | `MAX_CHANNEL_NAME_LENGTH` | `64` | Hard cap on the channel identifier before platform validation |
-| `UPGRADES_PER_MINUTE_PER_IP` | `60` | WebSocket upgrade attempts per client IP |
-| `NEW_SOURCES_PER_HOUR_PER_IP` | `120` | New channels one client IP may start |
+| `UPGRADES_PER_MINUTE_PER_IP` | `120` | WebSocket upgrade attempts per client IP |
+| `NEW_SOURCES_PER_HOUR_PER_IP` | `240` | New channels one client IP may start |
 | `NEW_SOURCES_PER_MINUTE` | `120` | New channels the bridge may start in total |
-| `SEARCHES_PER_MINUTE_PER_IP` | `60` | `/api/kick/channels` requests per client IP |
+| `SEARCHES_PER_MINUTE_PER_IP` | `120` | `/api/kick/channels` requests per client IP |
 | `WS_IDLE_TIMEOUT_SECONDS` | `120` | Peers that stop answering pings are dropped |
-| `TRUST_PROXY` | `false` | Read the client IP from the forwarded headers |
+| `TRUST_PROXY` | `auto` | Where the client IP comes from: `auto`, `1`, or `0` |
 | `ALLOWED_ORIGINS` | *(empty)* | Comma-separated browser origins; empty allows all |
 
 Rate limits are token buckets: each rule may burst for 30 seconds of its
-sustained rate and refills continuously, so a reconnect loop stays cheap. The
-identifier rules are per platform — YouTube handles are 3–30 characters, channel
-ids are `UC` plus 22 characters, video ids are 11, Kick slugs are 3–25 — and a
-malformed or oversized identifier is rejected before the upgrade.
+sustained rate and refills continuously, so a reconnect loop stays cheap while a
+spike still hits the ceiling. The identifier rules are per platform — YouTube
+handles are 3–30 characters, channel ids are `UC` plus 22 characters, video ids
+are 11, Kick slugs are 3–25 — and a malformed or oversized identifier is
+rejected before the upgrade.
 
 The bridge is receive-only: clients may send at most 4 KB per frame, and a
 client that stops reading is disconnected once 1 MB is buffered for it.
 
-Set `TRUST_PROXY=1` when a reverse proxy terminates TLS in front of the bridge,
-otherwise every client shares the proxy's address and the per-IP limits become
-one global limit. The forwarded chain is read right-to-left (`cf-connecting-ip`,
-then `x-real-ip`, then the last `x-forwarded-for` entry), because earlier
+### Behind a load balancer
+
+`TRUST_PROXY=auto` (the default) reads the forwarded chain when the peer
+address is private — which is exactly how a load balancer or an in-cluster
+ingress connects — and ignores it when the peer is a public address, because
+then the headers are the client's own claims. That means the common deployment
+needs no configuration at all; set `TRUST_PROXY=1` only if the proxy reaches the
+bridge over a public address, and `TRUST_PROXY=0` to ignore headers entirely.
+When forwarded headers arrive over a public peer the bridge logs one warning.
+
+The chain is read right-to-left (`cf-connecting-ip`, then `x-real-ip`, then the
+last `x-forwarded-for` entry): every proxy appends the peer it saw, so earlier
 entries are client-controlled.
 
 `ALLOWED_ORIGINS` is a browser-origin allowlist (for example
 `https://linaryx.github.io,https://chat.ruina.team`). Requests without an
 `origin` header — the bridge clients and health probes — are never blocked by
 it.
+
+### Northflank
+
+Public HTTP ports support WebSockets, so the bridge serves the overlay through
+its `*.code.run` endpoint as-is; Northflank's load balancer attaches
+`X-Forwarded-For`, which `auto` mode picks up. Add runtime variables under
+**Service → Environment** (or a project secret group) only to tune limits:
+
+```env
+TRUST_PROXY=1
+MAX_SOURCES=1000
+```
+
+Run the bridge as a single instance, or turn on client-IP sticky sessions in
+the load-balancing settings: replicas do not share workers or counters, so two
+instances would poll the same channel twice and each hold its own per-IP
+budget.
 
 ## Event Shape
 
