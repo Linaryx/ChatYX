@@ -7,9 +7,9 @@ import {
 } from "../src/styles/chatStyles";
 import { createChromeStyle } from "../src/features/chat-overlay";
 
-const chatCss = await Bun.file(
-  new URL("../src/styles/chat.css", import.meta.url),
-).text();
+const chatCss = (
+  await Bun.file(new URL("../src/styles/chat.css", import.meta.url)).text()
+).replace(/\r\n/g, "\n");
 
 test("the property list covers exactly what the variables function publishes", () => {
   // A maximal config, so the conditional shadow and stroke properties are present
