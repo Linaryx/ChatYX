@@ -16,6 +16,8 @@ const KICK_DELETE_EVENTS = new Set([
 const MAX_RECONNECT_DELAY_MS = 30_000;
 const GUEST_TOKEN_REFRESH_MARGIN_SECONDS = 60;
 const MAX_HISTORY_MESSAGES = 50;
+/** Upstream lookups fail fast instead of pinning a worker indefinitely. */
+const UPSTREAM_TIMEOUT_MS = 15_000;
 
 type KickBadge = {
   type?: unknown;
@@ -226,6 +228,7 @@ async function fetchKickJson(
       "x-app-platform": "web",
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`Kick request failed (${response.status})`);
   return asRecord(await response.json());
@@ -244,6 +247,7 @@ function getRealtimeUrl(value: Record<string, unknown>): string {
 async function resolveKickChannel(slug: string): Promise<KickChannel> {
   const response = await fetch(`${KICK_CHANNEL_ENDPOINT}/${encodeURIComponent(slug)}`, {
     headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`Kick channel lookup failed (${response.status})`);
   const data = asRecord(await response.json());
@@ -256,7 +260,10 @@ async function resolveKickChannel(slug: string): Promise<KickChannel> {
 async function fetchKickHistory(channelId: string): Promise<ChatSourceMessage[]> {
   const response = await fetch(
     `https://web.kick.com/api/v1/chat/${encodeURIComponent(channelId)}/history`,
-    { headers: { accept: "application/json" } },
+    {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    },
   );
   if (!response.ok) throw new Error(`Kick history request failed (${response.status})`);
   return normalizeKickHistory(await response.json());

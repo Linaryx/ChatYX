@@ -71,6 +71,10 @@ export class YouTubeSourceWorker implements ChatSourceWorker {
     const videoIds = this.mode === "channel"
       ? await resolveLiveVideoIds(this.id)
       : [this.id];
+    // The lookup can outlive the subscription, and a stopped worker must not
+    // leave live chats polling behind it.
+    if (this.stopped) return;
+
     let activeStreams = videoIds.length;
 
     for (const videoId of videoIds) {
@@ -103,6 +107,10 @@ export class YouTubeSourceWorker implements ChatSourceWorker {
           }
         },
       );
+      if (this.stopped) {
+        session.stop();
+        return;
+      }
       this.sessions.push(session);
     }
 

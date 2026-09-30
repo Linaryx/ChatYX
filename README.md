@@ -462,8 +462,8 @@ http://localhost:9905/health
 
 `/health` возвращает:
 
-```text
-ok
+```json
+{ "service": "ChatYX chat sources", "status": "ok", "active": { "connections": 3, "sources": 2, "clients": 3 } }
 ```
 
 ### Переменные окружения bridge
@@ -473,12 +473,26 @@ ok
 | `HOST` | Host Bun server |
 | `PORT` | Порт bridge |
 | `YOUTUBE_PROXY_URL` | Необязательный proxy для YouTube requests |
+| `MAX_CONNECTIONS_PER_IP` | Лимит одновременных WebSocket с одного IP (по умолчанию `16`) |
+| `MAX_SOURCES_PER_IP` | Лимит одновременных подписок на каналы с одного IP (`8`) |
+| `MAX_SOURCES` | Сколько разных каналов bridge ведёт одновременно (`500`) |
+| `MAX_CLIENTS_PER_SOURCE` | Сколько browser source делят один канал (`200`) |
+| `UPGRADES_PER_MINUTE_PER_IP` | Лимит попыток подключения с одного IP (`60`) |
+| `NEW_SOURCES_PER_HOUR_PER_IP` | Сколько новых каналов может запустить один IP (`120`) |
+| `TRUST_PROXY` | Читать реальный IP из forwarded headers (`false`) |
+| `ALLOWED_ORIGINS` | Список разрешённых origin через запятую (пусто — все) |
+
+Полный список лимитов, их поведение и коды ошибок описаны в
+[`services/youtube-websocket/README.md`](./services/youtube-websocket/README.md#limits-and-abuse-protection).
 
 Пример:
 
 ```bash
 YOUTUBE_PROXY_URL=http://proxy.example:1080 bun run sources:start
 ```
+
+За обратным прокси, который терминирует TLS, включи `TRUST_PROXY=1`, иначе все
+клиенты будут считаться одним IP.
 
 ### Docker
 

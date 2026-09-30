@@ -20,7 +20,8 @@
     "lint:youtube": "oxlint -c ./.oxlintrc.json services/youtube-websocket/src",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && bun run --cwd services/youtube-websocket typecheck",
     "test": "bun test ./tests",
-    "check": "bun run lint && bun run typecheck && bun run test && bun run build"
+    "test:services": "bun run --cwd services/youtube-websocket test",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run test:services && bun run build"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -4,12 +4,17 @@ Log.setLevel(Log.Level.ERROR);
 
 let cachedInnertube: Innertube | null = null;
 const proxyUrl = process.env.YOUTUBE_PROXY_URL ?? "";
+/** Upstream requests never hang: a slow YouTube answer must not pin a worker. */
+const UPSTREAM_TIMEOUT_MS = 15_000;
 
 function proxiedFetch(input: RequestInfo | URL, init?: RequestInit) {
-  if (!proxyUrl) return fetch(input, init);
+  const timeout = AbortSignal.timeout(UPSTREAM_TIMEOUT_MS);
+  const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+  if (!proxyUrl) return fetch(input, { ...init, signal });
 
   return fetch(input, {
     ...init,
+    signal,
     proxy: proxyUrl,
   } as RequestInit & { proxy: string });
 }
