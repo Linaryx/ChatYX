@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
-  collectTestMessageEmotes,
-  createTestMessages,
   TWITCH_SAMPLE_EMOTES,
-  type TestMessageEmotes,
-} from "../src/features/chat-overlay/model/testMessages";
+  type SampleEmotePools,
+} from "../src/config/sampleEmotes";
+import { createTestMessages } from "../src/features/chat-overlay/model/testMessages";
 
-const POOL: TestMessageEmotes = {
+const POOL: SampleEmotePools = {
   sevenTv: ["CatJAM", "peepoHappy", "RainTime"],
   ffz: ["5Head", "Sadge", "FeelsOkayMan"],
   bttv: ["POGGERS", "monkaS", "EZ"],
@@ -142,25 +141,5 @@ describe("test messages", () => {
       expect(message.message).toBe(message.message.trim());
       expect(message.message.split(/\s+/).length).toBeGreaterThan(0);
     }
-  });
-});
-
-describe("test message emote pool", () => {
-  test("groups emotes by provider and skips duplicates and cheer emotes", () => {
-    const pool = collectTestMessageEmotes([
-      { name: "CatJAM", source: "7tv" },
-      { name: "CatJAM", source: "bttv" },
-      { name: "Sadge", source: "ffz" },
-      { name: "POGGERS", source: "bttv" },
-      { name: "cheer100", source: "cheer" },
-      { name: "", source: "7tv" },
-    ]);
-
-    expect(pool).toEqual({
-      sevenTv: ["CatJAM"],
-      ffz: ["Sadge"],
-      bttv: ["POGGERS"],
-      twitch: TWITCH_SAMPLE_EMOTES,
-    });
   });
 });

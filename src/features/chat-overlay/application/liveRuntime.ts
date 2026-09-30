@@ -8,6 +8,7 @@ import {
   createChatPresentationConfig,
 } from "~/services/chat/chatPresentationService";
 import { emoteService } from "~/services/chat/assets/emoteService";
+import { collectSampleEmotePools } from "~/config/sampleEmotes";
 import { badgeService } from "~/services/badges/badgeService";
 import { mentionStyleService } from "~/services/chat/mentionStyleService";
 import { chatFeatureIntegration } from "~/services/chat/chatFeatureIntegration";
@@ -28,11 +29,7 @@ import {
   parseChatRefreshScope,
   parseTestMessageCount,
 } from "./chatCommandService";
-import {
-  collectTestMessageEmotes,
-  createTestMessages,
-  TWITCH_SAMPLE_EMOTES,
-} from "../model/testMessages";
+import { createTestMessages } from "../model/testMessages";
 import { createBrowserRteRuntime } from "~/services/chat/rte/browserRuntime";
 import type { RteRuntime } from "~/services/chat/rte/runtimeController";
 import {
@@ -577,9 +574,8 @@ export class LiveChatRuntime {
   private appendTestMessages(count: number): void {
     const messages = createTestMessages({
       count,
-      emotes: collectTestMessageEmotes(
+      emotes: collectSampleEmotePools(
         emoteService.getAllEmotes(this.activeChannelId),
-        TWITCH_SAMPLE_EMOTES,
       ),
     });
 

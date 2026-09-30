@@ -2,24 +2,40 @@ import type { ChatPresentationService } from "../chatPresentationService";
 import { emoteService } from "../assets/emoteService";
 import type { TwitchMessage } from "../twitch/twitchService";
 import { PREVIEW_USERNAME_BASES } from "~/config/previewUsernames";
+import {
+  buildSampleLine,
+  collectSampleEmotePools,
+  pickSampleEmotes,
+  type SampleEmote,
+} from "~/config/sampleEmotes";
 import { isReplyEligibleEvent } from "~/utils/chat/replyEligibility";
 import { previewRealUsers, type PreviewRealUser } from "./userPool";
 
+/**
+ * Neutral chat lines for the demo scenario: they read naturally on their own,
+ * with a trailing mention and with a trailing emote. The set still contains
+ * questions and a link so the demo keeps exercising wrapping and link styling.
+ */
 const PREVIEW_MESSAGES = [
-  "Всем привет! Как настроение?",
-  "Вот это сейчас было красиво",
-  "Первый раз на стриме, мне уже нравится",
-  "Расписание на неделю: https://example.com/schedule",
-  "Идеальный момент для клипа",
-  "Сегодня чат особенно активный",
-  "Спасибо за отличный эфир!",
-  "Кажется, мы нашли новую стратегию",
-  "Можно ещё раз, но теперь специально?",
-  "Не ожидал такого поворота",
+  "привет всем",
+  "как дела?",
+  "классный стрим",
+  "го ещё",
+  "давно смотрю",
+  "сегодня много народу",
+  "что по расписанию?",
+  "первый раз тут",
+  "спасибо за эфир",
+  "вот это да",
+  "ору с этого",
+  "гайд тут: https://example.com/guide",
 ];
 
 const PREVIEW_REPLY_BODY =
-  "Это старое сообщение, на которое сейчас отвечают, и оно специально длинное, чтобы проверить обрезку reply в одну строку.";
+  "Думал, что стрим начнётся в семь, но, кажется, всё сдвинулось — кто-нибудь знает точное время?";
+
+/** Keeps the emote scenario useful before any catalogue has loaded. */
+const FALLBACK_EMOTE: SampleEmote = { name: "Kappa", id: "25" };
 
 export type PreviewDemoKind = "pasta" | "emote";
 
@@ -47,12 +63,14 @@ let messageCounter = 0;
 let lastUsername = "";
 let shuffledOrder: number[] = [];
 let shufflePos = 0;
+let usedEmotes = new Set<string>();
 
 export function resetMessageState() {
   messageCounter = 0;
   lastUsername = "";
   shuffledOrder = [];
   shufflePos = 0;
+  usedEmotes = new Set();
 }
 
 function previewRandom(seed: number) {
@@ -94,31 +112,23 @@ function buildEmoteSnapshot(text: string, channelId: string, username: string) {
   return snapshot;
 }
 
-function pickRandomEmoteNames(
+/**
+ * Picks demo emotes per provider, so a batch shows 7TV, FFZ, BTTV and Twitch
+ * emotes instead of whatever the merged name list happens to contain.
+ */
+function pickPreviewEmotes(
   channelId: string,
   index: number,
   count: number,
-): string[] {
-  const availableEmotes = emoteService.getAllEmoteNames(channelId);
-  if (availableEmotes.length === 0) return [];
-
-  const selected: string[] = [];
-  for (let offset = 0; offset < availableEmotes.length; offset += 1) {
-    const name =
-      availableEmotes[
-        Math.floor(
-          previewRandom(index + 600 + offset * 37) * availableEmotes.length,
-        )
-      ];
-    if (name && !selected.includes(name)) selected.push(name);
-    if (selected.length >= count) break;
-  }
-
-  return selected;
-}
-
-function pickRandomEmoteName(channelId: string, index: number): string {
-  return pickRandomEmoteNames(channelId, index, 1)[0] || "Kappa";
+): SampleEmote[] {
+  let seed = index * 1013 + 17;
+  return pickSampleEmotes(
+    collectSampleEmotePools(emoteService.getAllEmotes(channelId)),
+    index,
+    count,
+    () => previewRandom(seed++),
+    usedEmotes,
+  );
 }
 
 function getPreviewTwitchEvent(
@@ -222,21 +232,27 @@ export function nextPreviewMessage(
     isFounder = false;
   }
 
-  const messageText =
+  const emoteCount =
+    demoKind === "emote" ? 1 : 1 + Math.floor(previewRandom(index + 710) * 3);
+  const pickedEmotes = pickPreviewEmotes(channelId, index, emoteCount);
+  const selectedEmotes =
+    pickedEmotes.length > 0
+      ? pickedEmotes
+      : demoKind === "emote"
+        ? [FALLBACK_EMOTE]
+        : [];
+
+  const mentionTarget = lastUsername || username;
+  const line =
     demoKind === "emote"
-        ? pickRandomEmoteName(channelId, index)
-        : (() => {
-          const mentionTarget = lastUsername || username;
-          let text = PREVIEW_MESSAGES[index % PREVIEW_MESSAGES.length];
-          const selectedEmotes = pickRandomEmoteNames(
-            channelId,
-            index,
-            1 + Math.floor(previewRandom(index + 710) * 3),
-          );
-          if (previewRandom(index + 20) < 0.3) text += ` @${mentionTarget}`;
-          if (selectedEmotes.length > 0) text += ` ${selectedEmotes.join(" ")}`;
-          return text;
-        })();
+      ? buildSampleLine("", selectedEmotes)
+      : buildSampleLine(
+          previewRandom(index + 20) < 0.3
+            ? `${PREVIEW_MESSAGES[index % PREVIEW_MESSAGES.length]} @${mentionTarget}`
+            : PREVIEW_MESSAGES[index % PREVIEW_MESSAGES.length],
+          selectedEmotes,
+        );
+  const messageText = line.message;
   const isGifPreview = showGifs && index % 16 === 1;
 
   let badges: string[];
@@ -265,18 +281,20 @@ export function nextPreviewMessage(
   const twitchEvent = getPreviewTwitchEvent(index, displayName);
   const replyTarget = lastUsername || channel;
   const canReply = isReplyEligibleEvent(twitchEvent?.type);
+  const hasAuthoredText =
+    twitchEvent?.type !== "raid" && twitchEvent?.type !== "watch-streak";
 
   const message: TwitchMessage = {
     id: `preview-live-${Date.now()}-${index}`,
     platform: "twitch",
     username,
     displayName,
-    message: twitchEvent?.type === "raid" || twitchEvent?.type === "watch-streak"
-      ? ""
-      : isGifPreview ? "[GIF]" : messageText,
+    message: hasAuthoredText
+      ? isGifPreview ? "[GIF]" : messageText
+      : "",
     color,
     badges,
-    emotes: {},
+    emotes: hasAuthoredText && !isGifPreview ? line.emotes : {},
     userType: "",
     isModerator,
     isSubscriber,

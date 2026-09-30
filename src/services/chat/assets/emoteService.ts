@@ -610,24 +610,6 @@ class EmoteService {
     return emotes;
   }
 
-  getAllEmoteNames(channelId?: string): string[] {
-    const emoteNames: string[] = [];
-
-    // Добавляем глобальные эмодзи
-    Object.keys(this.emoteData.emotes).forEach((name) => {
-      emoteNames.push(name);
-    });
-
-    // Добавляем канальные эмодзи
-    if (channelId && this.emoteData.channelEmotes[channelId]) {
-      Object.keys(this.emoteData.channelEmotes[channelId]).forEach((name) => {
-        emoteNames.push(name);
-      });
-    }
-
-    return emoteNames;
-  }
-
   getEmoteData(): EmoteData {
     return this.emoteData;
   }
