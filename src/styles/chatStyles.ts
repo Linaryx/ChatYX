@@ -111,6 +111,9 @@ export function getOverlayStyleVariables(
   const emoteScale = Number.isFinite(config.emoteScale)
     ? Math.min(Math.max(config.emoteScale, MIN_EMOTE_SCALE), MAX_EMOTE_SCALE)
     : 1;
+  const gigantifiedEmoteScale = Number.isFinite(config.gigantifiedEmoteScale)
+    ? Math.min(Math.max(config.gigantifiedEmoteScale, MIN_EMOTE_SCALE), MAX_EMOTE_SCALE)
+    : 1;
 
   const variables: Record<string, string> = {
     "--chat-size-font-size": size.fontSize,
@@ -136,7 +139,9 @@ export function getOverlayStyleVariables(
     "--chat-emoji-size": `${size.emojiHeight * emoteScale}px`,
     "--chat-emote-margin-right": size.emoteMarginRight,
     "--chat-upscale-height": `${size.upscaleHeight}px`,
-    "--chat-gigantified-emote-width": size.gigantifiedEmoteWidth,
+    "--chat-gigantified-emote-width": `${
+      Number.parseFloat(size.gigantifiedEmoteWidth) * gigantifiedEmoteScale
+    }px`,
   };
 
   if (config.shadow) {

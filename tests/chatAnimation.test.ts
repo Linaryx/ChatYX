@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   getAnimationScrollBehavior,
   getMessageEntryAnimationDuration,
+  messageSpeedToIntervalMs,
   normalizeChatAnimationMode,
 } from "../src/config/chatAnimation";
 import { getAnimationStyles } from "../src/services/chat/runtime/animationStyles";
@@ -41,5 +42,20 @@ describe("chat animation modes", () => {
     expect(getMessageEntryAnimationDuration("flow")).toBe(380);
     expect(getMessageEntryAnimationDuration("fade")).toBe(200);
     expect(getMessageEntryAnimationDuration("none")).toBe(200);
+  });
+
+  test("maps preview speed steps to readable intervals", () => {
+    expect(messageSpeedToIntervalMs(0)).toBeNull();
+    expect(messageSpeedToIntervalMs(10)).toBe(3000);
+    expect(messageSpeedToIntervalMs(20)).toBe(2000);
+    expect(messageSpeedToIntervalMs(30)).toBe(1500);
+    expect(messageSpeedToIntervalMs(40)).toBe(1000);
+    expect(messageSpeedToIntervalMs(50)).toBe(750);
+    expect(messageSpeedToIntervalMs(60)).toBe(500);
+    expect(messageSpeedToIntervalMs(70)).toBe(350);
+    expect(messageSpeedToIntervalMs(80)).toBe(250);
+    expect(messageSpeedToIntervalMs(90)).toBe(150);
+    expect(messageSpeedToIntervalMs(100)).toBe(100);
+    expect(messageSpeedToIntervalMs(31)).toBe(1500);
   });
 });

@@ -24,9 +24,22 @@ export interface AnimationOptions {
 
 export const MIN_MESSAGE_SPEED = 0;
 export const MAX_MESSAGE_SPEED = 100;
-export const DEFAULT_MESSAGE_SPEED = 31;
-export const MIN_MESSAGE_INTERVAL_MS = 80;
-export const MAX_MESSAGE_INTERVAL_MS = 3000;
+export const DEFAULT_MESSAGE_SPEED = 30;
+export const MESSAGE_SPEED_STEP = 10;
+
+const MESSAGE_SPEED_INTERVALS = [
+  null,
+  3000,
+  2000,
+  1500,
+  1000,
+  750,
+  500,
+  350,
+  250,
+  150,
+  100,
+] as const;
 
 export const DEFAULT_ANIMATION_OPTIONS: AnimationOptions = {
   enabled: true,
@@ -72,15 +85,13 @@ export function clampMessageSpeed(speed: number): number {
 }
 
 /**
- * Maps the 1..100 speed control onto a message interval, or null when the speed
- * is at its minimum, which means "no automatic pacing".
+ * Maps the preview's discrete speed control onto readable intervals. Legacy URL
+ * values between steps snap to the closest preset.
  */
 export function messageSpeedToIntervalMs(speed: number): number | null {
   const clamped = clampMessageSpeed(speed);
   if (clamped <= MIN_MESSAGE_SPEED) return null;
 
-  const normalized = (clamped - 1) / (MAX_MESSAGE_SPEED - 1);
-  const ratio = MIN_MESSAGE_INTERVAL_MS / MAX_MESSAGE_INTERVAL_MS;
-
-  return Math.round(MAX_MESSAGE_INTERVAL_MS * ratio ** normalized);
+  const index = Math.round(clamped / MESSAGE_SPEED_STEP);
+  return MESSAGE_SPEED_INTERVALS[index] ?? null;
 }

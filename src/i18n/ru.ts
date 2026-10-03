@@ -75,7 +75,7 @@ export const dictionary = {
     hideNicknames: "Не показывать ники", reverseMessageOrder: "Обратный порядок сообщений", horizontalMessageFeed: "Горизонтальная лента сообщений",
     showHighlightedMessages: "Показывать выделенные сообщения", showPointRewards: "Показывать награды за баллы",
     hideLinkRewards: "Скрывать награды со ссылками", hideLinkRewardsHint: "Включено по умолчанию. Скрывает всю покупку за баллы, если в сообщении, названии или описании награды есть ссылка.",
-    showGigantifiedEmotes: "Показывать гигантские эмоуты", showGifs: "Показывать GIF в сообщениях", showGifsHint: "Показывает Twitch GIF в формате WebP. Выключено по умолчанию.",
+    showGigantifiedEmotes: "Показывать гигантские эмоуты", gigantifiedEmoteSize: "Размер гигантских эмоутов", gigantifiedEmoteSizeHint: "Масштаб относительно размера, заданного пресетом.", showGifs: "Показывать GIF в сообщениях", showGifsHint: "Показывает Twitch GIF в формате WebP. Выключено по умолчанию.",
     showPredictions: "Показывать прогнозы над чатом", showPredictionsHint: "Полоска Twitch Predictions над сообщениями. Работает только при указанном Twitch-канале.", showPredictionsOnlyWhileActive: "Показывать прогноз только во время ставок", showPredictionsOnlyWhileActiveHint: "Скрывает прогноз после закрытия ставок и после результата.",
     showCommands: "Показывать сообщения, начинающиеся с !", showUnlistedEmotes: "Показывать скрытые 7TV-эмоуты",
     chatIsTts: "Русский TTS через ChatIS / Streamlabs", chatIsTtsHint: "Команда модератора: !chat tts (или короче !tts) [-s Maxim|Tatyana] текст. Синтезированный аудиофайл не сохраняется.",

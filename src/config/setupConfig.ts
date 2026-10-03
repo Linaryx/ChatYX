@@ -63,6 +63,7 @@ export type SetupFormState = {
   emoteScale: string;
   showGifs: boolean;
   gifScale: string;
+  gigantifiedEmoteScale: string;
   botNames: readonly string[];
   kickBotNames: readonly string[];
   youtubeBotNames: readonly string[];
@@ -165,6 +166,10 @@ export function buildSetupConfig(
     emoteScale: toFloat(form.emoteScale, DEFAULT_CHAT_CONFIG.emoteScale),
     showGifs: form.showGifs,
     gifScale: toFloat(form.gifScale, DEFAULT_CHAT_CONFIG.gifScale),
+    gigantifiedEmoteScale: toFloat(
+      form.gigantifiedEmoteScale,
+      DEFAULT_CHAT_CONFIG.gigantifiedEmoteScale,
+    ),
     botNames: normalizeBotNames(form.botNames.join(",")),
     kickBotNames: normalizeBotNames(form.kickBotNames.join(",")),
     youtubeBotNames: normalizeBotNames(form.youtubeBotNames.join(",")),

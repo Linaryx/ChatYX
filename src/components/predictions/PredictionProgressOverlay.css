@@ -169,7 +169,7 @@
 .prediction-overlay--chat {
   width: 100%;
   max-width: 100%;
-  gap: 8px;
+  gap: var(--chat-prediction-gap, 4px);
   padding: 0;
   margin: 0;
   transform: none;
@@ -183,7 +183,7 @@
 }
 
 .prediction-overlay--chat .prediction-meta {
-  min-height: 22px;
+  min-height: var(--chat-prediction-meta-height, 22px);
   gap: 8px;
   padding: 0 2px;
 }
@@ -199,7 +199,7 @@
 
 .prediction-overlay--chat .prediction-title {
   max-width: none;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0;
 }
@@ -214,7 +214,7 @@
 }
 
 .prediction-overlay--chat .prediction-segment {
-  height: 28px;
+  height: var(--chat-prediction-segment-height, 28px);
   padding: 0 8px;
   border-radius: 5px;
 }
@@ -262,7 +262,7 @@
   }
 
   .prediction-overlay--chat .prediction-segment {
-    height: 26px;
+    height: var(--chat-prediction-segment-height, 26px);
     padding: 0 8px;
   }
 

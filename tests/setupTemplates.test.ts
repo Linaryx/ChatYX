@@ -46,6 +46,7 @@ test("built-in templates keep both standard and atom presets", () => {
     fontCustom: "",
     fontWeight: 600,
     gifScale: 1,
+    gigantifiedEmoteScale: 1,
     highlightTwitchEvents: false,
     lineHeight: 100,
     linkColor: "#BD1313",
@@ -83,6 +84,7 @@ test("visual template patches exclude channels and behavior settings", () => {
     youtubeChannel: "video",
     animation: "flow",
     gifScale: 1.5,
+    gigantifiedEmoteScale: 1.2,
     font: 4,
     overlayBackgroundColor: "#123456",
   });
@@ -91,6 +93,7 @@ test("visual template patches exclude channels and behavior settings", () => {
     animation: "flow",
     font: 4,
     gifScale: 1.5,
+    gigantifiedEmoteScale: 1.2,
     overlayBackgroundColor: "#123456",
   });
 });

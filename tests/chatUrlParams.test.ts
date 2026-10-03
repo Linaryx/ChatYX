@@ -32,11 +32,12 @@ describe("chat URL params", () => {
     expect(DEFAULT_CHAT_CONFIG.recentMessages).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.showGifs).toBe(false);
     expect(DEFAULT_CHAT_CONFIG.gifScale).toBe(1);
+    expect(DEFAULT_CHAT_CONFIG.gigantifiedEmoteScale).toBe(1);
   });
 
   test("parses aliases and typed values", () => {
     const params = new URLSearchParams(
-      "channel=forsen&yt=@someyt&ytws=ws://localhost:9905&kick=xqc&kickws=ws://localhost:9906&bgp=18&s=2&lh=125&fw=700&nfw=900&sh=0&fd=0&a=false&ms=91&rm=false&b=false&cmd=false&es=1.5&gifs=true&gifscale=1.8&sg=someuser&u7=false",
+      "channel=forsen&yt=@someyt&ytws=ws://localhost:9905&kick=xqc&kickws=ws://localhost:9906&bgp=18&s=2&lh=125&fw=700&nfw=900&sh=0&fd=0&a=false&ms=91&rm=false&b=false&cmd=false&es=1.5&gifs=true&gifscale=1.8&gigantifyscale=1.2&sg=someuser&u7=false",
     );
 
     const cfg = parseChatConfigFromSearchParams(params);
@@ -61,6 +62,7 @@ describe("chat URL params", () => {
     expect(cfg.emoteScale).toBe(1.5);
     expect(cfg.showGifs).toBe(true);
     expect(cfg.gifScale).toBe(1.8);
+    expect(cfg.gigantifiedEmoteScale).toBe(1.2);
     expect(cfg.singleChatter).toBe("someuser");
     expect(cfg.show7tvUnlisted).toBe(false);
   });

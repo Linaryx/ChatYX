@@ -302,6 +302,9 @@ export default function ChatSetup() {
   );
   const [showGifs, setShowGifs] = createSignal(DEFAULT_CHAT_CONFIG.showGifs);
   const [gifScale, setGifScale] = createSignal(String(DEFAULT_CHAT_CONFIG.gifScale));
+  const [gigantifiedEmoteScale, setGigantifiedEmoteScale] = createSignal(
+    String(DEFAULT_CHAT_CONFIG.gigantifiedEmoteScale),
+  );
   const [botNames, setBotNames] = createSignal<string[]>(
     parseBotNames(DEFAULT_CHAT_CONFIG.botNames),
   );
@@ -507,6 +510,7 @@ const [activeSection, setActiveSection] =
       platformMarker: setPlatformMarker,
       showGifs: setShowGifs,
       gifScale: setGifScale,
+      gigantifiedEmoteScale: setGigantifiedEmoteScale,
       animation: setAnimation,
       bots: setBots,
       commands: setCommands,
@@ -644,6 +648,7 @@ const [activeSection, setActiveSection] =
     emoteScale: emoteScale(),
     showGifs: showGifs(),
     gifScale: gifScale(),
+    gigantifiedEmoteScale: gigantifiedEmoteScale(),
     botNames: botNames(),
     kickBotNames: kickBotNames(),
     youtubeBotNames: youtubeBotNames(),
@@ -1048,6 +1053,8 @@ const [activeSection, setActiveSection] =
     setEmoteScale,
     gifScale,
     setGifScale,
+    gigantifiedEmoteScale,
+    setGigantifiedEmoteScale,
   });
 
   const stylingRows = createStylingRows({

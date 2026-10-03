@@ -22,9 +22,20 @@ body {
 }
 
 #chat_chrome.has-prediction {
+  --chat-prediction-meta-height: 22px;
+  --chat-prediction-gap: 4px;
+  --chat-prediction-segment-height: 28px;
   padding-top: calc(
-    58px + var(--chat-surface-padding, 10px) + var(--chat-surface-padding, 10px)
+    var(--chat-prediction-meta-height) + var(--chat-prediction-gap) +
+      var(--chat-prediction-segment-height) + var(--chat-surface-padding, 10px) +
+      var(--chat-surface-padding, 10px)
   );
+}
+
+@media (max-width: 720px) {
+  #chat_chrome.has-prediction {
+    --chat-prediction-segment-height: 26px;
+  }
 }
 
 #chat_chrome.has-prediction #chat_container {

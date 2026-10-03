@@ -15,6 +15,7 @@ type VisualSettingKey =
   | "fontCustom"
   | "fontWeight"
   | "gifScale"
+  | "gigantifiedEmoteScale"
   | "highlightTwitchEvents"
   | "lineHeight"
   | "linkColor"
@@ -84,6 +85,7 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       fontCustom: DEFAULT_CHAT_CONFIG.fontCustom,
       fontWeight: DEFAULT_CHAT_CONFIG.fontWeight,
       gifScale: DEFAULT_CHAT_CONFIG.gifScale,
+      gigantifiedEmoteScale: DEFAULT_CHAT_CONFIG.gigantifiedEmoteScale,
       highlightTwitchEvents: DEFAULT_CHAT_CONFIG.highlightTwitchEvents,
       lineHeight: DEFAULT_CHAT_CONFIG.lineHeight,
       linkColor: DEFAULT_CHAT_CONFIG.linkColor,
@@ -122,6 +124,7 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
       fontCustom: "",
       fontWeight: 600,
       gifScale: 1,
+      gigantifiedEmoteScale: 1,
       highlightTwitchEvents: false,
       lineHeight: 100,
       linkColor: "#BD1313",
@@ -181,7 +184,7 @@ function createId(): string {
 export function toVisualSetupPatch<T extends Partial<Record<VisualSettingKey, unknown>>>(patch: T): VisualSetupPatch {
   const keys: readonly VisualSettingKey[] = [
     "animation",
-    "emoteScale", "font", "fontCustom", "fontWeight", "gifScale", "highlightTwitchEvents", "lineHeight", "linkColor", "linkMode", "nickFontWeight",
+    "emoteScale", "font", "fontCustom", "fontWeight", "gifScale", "gigantifiedEmoteScale", "highlightTwitchEvents", "lineHeight", "linkColor", "linkMode", "nickFontWeight",
     "overlayBackgroundColor", "overlayBackgroundOpacity", "overlayBackgroundRadius", "overlayBorderWidth", "overlayBorderColor",
     "overlayPadding", "platformMarker", "shadow", "showChannelPointRewards", "showGifs", "showGigantifiedEmotes", "showHighlightedMessages", "showPredictions", "showPredictionsOnlyWhileActive", "size", "smallCaps", "stroke",
     "eventColorDefault", "eventColorFirst", "eventColorHighlight", "eventColorReward", "eventColorSubscription", "eventColorRaid", "eventColorStreak", "eventColorPowerUp", "eventColorAnnPrimary", "eventColorAnnPurple", "eventColorAnnBlue", "eventColorAnnGreen", "eventColorAnnOrange", "eventColorOpacity", "twitchEventBold", "twitchEventItalic", "usersColor",

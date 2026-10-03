@@ -9,7 +9,11 @@ import { t } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { Icon } from "~/components/ui/icon";
 import { Slider } from "~/components/ui/slider";
-import { MAX_MESSAGE_SPEED, MIN_MESSAGE_SPEED } from "~/config/chatAnimation";
+import {
+  MAX_MESSAGE_SPEED,
+  MESSAGE_SPEED_STEP,
+  MIN_MESSAGE_SPEED,
+} from "~/config/chatAnimation";
 import type { PreviewDemoKind } from "~/services/chat/preview/messages";
 import { ColorPickerField } from "./ColorPickerField";
 
@@ -287,7 +291,7 @@ export function PreviewControls(props: PreviewControlsProps): JSX.Element {
                aria-label={t("setup.messageSpeed")}
               minValue={MIN_MESSAGE_SPEED}
               maxValue={MAX_MESSAGE_SPEED}
-              step={1}
+               step={MESSAGE_SPEED_STEP}
               value={[messageSpeedValue()]}
               onChange={(values) => {
                 const next = values[0];

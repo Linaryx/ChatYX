@@ -36,11 +36,15 @@ describe("chat event style variables", () => {
     expect(variables["--chat-event-color"]).toBe(DEFAULT_EVENT_COLORS.eventColorAnnPrimary);
   });
 
-  test("publishes the configured gigantified emote width for every size preset", () => {
+  test("publishes the scaled gigantified emote width for every size preset", () => {
     for (const size of [1, 2, 3] as const) {
-      const variables = getOverlayStyleVariables({ ...DEFAULT_CHAT_CONFIG, size });
+      const variables = getOverlayStyleVariables({
+        ...DEFAULT_CHAT_CONFIG,
+        size,
+        gigantifiedEmoteScale: 1.5,
+      });
       expect(variables["--chat-gigantified-emote-width"]).toBe(
-        SIZE_CONFIGS[size].gigantifiedEmoteWidth,
+        `${Number.parseFloat(SIZE_CONFIGS[size].gigantifiedEmoteWidth) * 1.5}px`,
       );
     }
   });

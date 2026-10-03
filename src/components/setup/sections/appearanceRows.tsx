@@ -31,6 +31,8 @@ export type AppearanceRowsSource = {
   setEmoteScale: (value: string) => void;
   gifScale: () => string;
   setGifScale: (value: string) => void;
+  gigantifiedEmoteScale: () => string;
+  setGigantifiedEmoteScale: (value: string) => void;
 };
 
 /**
@@ -63,6 +65,8 @@ export function createAppearanceRows(source: AppearanceRowsSource): ControlRow[]
     setEmoteScale,
     gifScale,
     setGifScale,
+    gigantifiedEmoteScale,
+    setGigantifiedEmoteScale,
   } = source;
 
   return [
@@ -228,6 +232,20 @@ export function createAppearanceRows(source: AppearanceRowsSource): ControlRow[]
           label={t("setup.gifSize")}
           value={gifScale()}
           onChange={setGifScale}
+          min={0.25}
+          max={3}
+          step={0.1}
+        />
+      ),
+    },
+    {
+      label: () => t("setup.gigantifiedEmoteSize"),
+      hint: () => t("setup.gigantifiedEmoteSizeHint"),
+      control: (_labelId) => (
+        <SetupNumberField
+          label={t("setup.gigantifiedEmoteSize")}
+          value={gigantifiedEmoteScale()}
+          onChange={setGigantifiedEmoteScale}
           min={0.25}
           max={3}
           step={0.1}

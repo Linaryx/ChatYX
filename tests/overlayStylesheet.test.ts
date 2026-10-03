@@ -58,8 +58,8 @@ test("the stylesheet no longer depends on generated style elements", () => {
 });
 
 test("prediction bars reserve space above the message container", () => {
-  expect(chatCss).toContain("#chat_chrome.has-prediction {\n  padding-top: calc(");
-  expect(chatCss).toContain("58px + var(--chat-surface-padding, 10px)");
+  expect(chatCss).toContain("#chat_chrome.has-prediction {\n  --chat-prediction-meta-height: 22px;");
+  expect(chatCss).toContain("var(--chat-prediction-meta-height) + var(--chat-prediction-gap)");
   expect(createChromeStyle()).not.toHaveProperty("padding");
 });
 

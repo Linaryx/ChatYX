@@ -48,6 +48,7 @@ function createForm(overrides: Partial<SetupFormState> = {}): SetupFormState {
     emoteScale: String(DEFAULT_CHAT_CONFIG.emoteScale),
     showGifs: DEFAULT_CHAT_CONFIG.showGifs,
     gifScale: String(DEFAULT_CHAT_CONFIG.gifScale),
+    gigantifiedEmoteScale: String(DEFAULT_CHAT_CONFIG.gigantifiedEmoteScale),
     botNames: parseBotNames(DEFAULT_CHAT_CONFIG.botNames),
     kickBotNames: parseBotNames(DEFAULT_CHAT_CONFIG.kickBotNames),
     youtubeBotNames: parseBotNames(DEFAULT_CHAT_CONFIG.youtubeBotNames),
@@ -203,6 +204,7 @@ test("the exported url round-trips through the overlay parser", () => {
       fontWeight: "700",
       emoteScale: "1.4",
       gifScale: "0.8",
+      gigantifiedEmoteScale: "1.3",
       fade: "12",
       shadow: "3",
       showGifs: true,
@@ -224,7 +226,8 @@ test("the exported url round-trips through the overlay parser", () => {
   expect(parsed.lineHeight).toBe(170);
   expect(parsed.fontWeight).toBe(700);
   expect(parsed.emoteScale).toBe(1.4);
-  expect(parsed.gifScale).toBe(0.8);
+    expect(parsed.gifScale).toBe(0.8);
+    expect(parsed.gigantifiedEmoteScale).toBe(1.3);
   expect(parsed.fade).toBe(12);
   expect(parsed.shadow).toBe(3);
   expect(parsed.showGifs).toBe(true);
