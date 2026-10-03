@@ -68,3 +68,9 @@ test("event labels and icons keep the opaque event color", () => {
   expect(chatCss).toContain(".chat-event-icon {\n  inline-size: 0.78em;");
   expect(chatCss).toContain("fill: var(--chat-event-color, #9146ff);");
 });
+
+test("horizontal event rows do not shrink into vertical columns", () => {
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal .chat_line.chat-event:not(.gigantified-emote) {\n  flex: 0 0 auto;",
+  );
+});

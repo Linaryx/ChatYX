@@ -294,7 +294,7 @@ body {
 }
 
 #chat_container.layout-horizontal .chat_line.chat-event:not(.gigantified-emote) {
-  flex: 1 1 20em;
+  flex: 0 0 auto;
   inline-size: auto;
   max-inline-size: min(28em, 100%);
   white-space: normal;
