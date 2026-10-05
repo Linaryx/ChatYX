@@ -7,6 +7,12 @@ body {
   -webkit-user-select: text;
 }
 
+/* The surface has a definite size, including in an OBS iframe. Its content box
+   excludes the configured border and padding, so media can use that space. */
+#chat_surface {
+  container-type: size;
+}
+
 /* Prediction reserves its own vertical lane so messages cannot render behind it. */
 .chat-prediction-slot {
   position: absolute;
@@ -25,11 +31,12 @@ body {
   --chat-prediction-meta-height: 22px;
   --chat-prediction-gap: 4px;
   --chat-prediction-segment-height: 28px;
-  padding-top: calc(
+  --chat-prediction-reserved-height: calc(
     var(--chat-prediction-meta-height) + var(--chat-prediction-gap) +
       var(--chat-prediction-segment-height) + var(--chat-surface-padding, 10px) +
       var(--chat-surface-padding, 10px)
   );
+  padding-top: var(--chat-prediction-reserved-height);
 }
 
 @media (max-width: 720px) {
@@ -474,13 +481,6 @@ img.badge {
   white-space: normal;
 }
 
-.gif-message-header {
-  display: block;
-  inline-size: max-content;
-  max-inline-size: 100%;
-  white-space: nowrap;
-}
-
 .gif-message-line {
   display: block;
   max-inline-size: 100%;
@@ -703,19 +703,61 @@ img.badge {
   white-space: normal;
 }
 
-.gigantified-emote .user_info {
-  max-inline-size: 100%;
-  overflow-wrap: anywhere;
+/* Keep the author in a single-line track; only the media track shrinks when
+   the browser source is short. Prediction chrome owns the reserved lane. */
+:is(.gigantified-emote, .gif-message) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-block-size: max(
+    0px,
+    calc(100cqb - var(--chat-prediction-reserved-height, 0px))
+  );
 }
 
-.gigantified-emote-header {
+#chat_container.layout-horizontal :is(.gigantified-emote, .gif-message) {
+  align-self: flex-end;
+}
+
+.gigantified-emote .user_info,
+.gif-message .user_info {
+  display: inline;
+}
+
+.gigantified-emote-header,
+.gif-message-header {
   display: block;
-  inline-size: max-content;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.gigantified-emote > .message,
+.gigantified-emote > .message > span,
+.gigantified-emote-line,
+.gif-message-line,
+.gif-message-line > .message,
+.gif-message-line > .message > span,
+.gif-message-line .gif-container {
+  display: grid;
+  min-inline-size: 0;
+  min-block-size: 0;
+}
+
+.gif-message-line .chat-gif {
+  block-size: 100%;
+  min-block-size: 0;
+}
+
+/* Media already starts below its author, so the optional author separator must
+   not create another grid track above the image. */
+:root[data-nl-after-name] .gigantified-emote > .message::before,
+:root[data-nl-after-name] .gif-message-line > .message::before {
+  content: none;
+}
+
 .gigantified-emote-line {
-  display: block;
   inline-size: min(var(--chat-gigantified-emote-width), 100%);
   max-inline-size: 100%;
   line-height: 1;
@@ -728,24 +770,32 @@ img.badge {
 
 .gigantified-emote-line img.gigantified {
   display: block;
-  inline-size: 100%;
-  block-size: auto;
+  /* Giant sizing overrides ordinary emote/emoji dimensions and their scale. */
+  inline-size: 100% !important;
+  block-size: 100% !important;
+  min-block-size: 0;
   max-inline-size: 100% !important;
-  max-block-size: none !important;
+  max-block-size: 100% !important;
   margin: 0;
   object-fit: contain;
 }
 
-.gigantified-emote-line .emote-modified {
-  display: block;
-  overflow: visible;
+.gigantified-emote-line .emote-modified,
+.gigantified-emote-line .emote-transform-layer,
+.gigantified-emote-line .emote-filter-layer,
+.gigantified-emote-line .emote-animation-layer {
+  display: grid;
+  min-block-size: 0;
+  max-block-size: 100%;
 }
 
 .gigantified-emote-line .emote-modified.emote-modifier-rotate-left,
 .gigantified-emote-line .emote-modified.emote-modifier-rotate-right {
-  inline-size: 100%;
-  block-size: auto;
+  inline-size: auto;
+  block-size: 100%;
+  max-inline-size: 100%;
   aspect-ratio: 1;
+  justify-self: center;
 }
 
 .gigantified-emote-line .emote-modifier-wide {
@@ -756,6 +806,7 @@ img.badge {
 .gigantified-emote-line .emote-modifier-wide img.gigantified {
   inline-size: 100% !important;
   block-size: auto !important;
+  max-block-size: 100% !important;
 }
 
 .chat_line.gigantified-emote:has(.emote-modifier-wide) {

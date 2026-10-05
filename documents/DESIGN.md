@@ -144,6 +144,7 @@ Authored messages use transparent surfaces, except highlighted messages, which u
 - Wide modifiers may use their calculated width inside the preset-bounded frame; they cannot force horizontal overflow.
 - Rotated modifiers reserve their transformed square layout box inside the same frame.
 - Zero-width overlays remain layered over their base emote and do not create an independent layout track.
+- Giant emotes and GIFs keep their author on one bounded line and shrink their media track to the available source height, excluding surface padding, borders and the prediction lane. Long author names may be ellipsized but remain in the DOM and header title. Rotated media stays inside that same bounded track.
 
 ### Responsive And Accessibility Constraints
 

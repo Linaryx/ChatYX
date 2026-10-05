@@ -100,3 +100,40 @@ test("horizontal reply previews follow the body width without widening the item"
     ".reply_text {\n  min-inline-size: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}",
   );
 });
+
+test("media rows fit the surface height without consuming the prediction lane", () => {
+  expect(chatCss).toContain("#chat_surface {\n  container-type: size;\n}");
+  const mediaRule = chatCss.match(
+    /:is\(\.gigantified-emote, \.gif-message\) \{([^}]+)\}/,
+  )?.[1];
+  expect(mediaRule).toContain("grid-template-rows: auto minmax(0, 1fr);");
+  expect(mediaRule).toContain("100cqb - var(--chat-prediction-reserved-height, 0px)");
+  expect(chatCss).toContain("padding-top: var(--chat-prediction-reserved-height);");
+});
+
+test("media headers stay on one bounded line instead of overlapping the next item", () => {
+  const headerRule = chatCss.match(
+    /\.gigantified-emote-header,\s*\.gif-message-header \{([^}]+)\}/,
+  )?.[1];
+  expect(headerRule).toContain("max-inline-size: 100%;");
+  expect(headerRule).toContain("white-space: nowrap;");
+  expect(headerRule).toContain("overflow: hidden;");
+  expect(headerRule).toContain("text-overflow: ellipsis;");
+});
+
+test("giant images and modifier layers can shrink within their media track", () => {
+  const imageRule = chatCss.match(
+    /\.gigantified-emote-line img\.gigantified \{([^}]+)\}/,
+  )?.[1];
+  expect(imageRule).toContain("inline-size: 100% !important;");
+  expect(imageRule).toContain("block-size: 100% !important;");
+  expect(imageRule).toContain("max-block-size: 100% !important;");
+  expect(imageRule).toContain("object-fit: contain;");
+  expect(chatCss).toContain(".gigantified-emote-line .emote-animation-layer {\n  display: grid;\n  min-block-size: 0;");
+});
+
+test("media does not add a second line break after its existing author track", () => {
+  expect(chatCss).toContain(
+    ":root[data-nl-after-name] .gigantified-emote > .message::before,\n:root[data-nl-after-name] .gif-message-line > .message::before {\n  content: none;\n}",
+  );
+});

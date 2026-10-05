@@ -579,7 +579,10 @@ export const ChatMessage = (props: ChatMessageProps) => {
                 fallback={
                   <>
                     <Show when={isGigantifiedEmote()} fallback={<MessageIdentity />}>
-                      <span class="gigantified-emote-header">
+                      <span
+                        class="gigantified-emote-header"
+                        title={props.config.hideNames ? undefined : props.message.displayName || props.message.username}
+                      >
                         <MessageIdentity />
                       </span>
                     </Show>
@@ -587,7 +590,12 @@ export const ChatMessage = (props: ChatMessageProps) => {
                   </>
                 }
               >
-                <span class="gif-message-header"><MessageIdentity /></span>
+                <span
+                  class="gif-message-header"
+                  title={props.config.hideNames ? undefined : props.message.displayName || props.message.username}
+                >
+                  <MessageIdentity />
+                </span>
                 <div class="gif-message-line"><MessageText /></div>
               </Show>
             </>
