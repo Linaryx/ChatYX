@@ -100,6 +100,10 @@ The overlay is a transparent, compact feed, not a stack of cards. Ordinary chat 
 
 The spatial model combines StyleGallery's `feed` pattern for stable message order with its wrapping `cluster` pattern for event metadata. The overlay viewport owns clipping and message flow; individual messages never create an internal scrollbar.
 
+The prediction overlay is anchored to the fixed chat surface, as a sibling of
+the message chrome. Its top position never follows message count or feed height;
+the surface publishes the reserved lane inherited by messages and media.
+
 ### Message Anatomy
 
 - `Chat row`: optional reply preview, badges, author, separator, and message content in source order. It has no background by default.

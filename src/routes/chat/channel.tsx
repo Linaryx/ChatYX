@@ -165,21 +165,24 @@ export default function ChatOverlay() {
             />
           </Show>
           <div id="chat_overlay_root" style={overlayRootStyle()}>
-            <div id="chat_surface" style={surfaceStyle()}>
+            <div
+              id="chat_surface"
+              style={surfaceStyle()}
+              classList={{ "has-prediction": hasPredictionBar() }}
+            >
+              <Show when={hasPredictionBar()}>
+                <div class="chat-prediction-slot">
+                  <PredictionProgressOverlay
+                    event={prediction()}
+                    now={predictionNow()}
+                    variant="chat"
+                  />
+                </div>
+              </Show>
               <div
                 id="chat_chrome"
-                classList={{ "has-prediction": hasPredictionBar() }}
                 style={chromeStyle}
               >
-                <Show when={hasPredictionBar()}>
-                  <div class="chat-prediction-slot">
-                    <PredictionProgressOverlay
-                      event={prediction()}
-                      now={predictionNow()}
-                      variant="chat"
-                    />
-                  </div>
-                </Show>
                 <div
                   id="chat_container"
                   data-connected={isConnected() ? "true" : "false"}

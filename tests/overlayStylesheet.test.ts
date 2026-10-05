@@ -58,9 +58,29 @@ test("the stylesheet no longer depends on generated style elements", () => {
 });
 
 test("prediction bars reserve space above the message container", () => {
-  expect(chatCss).toContain("#chat_chrome.has-prediction {\n  --chat-prediction-meta-height: 22px;");
+  expect(chatCss).toContain("#chat_surface.has-prediction {\n  --chat-prediction-meta-height: 22px;");
   expect(chatCss).toContain("var(--chat-prediction-meta-height) + var(--chat-prediction-gap)");
+  expect(chatCss).toContain(
+    "#chat_surface.has-prediction > #chat_chrome {\n  padding-top: var(--chat-prediction-reserved-height);\n}",
+  );
+  expect(chatCss).not.toContain("#chat_chrome.has-prediction");
   expect(createChromeStyle()).not.toHaveProperty("padding");
+});
+
+test("the prediction slot belongs to the fixed surface, not the growing message chrome", async () => {
+  const route = await Bun.file(
+    new URL("../src/routes/chat/channel.tsx", import.meta.url),
+  ).text();
+  const surfaceStart = route.indexOf('id="chat_surface"');
+  const slotStart = route.indexOf('class="chat-prediction-slot"');
+  const chromeStart = route.indexOf('id="chat_chrome"');
+  expect(surfaceStart).toBeGreaterThan(0);
+  expect(slotStart).toBeGreaterThan(surfaceStart);
+  expect(chromeStart).toBeGreaterThan(slotStart);
+  expect(route.slice(surfaceStart, slotStart)).toContain(
+    'classList={{ "has-prediction": hasPredictionBar() }}',
+  );
+  expect(route.slice(chromeStart)).not.toContain('"has-prediction"');
 });
 
 test("event labels and icons keep the opaque event color", () => {
