@@ -718,6 +718,66 @@ img.badge {
   align-self: flex-end;
 }
 
+/* Horizontal giants share one row with the author and grow upward from the
+   feed's lower edge. The preset ceiling is independent of the requested scale. */
+#chat_container.layout-horizontal .gigantified-emote {
+  --chat-horizontal-giant-size: min(
+    var(--chat-gigantified-emote-width),
+    var(--chat-gigantified-emote-max-size),
+    max(
+      0px,
+      calc(
+        100cqb - var(--chat-prediction-reserved-height, 0px) -
+          var(--chat-message-pad-block) - var(--chat-message-pad-block)
+      )
+    )
+  );
+  grid-template-columns:
+    minmax(0, max-content) minmax(0, var(--chat-horizontal-giant-size));
+  grid-template-rows: minmax(0, auto);
+  align-items: end;
+  align-self: flex-end;
+  inline-size: fit-content;
+  white-space: nowrap;
+}
+
+#chat_container.layout-horizontal .gigantified-emote > .message {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  inline-size: var(--chat-horizontal-giant-size);
+  block-size: auto;
+  aspect-ratio: 1;
+  max-inline-size: 100%;
+}
+
+#chat_container.layout-horizontal .gigantified-emote > .gigantified-emote-header {
+  grid-column: 1;
+  grid-row: -2;
+}
+
+#chat_container.layout-horizontal .gigantified-emote:has(> .reply_line) {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+#chat_container.layout-horizontal .gigantified-emote > .reply_line {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+}
+
+#chat_container.layout-horizontal .gigantified-emote-line {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+#chat_container.layout-horizontal .gigantified-emote-line .emote-modified {
+  margin: 0;
+}
+
+#chat_container.layout-horizontal .gigantified-emote-line img.gigantified {
+  object-position: center bottom;
+}
+
 .gigantified-emote .user_info,
 .gif-message .user_info {
   display: inline;

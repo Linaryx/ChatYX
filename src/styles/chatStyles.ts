@@ -142,6 +142,7 @@ export function getOverlayStyleVariables(
     "--chat-gigantified-emote-width": `${
       Number.parseFloat(size.gigantifiedEmoteWidth) * gigantifiedEmoteScale
     }px`,
+    "--chat-gigantified-emote-max-size": size.gigantifiedEmoteWidth,
   };
 
   if (config.shadow) {
@@ -184,6 +185,7 @@ export const OVERLAY_STYLE_PROPERTIES = [
   "--chat-emote-margin-right",
   "--chat-upscale-height",
   "--chat-gigantified-emote-width",
+  "--chat-gigantified-emote-max-size",
   "--chat-shadow-filter",
   "--chat-stroke",
   "--chat-paint-order",

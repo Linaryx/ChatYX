@@ -58,6 +58,21 @@ describe("chat event style variables", () => {
     expect(variables["--chat-line-height"]).toBe("45px");
   });
 
+  test("keeps the default giant size ceiling independent from its requested scale", () => {
+    for (const size of [1, 2, 3] as const) {
+      for (const gigantifiedEmoteScale of [0.25, 1, 3]) {
+        const variables = getOverlayStyleVariables({
+          ...DEFAULT_CHAT_CONFIG,
+          size,
+          gigantifiedEmoteScale,
+        });
+        expect(variables["--chat-gigantified-emote-max-size"]).toBe(
+          SIZE_CONFIGS[size].gigantifiedEmoteWidth,
+        );
+      }
+    }
+  });
+
   test("clamps the line height percentage", () => {
     expect(
       getOverlayStyleVariables({ ...DEFAULT_CHAT_CONFIG, size: 1, lineHeight: 900 })[

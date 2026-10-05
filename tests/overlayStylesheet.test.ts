@@ -123,7 +123,7 @@ test("media headers stay on one bounded line instead of overlapping the next ite
 
 test("giant images and modifier layers can shrink within their media track", () => {
   const imageRule = chatCss.match(
-    /\.gigantified-emote-line img\.gigantified \{([^}]+)\}/,
+    /(?:^|\n)\.gigantified-emote-line img\.gigantified \{([^}]+)\}/,
   )?.[1];
   expect(imageRule).toContain("inline-size: 100% !important;");
   expect(imageRule).toContain("block-size: 100% !important;");
@@ -135,5 +135,43 @@ test("giant images and modifier layers can shrink within their media track", () 
 test("media does not add a second line break after its existing author track", () => {
   expect(chatCss).toContain(
     ":root[data-nl-after-name] .gigantified-emote > .message::before,\n:root[data-nl-after-name] .gif-message-line > .message::before {\n  content: none;\n}",
+  );
+});
+
+test("horizontal giants put their author and media in one bottom-aligned row", () => {
+  const rule = chatCss.match(
+    /#chat_container\.layout-horizontal \.gigantified-emote \{([^}]+)\}/,
+  )?.[1];
+  expect(rule).toContain("grid-template-columns:");
+  expect(rule).toContain("minmax(0, max-content) minmax(0, var(--chat-horizontal-giant-size))");
+  expect(rule).toContain("grid-template-rows: minmax(0, auto);");
+  expect(rule).toContain("align-items: end;");
+  expect(rule).toContain("align-self: flex-end;");
+  expect(rule).toContain("inline-size: fit-content;");
+  expect(rule).toContain("var(--chat-gigantified-emote-max-size)");
+  expect(rule).toContain("100cqb - var(--chat-prediction-reserved-height, 0px)");
+  expect(chatCss).toContain(
+    "grid-row: 1 / -1;\n  inline-size: var(--chat-horizontal-giant-size);\n  block-size: auto;\n  aspect-ratio: 1;",
+  );
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal .gigantified-emote-line img.gigantified {\n  object-position: center bottom;\n}",
+  );
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal .gigantified-emote-line .emote-modified {\n  margin: 0;\n}",
+  );
+});
+
+test("horizontal giant replies stay above the author, not in the media column", () => {
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal .gigantified-emote:has(> .reply_line) {\n  grid-template-rows: minmax(0, 1fr) auto;\n}",
+  );
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal .gigantified-emote > .reply_line {\n  grid-column: 1;\n  grid-row: 1;\n  align-self: end;\n}",
+  );
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal .gigantified-emote > .gigantified-emote-header {\n  grid-column: 1;\n  grid-row: -2;\n}",
+  );
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal .gigantified-emote > .message {\n  grid-column: 2;\n  grid-row: 1 / -1;",
   );
 });

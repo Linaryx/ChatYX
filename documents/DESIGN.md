@@ -145,6 +145,7 @@ Authored messages use transparent surfaces, except highlighted messages, which u
 - Rotated modifiers reserve their transformed square layout box inside the same frame.
 - Zero-width overlays remain layered over their base emote and do not create an independent layout track.
 - Giant emotes and GIFs keep their author on one bounded line and shrink their media track to the available source height, excluding surface padding, borders and the prediction lane. Long author names may be ellipsized but remain in the DOM and header title. Rotated media stays inside that same bounded track.
+- In horizontal mode, giant emotes sit beside their badges and author in one bottom-aligned row, growing upward. Their media size follows the requested giant scale but cannot exceed the unscaled S1/S2/S3 ceiling or available source height. GIFs retain their stacked author/media layout.
 
 ### Responsive And Accessibility Constraints
 
