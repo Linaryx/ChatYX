@@ -31,7 +31,6 @@ export function getLayoutStyles(options: LayoutOptions): string {
       #chat_container {
         display: flex;
         flex-direction: row;
-        align-items: flex-end;
         justify-content: flex-start;
         gap: 1rem;
         overflow-x: hidden;

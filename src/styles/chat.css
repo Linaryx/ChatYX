@@ -289,6 +289,20 @@ body {
   font-size: inherit;
 }
 
+/* Replies add a line above the body; emotes can extend below it. Align the
+   final text baseline instead of the differently sized row boxes. */
+#chat_container.layout-horizontal {
+  align-items: last baseline;
+  padding-inline-end: var(--chat-message-pad-inline);
+}
+
+/* A reply follows the body's width, but must not contribute its own intrinsic
+   width to the reel item. Its text keeps the existing ellipsis and title. */
+#chat_container.layout-horizontal .reply_line {
+  inline-size: 0;
+  min-inline-size: 100%;
+}
+
 #chat_container.layout-horizontal .chat_line.chat-event-highlight {
   inline-size: auto;
 }

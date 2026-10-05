@@ -70,6 +70,14 @@ describe("chat layout scrolling", () => {
     expect(isScrolledToEnd(container, options, 10)).toBe(true);
   });
 
+  test("leaves horizontal baseline alignment to the static stylesheet", () => {
+    for (const reverse of [false, true]) {
+      const styles = getLayoutStyles({ horizontal: true, reverse });
+      expect(styles).toContain("flex-direction: row");
+      expect(styles).not.toContain("align-items:");
+    }
+  });
+
   test("supports intentional smooth scrolling", () => {
     const container = createContainer();
 

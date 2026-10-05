@@ -5,7 +5,7 @@ import {
   OVERLAY_ATTRIBUTES,
   OVERLAY_STYLE_PROPERTIES,
 } from "../src/styles/chatStyles";
-import { createChromeStyle } from "../src/features/chat-overlay";
+import { createChromeStyle, createContainerStyle } from "../src/features/chat-overlay";
 
 const chatCss = (
   await Bun.file(new URL("../src/styles/chat.css", import.meta.url)).text()
@@ -72,5 +72,31 @@ test("event labels and icons keep the opaque event color", () => {
 test("horizontal event rows do not shrink into vertical columns", () => {
   expect(chatCss).toContain(
     "#chat_container.layout-horizontal .chat_line.chat-event:not(.gigantified-emote) {\n  flex: 0 0 auto;",
+  );
+});
+
+test("horizontal chat aligns the message baseline rather than row bottoms", () => {
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal {\n  align-items: last baseline;",
+  );
+});
+
+test("horizontal chat reserves a small trailing viewport inset", () => {
+  const horizontalRule = chatCss.match(
+    /#chat_container\.layout-horizontal \{([^}]+)\}/,
+  )?.[1];
+  expect(horizontalRule).toContain(
+    "padding-inline-end: var(--chat-message-pad-inline);",
+  );
+  expect(createContainerStyle()).not.toHaveProperty("padding");
+  expect(createContainerStyle()["box-sizing"]).toBe("border-box");
+});
+
+test("horizontal reply previews follow the body width without widening the item", () => {
+  expect(chatCss).toContain(
+    "#chat_container.layout-horizontal .reply_line {\n  inline-size: 0;\n  min-inline-size: 100%;\n}",
+  );
+  expect(chatCss).toContain(
+    ".reply_text {\n  min-inline-size: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}",
   );
 });

@@ -89,7 +89,6 @@ export function createContainerStyle() {
     width: "100%",
     "max-width": "100%",
     "max-height": "100%",
-    padding: "0",
     "box-sizing": "border-box",
     "pointer-events": "none",
     overflow: "hidden",
