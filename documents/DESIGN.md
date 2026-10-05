@@ -145,6 +145,10 @@ Overlay spacing scales with the active text preset: `--chat-message-pad-block` (
 
 Authored messages use transparent surfaces, except highlighted messages, which use a shallow full-row tint. Factual event context is an inline prefix, so badges, author, separator, and authored text retain the same rhythm as ordinary chat instead of becoming a second card-like row. System notices occupy the available inline size for readable wrapping, but remain compact through content-driven block size and low padding.
 
+Highlighted events have a leading accent rail only, never a trailing rail.
+When combined with a platform stripe, their surface has square corners so the
+two leading markers join without rounding; other event surfaces keep their radius.
+
 ### Media Constraints
 
 - S1/S2/S3 gigantified widths are `180px`, `240px`, and `300px`; the active value is authoritative and is capped by `100%` of the row.

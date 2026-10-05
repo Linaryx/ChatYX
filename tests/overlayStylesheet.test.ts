@@ -95,6 +95,30 @@ test("horizontal event rows do not shrink into vertical columns", () => {
   );
 });
 
+test("event highlights have only a leading rail", () => {
+  const rail = chatCss.match(
+    /\.chat_line\.chat-event-highlight:not\(\.gigantified-emote\)::before \{([^}]+)\}/,
+  )?.[1];
+  expect(rail).toContain('content: "";');
+  expect(rail).toContain("inset-inline-start: 0;");
+  expect(rail).toContain("pointer-events: none;");
+  expect(chatCss).not.toContain(
+    ".chat_line.chat-event-highlight:not(.gigantified-emote)::after",
+  );
+});
+
+test("combined platform and event rails use square corners without changing other highlights", () => {
+  const combined = chatCss.match(
+    /\.chat_line\.chat-event-highlight\.platform-marked:not\(\.gigantified-emote\) \{([^}]+)\}/,
+  )?.[1];
+  expect(combined).toContain("border-radius: 0;");
+  const highlight = chatCss.match(
+    /\.chat_line\.chat-event-highlight:not\(\.gigantified-emote\) \{([^}]+)\}/,
+  )?.[1];
+  expect(highlight).toContain("border-radius: var(--chat-event-radius);");
+  expect(chatCss).toContain("box-shadow: inset 2px 0 var(--chat-platform-marker);");
+});
+
 test("horizontal chat aligns the message baseline rather than row bottoms", () => {
   expect(chatCss).toContain(
     "#chat_container.layout-horizontal {\n  align-items: last baseline;",

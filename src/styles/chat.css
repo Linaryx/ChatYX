@@ -149,22 +149,18 @@ body {
   background-color: var(--chat-event-accent);
 }
 
-.chat_line.chat-event-highlight:not(.gigantified-emote)::before,
-.chat_line.chat-event-highlight:not(.gigantified-emote)::after {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inline-size: var(--chat-event-rail);
-  background: var(--chat-event-accent);
-  pointer-events: none;
+.chat_line.chat-event-highlight.platform-marked:not(.gigantified-emote) {
+  border-radius: 0;
 }
 
 .chat_line.chat-event-highlight:not(.gigantified-emote)::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
   inset-inline-start: 0;
-}
-
-.chat_line.chat-event-highlight:not(.gigantified-emote)::after {
-  inset-inline-end: 0;
+  inline-size: var(--chat-event-rail);
+  background: var(--chat-event-accent);
+  pointer-events: none;
 }
 
 
