@@ -67,8 +67,8 @@
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  gap: 8px;
   line-height: 1;
 }
 
@@ -77,6 +77,9 @@
 }
 
 .twitch-channel-title-row {
+  flex: 0 1 auto;
+  min-inline-size: min(5rem, 40%);
+  max-inline-size: 150px;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -104,13 +107,22 @@
 }
 
 .twitch-channel-metrics {
+  flex: 0 1 auto;
+  min-inline-size: 0;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.twitch-channel-metrics::-webkit-scrollbar {
+  display: none;
 }
 
 .twitch-channel-metric {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -143,8 +155,8 @@
 }
 
 .twitch-channel-remove {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   flex: 0 0 auto;
   margin-left: auto;
   display: inline-flex;

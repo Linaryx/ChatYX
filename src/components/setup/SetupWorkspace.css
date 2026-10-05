@@ -282,12 +282,10 @@
   flex-shrink: 0;
 }
 
-/* Connection row */
+/* One platform per row, with a shared label edge and flexible channel field. */
 .setup-connection {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.875rem 1.5rem;
+  display: grid;
+  gap: 0.75rem;
   padding: 1rem 1.25rem;
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
@@ -295,8 +293,7 @@
 }
 
 .setup-connection-intro {
-  flex: 0 0 auto;
-  min-width: 14rem;
+  min-width: 0;
   padding-top: 0.15rem;
 }
 
@@ -314,12 +311,11 @@
 }
 
 .setup-channel-field {
-  flex: 1 1 200px;
   min-width: 0;
-  max-width: 20rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .setup-field-label {
@@ -335,6 +331,7 @@
 
 .setup-field-label.setup-platform-label {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.375rem;
 }
@@ -1129,20 +1126,6 @@
     overflow-y: auto;
   }
 
-  .setup-connection {
-    flex-direction: column;
-  }
-
-  .setup-connection-intro {
-    min-width: 0;
-  }
-
-  .setup-channel-field {
-    flex: none;
-    width: 100%;
-    max-width: none;
-  }
-
   .setup-workspace {
     display: flex;
     flex-direction: column;
@@ -1187,6 +1170,15 @@
 }
 
 @media (max-width: 639px) {
+  .setup-connection {
+    padding-inline: 0.75rem;
+  }
+
+  .setup-channel-field {
+    grid-template-columns: 5.25rem minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
   .setup-shell {
     padding-inline: 0;
   }
@@ -1230,9 +1222,6 @@
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   }
 
-  .setup-connection-intro {
-    flex-basis: 100%;
-  }
 }
 
 .setup-root :is(button, a, input, select, textarea, [tabindex="0"]):focus-visible {

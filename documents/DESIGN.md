@@ -4,6 +4,10 @@
 
 Setup is a compact operational interface for producing an OBS overlay URL. It preserves the existing dark, dense card layout and uses the same navigation, `SectionCard`, and `ToggleRows` primitives for every settings category.
 
+Connection uses one label-and-channel row per platform. Twitch emote and badge
+counts sit beside the channel name without wrapping; on narrow screens the
+counts scroll horizontally and remain keyboard reachable.
+
 ## TTS And RTE Sections
 
 `Озвучка сообщений` and `RTE` are separate setup categories. Each switch is independent and disabled by default. Copy must state the provider, the affected data, and the safe boundary:

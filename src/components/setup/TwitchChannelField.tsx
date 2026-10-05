@@ -575,11 +575,16 @@ export function TwitchChannelField(props: TwitchChannelFieldProps) {
               classList={{ "twitch-channel-main--simple": props.loadSummary === false }}
             >
               <span class="twitch-channel-title-row">
-                <span class="twitch-channel-name">{displayName()}</span>
+                <span class="twitch-channel-name" title={displayName()}>{displayName()}</span>
                 {props.loadSummary !== false && loading() && <span class="twitch-channel-loading" />}
               </span>
               {props.loadSummary !== false && (
-                <span class="twitch-channel-metrics">
+                <span
+                  class="twitch-channel-metrics"
+                  tabIndex={metrics().length ? 0 : undefined}
+                  role="group"
+                  aria-label={t("setup.channelMetrics.summary")}
+                >
                   <For each={metrics()}>
                     {(metric) => (
                       <span
