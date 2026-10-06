@@ -523,13 +523,14 @@ img.badge {
   height: 100%;
 }
 
-/* rotate + wide: no *4 stretch — fit rotated box into the line (FFZ-style cap) */
+/* rotate + wide: no *4 stretch — reserve the full rotated box. Percentage
+   height caps collapse in content-sized rows; giant media has its own track cap. */
 .emote-modifier-wide.emote-modifier-rotate-left,
 .emote-modifier-wide.emote-modifier-rotate-right {
   width: min(var(--emote-wide-width, 100%), 100%);
-  height: min(var(--emote-wide-height, 100%), 100%);
+  height: var(--emote-wide-height);
   max-width: 100%;
-  max-height: 100%;
+  max-height: none;
   overflow: visible;
 }
 

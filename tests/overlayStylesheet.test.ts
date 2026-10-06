@@ -165,6 +165,15 @@ test("media headers stay on one bounded line instead of overlapping the next ite
   expect(headerRule).toContain("text-overflow: ellipsis;");
 });
 
+test("rotated wide emotes reserve their calculated height in content-sized rows", () => {
+  const rule = chatCss.match(
+    /\.emote-modifier-wide\.emote-modifier-rotate-left,\s*\.emote-modifier-wide\.emote-modifier-rotate-right \{([^}]+)\}/,
+  )?.[1];
+  expect(rule).toContain("height: var(--emote-wide-height);");
+  expect(rule).toContain("max-height: none;");
+  expect(rule).not.toContain("height: min(");
+});
+
 test("giant images and modifier layers can shrink within their media track", () => {
   const imageRule = chatCss.match(
     /(?:^|\n)\.gigantified-emote-line img\.gigantified \{([^}]+)\}/,

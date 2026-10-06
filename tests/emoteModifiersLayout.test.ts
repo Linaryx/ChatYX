@@ -28,6 +28,19 @@ describe("emote modifier layout", () => {
     });
   });
 
+  test("v! r! w! on a 3:1 emote reserves the full rotated height", () => {
+    const wrapped = wrapEmoteModifiers(
+      '<span class="emote-container"><img class="emote" src="buhFlipExplode" style="width: 75px; height: 25px;" /></span>',
+      ["flip-y", "rotate-right", "wide"],
+      "v! r! w! buhFlipExplode",
+    );
+    expect(wrapped).toContain("--emote-wide-width: 75.000px");
+    expect(wrapped).toContain("--emote-wide-height: 75.000px");
+    expect(wrapped).toContain("--emote-scale-y: -1");
+    expect(wrapped).toContain("--emote-rotation: 90deg");
+    expect(wrapped).toContain('aria-label="v! r! w! buhFlipExplode"');
+  });
+
   test("plain rotation reserves a square layout box", () => {
     expect(computeRotatedLayout({ width: 40, height: 20 })).toEqual({
       width: 40,
