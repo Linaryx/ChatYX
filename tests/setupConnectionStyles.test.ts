@@ -43,3 +43,14 @@ test("Twitch has a visible input label and the metric strip is keyboard reachabl
   expect(channel).toContain('tabIndex={metrics().length ? 0 : undefined}');
   expect(channel).toContain('aria-label={t("setup.channelMetrics.summary")}');
 });
+
+test("the connection block has no introductory heading or hint", async () => {
+  const route = await Bun.file(new URL("../src/routes/setup.tsx", import.meta.url)).text();
+  const connection = route.slice(
+    route.indexOf('class="setup-connection"'),
+    route.indexOf('class="setup-export"'),
+  );
+  expect(connection).not.toContain("setup-connection-intro");
+  expect(connection).not.toContain('t("setup.connection")');
+  expect(connection).not.toContain('t("setup.connectionHint")');
+});

@@ -1335,7 +1335,6 @@ const [activeSection, setActiveSection] =
           <main class="setup-body setup-pane-scroll" ref={bodyScrollRef}>
             <div class="setup-source-row">
             <section class="setup-connection" aria-label={t("setup.channelsConnection")}>
-              <div class="setup-connection-intro"><h2>{t("setup.connection")}</h2><p>{t("setup.connectionHint")}</p></div>
               <div class="setup-channel-field">
                 <label class="setup-field-label setup-platform-label" for="setup-twitch">
                   <PlatformGlyph

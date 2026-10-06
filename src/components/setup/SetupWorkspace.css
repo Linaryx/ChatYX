@@ -292,24 +292,6 @@
   background: hsl(var(--card) / 0.5);
 }
 
-.setup-connection-intro {
-  min-width: 0;
-  padding-top: 0.15rem;
-}
-
-.setup-connection-intro h2 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.setup-connection-intro p {
-  margin-top: 0.15rem;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: hsl(var(--muted-foreground));
-}
-
 .setup-channel-field {
   min-width: 0;
   display: grid;
