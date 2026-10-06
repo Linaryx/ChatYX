@@ -733,7 +733,7 @@ img.badge {
   );
   grid-template-columns:
     minmax(0, max-content) minmax(0, var(--chat-horizontal-giant-size));
-  grid-template-rows: minmax(0, auto);
+  grid-template-rows: minmax(0, 1fr);
   align-items: end;
   align-self: flex-end;
   inline-size: fit-content;
@@ -752,16 +752,20 @@ img.badge {
 #chat_container.layout-horizontal .gigantified-emote > .gigantified-emote-header {
   grid-column: 1;
   grid-row: -2;
+  min-block-size: 0;
+  max-block-size: 100%;
 }
 
 #chat_container.layout-horizontal .gigantified-emote:has(> .reply_line) {
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) minmax(0, auto);
 }
 
 #chat_container.layout-horizontal .gigantified-emote > .reply_line {
   grid-column: 1;
   grid-row: 1;
   align-self: end;
+  min-block-size: 0;
+  max-block-size: 100%;
 }
 
 #chat_container.layout-horizontal .gigantified-emote-line {

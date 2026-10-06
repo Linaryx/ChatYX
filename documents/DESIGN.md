@@ -158,6 +158,7 @@ two leading markers join without rounding; other event surfaces keep their radiu
 - Zero-width overlays remain layered over their base emote and do not create an independent layout track.
 - Giant emotes and GIFs keep their author on one bounded line and shrink their media track to the available source height, excluding surface padding, borders and the prediction lane. Long author names may be ellipsized but remain in the DOM and header title. Rotated media stays inside that same bounded track.
 - In horizontal mode, giant emotes sit beside their badges and author in one bottom-aligned row, growing upward. Their media size follows the requested giant scale but cannot exceed the unscaled S1/S2/S3 ceiling or available source height. GIFs retain their stacked author/media layout.
+- Horizontal giant author/reply tracks shrink within that height budget rather than pushing the media below short browser sources, including 60px and 100px. Large configured text may be clipped within its track when it cannot fit; its font settings and full header/reply titles are preserved. Modifier wrappers use the same bounded media frame.
 
 ### Responsive And Accessibility Constraints
 

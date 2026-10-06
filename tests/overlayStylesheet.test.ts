@@ -188,7 +188,7 @@ test("horizontal giants put their author and media in one bottom-aligned row", (
   )?.[1];
   expect(rule).toContain("grid-template-columns:");
   expect(rule).toContain("minmax(0, max-content) minmax(0, var(--chat-horizontal-giant-size))");
-  expect(rule).toContain("grid-template-rows: minmax(0, auto);");
+  expect(rule).toContain("grid-template-rows: minmax(0, 1fr);");
   expect(rule).toContain("align-items: end;");
   expect(rule).toContain("align-self: flex-end;");
   expect(rule).toContain("inline-size: fit-content;");
@@ -207,15 +207,27 @@ test("horizontal giants put their author and media in one bottom-aligned row", (
 
 test("horizontal giant replies stay above the author, not in the media column", () => {
   expect(chatCss).toContain(
-    "#chat_container.layout-horizontal .gigantified-emote:has(> .reply_line) {\n  grid-template-rows: minmax(0, 1fr) auto;\n}",
+    "#chat_container.layout-horizontal .gigantified-emote:has(> .reply_line) {\n  grid-template-rows: minmax(0, 1fr) minmax(0, auto);\n}",
   );
   expect(chatCss).toContain(
-    "#chat_container.layout-horizontal .gigantified-emote > .reply_line {\n  grid-column: 1;\n  grid-row: 1;\n  align-self: end;\n}",
+    "#chat_container.layout-horizontal .gigantified-emote > .reply_line {\n  grid-column: 1;\n  grid-row: 1;\n  align-self: end;\n  min-block-size: 0;\n  max-block-size: 100%;\n}",
   );
   expect(chatCss).toContain(
-    "#chat_container.layout-horizontal .gigantified-emote > .gigantified-emote-header {\n  grid-column: 1;\n  grid-row: -2;\n}",
+    "#chat_container.layout-horizontal .gigantified-emote > .gigantified-emote-header {\n  grid-column: 1;\n  grid-row: -2;\n  min-block-size: 0;\n  max-block-size: 100%;\n}",
   );
   expect(chatCss).toContain(
     "#chat_container.layout-horizontal .gigantified-emote > .message {\n  grid-column: 2;\n  grid-row: 1 / -1;",
   );
+});
+
+test("horizontal giant author and reply tracks can shrink in short browser sources", () => {
+  for (const selector of [".gigantified-emote-header", ".reply_line"]) {
+    const start = chatCss.indexOf(
+      `#chat_container.layout-horizontal .gigantified-emote > ${selector} {`,
+    );
+    expect(start).toBeGreaterThan(0);
+    const rule = chatCss.slice(start, chatCss.indexOf("}", start));
+    expect(rule).toContain("min-block-size: 0;");
+    expect(rule).toContain("max-block-size: 100%;");
+  }
 });
