@@ -27,6 +27,8 @@ export type ChatOverlayApplicationHooks = ChatRuntimeHooks & {
 };
 
 type ChatRuntime = {
+  debugDisconnect?: () => void;
+  debugReconnect?: () => void;
   initialize: () => Promise<void>;
   updateConfig: (config: ChatConfig) => void;
   destroy: () => void;
@@ -111,6 +113,16 @@ export class ChatOverlayApplication {
     this.started = true;
     window.addEventListener("message", this.handleConfigMessage);
     await this.runtime.initialize();
+  }
+
+  debugDisconnect() {
+    if (this.destroyed || this.options.mode !== "live") return;
+    this.runtime.debugDisconnect?.();
+  }
+
+  debugReconnect() {
+    if (this.destroyed || this.options.mode !== "live") return;
+    this.runtime.debugReconnect?.();
   }
 
   /**

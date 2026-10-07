@@ -35,6 +35,15 @@ function parsePreviewDemoKind(raw: string | null): PreviewDemoKind {
   return raw === "emote" ? "emote" : "pasta";
 }
 
+declare global {
+  interface Window {
+    chatyxDebug?: {
+      disconnect: () => void;
+      reconnect: () => void;
+    };
+  }
+}
+
 export default function ChatOverlay() {
   const urlParams =
     typeof window !== "undefined"
@@ -55,6 +64,8 @@ export default function ChatOverlay() {
   const [config, setConfig] = createSignal<ChatConfig | null>(null);
   const [messages, setMessages] = createSignal<TwitchMessage[]>([]);
   const [isConnected, setIsConnected] = createSignal(false);
+  const [wasConnected, setWasConnected] = createSignal(false);
+  const [debugDisconnected, setDebugDisconnected] = createSignal(false);
   const [chatService, setChatService] = createSignal<ChatPresentationService | null>(null);
   const [animationDurationMs, setAnimationDurationMs] = createSignal(
     DEFAULT_ANIMATION_OPTIONS.duration,
@@ -85,7 +96,10 @@ export default function ChatOverlay() {
             setLoadingProgress(progress);
           },
           onCommandStatusChange: setCommandStatus,
-          onConnectionChange: setIsConnected,
+          onConnectionChange: (connected) => {
+            if (connected) setWasConnected(true);
+            setIsConnected(connected);
+          },
           onMessagesChange: (updater) => setMessages(updater),
           onAnimationDurationChange: setAnimationDurationMs,
           onChannelResolved: ({ displayName }) => setChannelDisplayName(displayName),
@@ -102,6 +116,9 @@ export default function ChatOverlay() {
     return `ChatYX • ${channelDisplayName() || channel || initialConfig.youtubeChannel || initialConfig.kickChannel}`;
   });
   const chatVisible = createMemo(() => !isLoading() || loadingProgress() >= 100);
+  const connectionInterrupted = createMemo(
+    () => debugDisconnected() || (wasConnected() && !isConnected()),
+  );
 
   const showPredictionsBar = createMemo(
     () => Boolean((config() ?? runtimeConfig).showPredictions) && Boolean(channel),
@@ -136,15 +153,36 @@ export default function ChatOverlay() {
 
   const containerStyle = createContainerStyle();
 
+  let debugCommands: Window["chatyxDebug"];
   onMount(() => {
     if (!application) {
       // Channel parameter required — URL will show error state;
       return;
     }
     void application.start();
+    if (isDebug && !isPreview) {
+      debugCommands = {
+        disconnect: () => {
+          if (!chatService() || isLoading()) {
+            console.info("[ChatYX] Дождитесь загрузки оверлея.");
+            return;
+          }
+          application.debugDisconnect();
+          setDebugDisconnected(true);
+        },
+        reconnect: () => {
+          application.debugReconnect();
+          setDebugDisconnected(false);
+        },
+      };
+      window.chatyxDebug = debugCommands;
+    }
   });
 
   onCleanup(() => {
+    if (debugCommands && window.chatyxDebug === debugCommands) {
+      delete window.chatyxDebug;
+    }
     application?.destroy();
   });
 
@@ -188,13 +226,22 @@ export default function ChatOverlay() {
                   data-connected={isConnected() ? "true" : "false"}
                   style={containerStyle}
                 >
-                  <ChatMessageList
-                    messages={messages()}
-                    config={config()}
-                    service={chatService()}
-                    animationDurationMs={animationDurationMs()}
-                    onMessageExpired={removeMessageById}
-                  />
+                  <Show
+                    when={!connectionInterrupted()}
+                    fallback={
+                      <div class="chat-connection-status" role="status">
+                        Соединение прервано
+                      </div>
+                    }
+                  >
+                    <ChatMessageList
+                      messages={messages()}
+                      config={config()}
+                      service={chatService()}
+                      animationDurationMs={animationDurationMs()}
+                      onMessageExpired={removeMessageById}
+                    />
+                  </Show>
                 </div>
               </div>
             </div>
@@ -212,7 +259,13 @@ export default function ChatOverlay() {
         </>
       </Show>
       <Show when={isDebug}>
-        <PerfMonitor />
+        <PerfMonitor
+          isConnected={isConnected()}
+          onDisconnect={!isPreview && application ? () => window.chatyxDebug?.disconnect() : undefined}
+          onReconnect={!isPreview && application ? () => window.chatyxDebug?.reconnect() : undefined}
+          connectionControlsReady={!isLoading() && Boolean(chatService())}
+          debugDisconnected={debugDisconnected()}
+        />
       </Show>
     </>
   );

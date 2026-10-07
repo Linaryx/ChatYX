@@ -205,10 +205,12 @@ export class ExternalChatService {
     const socket = new WebSocket(url);
     this.socket = socket;
     socket.onopen = () => {
+      if (this.socket !== socket || this.intentionallyDisconnected) return;
       this.reconnectAttempts = 0;
       callbacks.onConnectionChange(true);
     };
     socket.onmessage = (event) => {
+      if (this.socket !== socket || this.intentionallyDisconnected) return;
       let payload: ExternalChatEvent;
       try {
         payload = JSON.parse(String(event.data)) as ExternalChatEvent;
@@ -230,6 +232,7 @@ export class ExternalChatService {
       }
     };
     socket.onclose = (event) => {
+      if (this.socket !== socket || this.intentionallyDisconnected) return;
       if (this.socket === socket) this.socket = null;
       callbacks.onConnectionChange(false);
       if (!this.intentionallyDisconnected && this.retryable && event.code !== 1000) {

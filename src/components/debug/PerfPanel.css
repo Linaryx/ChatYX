@@ -171,7 +171,12 @@
   text-align: center;
 }
 
-.perf-action-btn:hover {
+.perf-action-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.perf-action-btn:hover:not(:disabled) {
   background: #27272a;
   border-color: #52525b;
 }
@@ -181,7 +186,7 @@
   outline-offset: 1px;
 }
 
-.perf-action-btn:active {
+.perf-action-btn:active:not(:disabled) {
   background: #3f3f46;
 }
 

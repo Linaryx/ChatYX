@@ -240,8 +240,10 @@ export class TwitchService {
       log.ws(LOG_CATEGORIES.TWITCH_IRC, "connect", { channel: this.channel });
       // Подключаемся к Twitch IRC через WebSocket
       this.ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+      const socket = this.ws;
 
       this.ws.onopen = () => {
+        if (this.ws !== socket || this.intentionallyDisconnected) return;
         log.info(LOG_CATEGORIES.TWITCH_IRC, "Connected successfully");
         this.authenticate();
         this.readyFallbackTimer = window.setTimeout(() => {
@@ -250,6 +252,7 @@ export class TwitchService {
       };
 
       this.ws.onmessage = (event) => {
+        if (this.ws !== socket || this.intentionallyDisconnected) return;
         log.ws(LOG_CATEGORIES.TWITCH_IRC, "receive", {
           data: event.data.substring(0, 100),
         });
@@ -257,6 +260,7 @@ export class TwitchService {
       };
 
       this.ws.onclose = () => {
+        if (this.ws !== socket) return;
         log.ws(LOG_CATEGORIES.TWITCH_IRC, "disconnect", {});
         if (this.intentionallyDisconnected) {
           return;

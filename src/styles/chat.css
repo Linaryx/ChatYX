@@ -194,6 +194,13 @@ body {
   fill: var(--chat-event-color, #9146ff);
 }
 
+.chat-connection-status {
+  padding-block: var(--chat-message-pad-block);
+  padding-inline: var(--chat-message-pad-inline);
+  line-height: var(--chat-line-height);
+  overflow-wrap: anywhere;
+}
+
 .chat-event-subscription .chat-event-star {
   fill: var(--chat-event-color, #9146ff);
 }

@@ -212,6 +212,29 @@ afterEach(() => {
 });
 
 describe("overlay runtime lifecycle", () => {
+  test("debug reconnect does not publish preparation started before disconnect", async () => {
+    const preparation = deferred<TwitchMessage>();
+    const published: TwitchMessage[] = [];
+    const runtime = new LiveChatRuntime("channel", {
+      onConfigResolved: () => {}, onServiceReady: () => {}, onLoadingChange: () => {},
+      onCommandStatusChange: () => {}, onConnectionChange: () => {},
+      onMessagesChange: () => {}, onAnimationDurationChange: () => {}, onChannelResolved: () => {},
+    });
+    (runtime as any).activeConfig = { channel: "channel", youtubeChannel: "", kickChannel: "" };
+    (runtime as any).initialized = true;
+    (runtime as any).prepareMessageForDisplay = () => preparation.promise;
+    (runtime as any).appendMessage = (value: TwitchMessage) => published.push(value);
+    (runtime as any).connectionManager.destroy = () => {};
+    (runtime as any).connectionManager.connectTwitch = () => {};
+    (runtime as any).connectionManager.connectExternal = () => {};
+    const pending = (runtime as any).connectionManager.options.onTwitchMessage(message());
+    runtime.debugDisconnect();
+    runtime.debugReconnect();
+    preparation.resolve(message());
+    await pending;
+    expect(published).toEqual([]);
+  });
+
   test("scrolls restored messages after the DOM render frame", () => {
     const frames: FrameRequestCallback[] = [];
     (globalThis as any).window = {

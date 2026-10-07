@@ -81,6 +81,8 @@ export class LiveChatRuntime {
   private chatService: ChatPresentationService | null = null;
   private readonly pendingTimers: number[] = [];
   private initialized = false;
+  private debugDisconnected = false;
+  private connectionGeneration = 0;
   private activeChannelId = "";
   private activeConfig: ChatConfig | null = null;
   private recentMessageLimit = DEFAULT_RECENT_MESSAGE_LIMIT;
@@ -117,18 +119,21 @@ export class LiveChatRuntime {
       onChatClear: () => this.clearMessages(),
       onMessageDelete: (messageId) => this.deleteMessage(messageId),
       onTwitchConnectionChange: (connected) => {
+        if (this.debugDisconnected) return;
         this.hooks.onConnectionChange(connected);
         if (connected) this.setLoading("Готово!", 100);
       },
       onTwitchMessage: async (message) => {
-        if (!this.activeConfig) return;
+        if (!this.activeConfig || this.debugDisconnected) return;
+        const generation = this.connectionGeneration;
         this.handleChatCommand(message);
         if (isDeveloperChatMessage(message, this.channel)) return;
         const preparedMessage = await this.prepareMessageForDisplay(message);
-        if (preparedMessage) this.appendMessage(preparedMessage);
+        if (preparedMessage && generation === this.connectionGeneration) this.appendMessage(preparedMessage);
       },
       onTwitchUserClear: (username) => this.clearUserMessages(username),
       onExternalConnectionChange: (platform, connected) => {
+        if (this.debugDisconnected) return;
         if (this.channel.trim()) return;
         if (connected) this.externalConnectedPlatforms.add(platform);
         else this.externalConnectedPlatforms.delete(platform);
@@ -136,18 +141,21 @@ export class LiveChatRuntime {
         if (connected) this.setLoading("Готово!", 100);
       },
       onExternalMessage: async (message) => {
-        if (!this.activeConfig) return;
+        if (!this.activeConfig || this.debugDisconnected) return;
+        const generation = this.connectionGeneration;
         const preparedMessage = await this.prepareMessageForDisplay(message);
-        if (preparedMessage) this.appendMessage(preparedMessage);
+        if (preparedMessage && generation === this.connectionGeneration) this.appendMessage(preparedMessage);
       },
       onExternalHistory: async (messages) => {
-        if (!this.activeConfig?.recentMessages) return;
+        if (!this.activeConfig?.recentMessages || this.debugDisconnected) return;
+        const generation = this.connectionGeneration;
         const preparedMessages = (
           await Promise.all(
             messages
               .map((message) => this.prepareMessageForDisplay(message)),
           )
         ).filter((message): message is TwitchMessage => Boolean(message));
+        if (generation !== this.connectionGeneration) return;
         const restoredMessages = this.restoreRecentHistoryMessages(preparedMessages);
         if (restoredMessages.length === 0) return;
         this.mergeRecentHistory(restoredMessages);
@@ -159,6 +167,32 @@ export class LiveChatRuntime {
 
   getService() {
     return this.chatService;
+  }
+
+  debugDisconnect() {
+    if (!this.initialized || this.debugDisconnected) return;
+    this.debugDisconnected = true;
+    this.connectionGeneration += 1;
+    this.connectionManager.destroy();
+    this.externalConnectedPlatforms.clear();
+    this.messageQueue.clear();
+    this.messageQueue.clearRefreshes();
+    this.messagePipeline.cancelPending();
+    this.hooks.onConnectionChange(false);
+  }
+
+  debugReconnect() {
+    if (!this.initialized || !this.debugDisconnected || !this.activeConfig) return;
+    this.debugDisconnected = false;
+    if (this.channel.trim()) {
+      this.connectionManager.connectTwitch(this.channel, [CHATYX_DEVELOPER_CHANNEL]);
+    }
+    this.connectionManager.connectExternal(
+      "youtube", this.activeConfig.youtubeChannel, this.activeConfig.youtubeWebSocketUrl,
+    );
+    this.connectionManager.connectExternal(
+      "kick", this.activeConfig.kickChannel, this.activeConfig.kickWebSocketUrl,
+    );
   }
 
   updateConfig(config: ChatConfig) {
@@ -308,6 +342,7 @@ export class LiveChatRuntime {
 
   destroy(preserveRteRuntime = false) {
     this.initializationGeneration += 1;
+    this.connectionGeneration += 1;
     for (const id of this.pendingTimers) window.clearTimeout(id);
     this.pendingTimers.length = 0;
     this.messageQueue.destroy();
@@ -363,6 +398,7 @@ export class LiveChatRuntime {
   }
 
   private appendMessage(message: TwitchMessage) {
+    if (this.debugDisconnected) return;
     if (!this.chatService || !this.activeConfig) return;
     this.rteRuntime.handleDisplayedMessage(message);
     this.messageQueue.append(message);
@@ -638,6 +674,7 @@ export class LiveChatRuntime {
   }
 
   private mergeRecentHistory(restoredMessages: TwitchMessage[]) {
+    if (this.debugDisconnected) return;
     this.hooks.onMessagesChange((current) =>
       [...current, ...restoredMessages]
         .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())

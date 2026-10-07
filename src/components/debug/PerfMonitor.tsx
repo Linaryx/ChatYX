@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount, type JSX } from "solid-js";
+import { createSignal, onCleanup, onMount, Show, type JSX } from "solid-js";
 import type { CollectorSnapshot } from "./perfCollector";
 import { start as collectorStart, stop as collectorStop, subscribe } from "./perfCollector";
 import { PerfPanel } from "./PerfPanel";
@@ -6,6 +6,10 @@ import { PerfPanel } from "./PerfPanel";
 export interface PerfMonitorProps {
   /** Connection state from the chat service; omitted when the route has none. */
   readonly isConnected?: boolean;
+  readonly onDisconnect?: () => void;
+  readonly onReconnect?: () => void;
+  readonly connectionControlsReady?: boolean;
+  readonly debugDisconnected?: boolean;
 }
 
 /**
@@ -43,6 +47,26 @@ export function PerfMonitor(props: PerfMonitorProps): JSX.Element {
       >
         {visible() ? "▼ perf" : "▶ perf"}
       </button>
+      <Show when={visible() && props.onDisconnect && props.onReconnect}>
+        <div class="perf-actions">
+          <button
+            type="button"
+            class="perf-action-btn"
+            disabled={!props.connectionControlsReady || props.debugDisconnected}
+            onClick={() => props.onDisconnect?.()}
+          >
+            Отключить чат
+          </button>
+          <button
+            type="button"
+            class="perf-action-btn"
+            disabled={!props.connectionControlsReady || !props.debugDisconnected}
+            onClick={() => props.onReconnect?.()}
+          >
+            Подключить чат
+          </button>
+        </div>
+      </Show>
       {(() => {
         if (!visible()) return null;
         const s = snapshot();

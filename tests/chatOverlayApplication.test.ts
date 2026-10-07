@@ -47,6 +47,8 @@ function createHarness(initialize?: () => Promise<void>) {
           return initialize ? initialize() : Promise.resolve();
         },
         updateConfig: () => calls.push("runtime.updateConfig"),
+        debugDisconnect: () => calls.push("runtime.debugDisconnect"),
+        debugReconnect: () => calls.push("runtime.debugReconnect"),
         destroy: () => calls.push("runtime.destroy"),
       };
     },
@@ -93,6 +95,20 @@ afterEach(() => {
 });
 
 describe("chat overlay application lifecycle", () => {
+  test("debug connection controls cannot restart a destroyed runtime", () => {
+    installWindowShim();
+    const { application, calls } = createHarness();
+    application.debugDisconnect();
+    application.debugReconnect();
+    expect(calls).toContain("runtime.debugDisconnect");
+    expect(calls).toContain("runtime.debugReconnect");
+    application.destroy();
+    application.debugDisconnect();
+    application.debugReconnect();
+    expect(calls.filter((call) => call === "runtime.debugDisconnect")).toHaveLength(1);
+    expect(calls.filter((call) => call === "runtime.debugReconnect")).toHaveLength(1);
+  });
+
   test("destroy before start releases the runtimes the constructor built", () => {
     installWindowShim();
     const { application, calls } = createHarness();
