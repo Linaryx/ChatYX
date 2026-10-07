@@ -219,6 +219,8 @@ export default function ChatSetup() {
   const [animation, setAnimation] = createSignal<ChatAnimationMode>(
     DEFAULT_CHAT_CONFIG.animation,
   );
+  const [removalAnimation, setRemovalAnimation] = createSignal(DEFAULT_CHAT_CONFIG.removalAnimation);
+  const [fadeAnimation, setFadeAnimation] = createSignal(DEFAULT_CHAT_CONFIG.fadeAnimation);
   const [messageSpeed, setMessageSpeed] = createSignal(
     String(DEFAULT_CHAT_CONFIG.messageSpeed),
   );
@@ -512,6 +514,8 @@ const [activeSection, setActiveSection] =
       gifScale: setGifScale,
       gigantifiedEmoteScale: setGigantifiedEmoteScale,
       animation: setAnimation,
+      removalAnimation: setRemovalAnimation,
+      fadeAnimation: setFadeAnimation,
       bots: setBots,
       commands: setCommands,
       hideAllBadges: setHideAllBadges,
@@ -631,6 +635,8 @@ const [activeSection, setActiveSection] =
     stroke: stroke(),
     fade: fade(),
     animation: animation(),
+    removalAnimation: removalAnimation(),
+    fadeAnimation: fadeAnimation(),
     messageSpeed: messageSpeed(),
     showHomies: showHomies(),
     show7tvBadges: show7tvBadges(),
@@ -1111,9 +1117,11 @@ const [activeSection, setActiveSection] =
     ),
   };
 
-  const behaviorRows = createBehaviorRows({ animation, setAnimation, linkMode, setLinkMode });
+  const behaviorRows = createBehaviorRows({ animation, setAnimation, removalAnimation, setRemovalAnimation, linkMode, setLinkMode });
 
   const behaviorToggles = createBehaviorToggles({
+    fadeAnimation,
+    setFadeAnimation,
     twitchEventBold,
     setTwitchEventBold,
     twitchEventItalic,

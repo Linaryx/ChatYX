@@ -31,6 +31,8 @@ function createForm(overrides: Partial<SetupFormState> = {}): SetupFormState {
     stroke: optionalIntToForm(DEFAULT_CHAT_CONFIG.stroke),
     fade: optionalIntToForm(DEFAULT_CHAT_CONFIG.fade),
     animation: DEFAULT_CHAT_CONFIG.animation,
+    removalAnimation: DEFAULT_CHAT_CONFIG.removalAnimation,
+    fadeAnimation: DEFAULT_CHAT_CONFIG.fadeAnimation,
     messageSpeed: String(DEFAULT_CHAT_CONFIG.messageSpeed),
     showHomies: DEFAULT_CHAT_CONFIG.showHomies,
     show7tvBadges: DEFAULT_CHAT_CONFIG.show7tvBadges,
@@ -98,6 +100,15 @@ test("a default form projects the default config", () => {
     ...DEFAULT_CHAT_CONFIG,
     channel: "somechannel",
   });
+});
+
+test("removal animation and lifetime animation independently round-trip from setup", () => {
+  const config = buildSetupConfig(createForm({ removalAnimation: "thanos", fadeAnimation: false, fade: "15" }), "streamer");
+  const url = new URL(buildOverlayUrl(config, undefined, { baseUrl: "https://example.com" }));
+  const parsed = parseChatConfigFromSearchParams(url.searchParams);
+  expect(parsed.removalAnimation).toBe("thanos");
+  expect(parsed.fadeAnimation).toBe(false);
+  expect(parsed.fade).toBe(15);
 });
 
 test("buildSetupConfig trims and de-channels the secondary platforms", () => {

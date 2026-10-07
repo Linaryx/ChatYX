@@ -21,6 +21,11 @@ const PROVIDER_BY_NAME = new Map<string, string>([
 ]);
 
 describe("chat preview messages", () => {
+  test("synthetic demo authors recur so a timeout can demonstrate batch deletion", () => {
+    resetUserPool();
+    const messages = createPreviewMessages("channel", service, "0", "pasta", 24);
+    expect(new Set(messages.map((message) => message.username)).size).toBeLessThan(messages.length);
+  });
   test("does not attach replies to rewards, raids, or announcements", () => {
     resetUserPool();
     const messages = createPreviewMessages("channel", service, "0", "pasta", 13);

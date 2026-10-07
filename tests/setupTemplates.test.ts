@@ -41,6 +41,8 @@ test("built-in templates keep both standard and atom presets", () => {
   const atom = BUILT_IN_SETUP_TEMPLATES.find((template) => template.id === "atom");
   expect(atom?.settings).toEqual({
     animation: "fade",
+    removalAnimation: "none",
+    fadeAnimation: true,
     emoteScale: 1,
     font: 13,
     fontCustom: "",

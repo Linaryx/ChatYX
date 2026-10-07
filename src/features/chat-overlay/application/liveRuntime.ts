@@ -43,30 +43,6 @@ import {
 } from "~/services/chat/runtime";
 import type { ChatCommandStatus, ChatRuntimeHooks } from "./runtimeHooks";
 
-function removeMessageElements(selector: string, tracked: number[]) {
-  const remove = () => {
-    document.querySelectorAll(selector).forEach((element) => element.remove());
-  };
-
-  remove();
-  setTrackedTimeout(tracked, remove, 200);
-  setTrackedTimeout(tracked, remove, 1000);
-}
-
-function setTrackedTimeout(
-  tracked: number[],
-  callback: () => void,
-  delay: number,
-) {
-  const id = window.setTimeout(() => {
-    const index = tracked.indexOf(id);
-    if (index >= 0) tracked.splice(index, 1);
-    callback();
-  }, delay);
-  tracked.push(id);
-  return id;
-}
-
 export class LiveChatRuntime {
   private readonly commandFeedback = new ChatCommandFeedback();
   private readonly styleManager = new OverlayStyleManager();
@@ -79,7 +55,6 @@ export class LiveChatRuntime {
   private readonly rteRuntime: RteRuntime;
 
   private chatService: ChatPresentationService | null = null;
-  private readonly pendingTimers: number[] = [];
   private initialized = false;
   private debugDisconnected = false;
   private connectionGeneration = 0;
@@ -343,8 +318,6 @@ export class LiveChatRuntime {
   destroy(preserveRteRuntime = false) {
     this.initializationGeneration += 1;
     this.connectionGeneration += 1;
-    for (const id of this.pendingTimers) window.clearTimeout(id);
-    this.pendingTimers.length = 0;
     this.messageQueue.destroy();
     this.messagePipeline.clear();
     this.connectionManager.destroy();
@@ -427,10 +400,7 @@ export class LiveChatRuntime {
     this.rteRuntime.cancelMessage(messageId);
     this.messagePipeline.cancelMessage(messageId);
     this.messageQueue.discard((message) => message.id === messageId);
-    this.hooks.onMessagesChange((messages) =>
-      messages.filter((message) => message.id !== messageId),
-    );
-    removeMessageElements(`[data-id="${messageId}"]`, this.pendingTimers);
+    this.removeVisibleMessages((message) => message.id === messageId);
   }
 
   private clearUserMessages(username: string) {
@@ -441,22 +411,14 @@ export class LiveChatRuntime {
     this.messageQueue.discard(
       (message) => message.username.toLowerCase() === normalizedUsername,
     );
-    this.hooks.onMessagesChange((messages) =>
-      messages.filter(
-        (message) => message.username.toLowerCase() !== normalizedUsername,
-      ),
-    );
-    removeMessageElements(`[data-nick="${username}"]`, this.pendingTimers);
+    this.removeVisibleMessages((message) => message.username.toLowerCase() === normalizedUsername);
   }
 
   private banExternalUser(userId: string) {
     this.rteRuntime.cancelUser({ userId });
     this.messagePipeline.cancelUserId(userId);
     this.messageQueue.discard((message) => message.userId === userId);
-    this.hooks.onMessagesChange((messages) =>
-      messages.filter((message) => message.userId !== userId),
-    );
-    removeMessageElements(`[data-user-id="${userId}"]`, this.pendingTimers);
+    this.removeVisibleMessages((message) => message.userId === userId);
   }
 
   private clearMessages() {
@@ -465,7 +427,30 @@ export class LiveChatRuntime {
     this.messagePipeline.cancelPending();
     this.messageQueue.clear();
     this.messageQueue.clearRefreshes();
-    this.hooks.onMessagesChange(() => []);
+    this.removeVisibleMessages(() => true);
+  }
+
+  private removeVisibleMessages(predicate: (message: TwitchMessage) => boolean) {
+    const targets = this.messageQueue.captureVisibleMessages().filter(predicate);
+    if (targets.length === 0) return;
+    const mode = this.activeConfig?.removalAnimation ?? "none";
+    const generation = this.initializationGeneration;
+    const ids = new Set(targets.map((message) => message.id));
+    const remove = () => {
+      if (!this.isInitializationCurrent(generation)) return;
+      // One state update for the moderation batch. New messages are not included.
+      this.hooks.onMessagesChange((messages) => messages.filter((message) => !ids.has(message.id)));
+    };
+    if (mode === "none" || !this.chatService) {
+      remove();
+      return;
+    }
+    const container = document.getElementById("chat_container");
+    const elements = Array.from(document.querySelectorAll<HTMLElement>("#chat_container .chat_line[data-id]"))
+      .filter((element) => ids.has(element.dataset.id ?? ""));
+    if (container && elements.length > 1) this.chatService.removeMessageGroup(container, elements, mode, remove);
+    else if (elements.length === 1) this.chatService.removeMessage(elements[0], mode, remove);
+    else remove();
   }
 
   private handleChatCommand(message: TwitchMessage): void {

@@ -107,7 +107,7 @@ export function updateFadeStyles(options: FadeOptions): void {
  * Message fade manager class
  */
 export class MessageFadeManager {
-  private fadeTimers: Map<HTMLElement, { start: number; complete?: number }> = new Map();
+  private fadeTimers: Map<HTMLElement, { start: number; complete?: number; restore?: () => void }> = new Map();
   private options: FadeOptions;
 
   constructor(options: FadeOptions = DEFAULT_FADE_OPTIONS) {
@@ -128,6 +128,24 @@ export class MessageFadeManager {
         return;
       }
 
+      if (this.options.fadeOutDuration === 0) {
+        this.fadeTimers.delete(element);
+        if (onRemove) onRemove();
+        else element.remove();
+        return;
+      }
+
+      const originalStyles = ["opacity", "transition"].map((property) => ({
+        property,
+        value: element.style.getPropertyValue(property),
+        priority: element.style.getPropertyPriority(property),
+      }));
+      const restore = () => {
+        for (const { property, value, priority } of originalStyles) {
+          if (value) element.style.setProperty(property, value, priority);
+          else element.style.removeProperty(property);
+        }
+      };
       element.style.transition = `opacity ${this.options.fadeOutDuration}ms ease-out`;
       element.style.opacity = "0";
 
@@ -140,7 +158,7 @@ export class MessageFadeManager {
         }
       }, this.options.fadeOutDuration);
 
-      this.fadeTimers.set(element, { start, complete });
+      this.fadeTimers.set(element, { start, complete, restore });
     }, this.options.timeout);
 
     this.fadeTimers.set(element, { start });
@@ -156,6 +174,7 @@ export class MessageFadeManager {
       if (timers.complete !== undefined) {
         window.clearTimeout(timers.complete);
       }
+      timers.restore?.();
     }
     this.fadeTimers.delete(element);
   }
@@ -169,6 +188,7 @@ export class MessageFadeManager {
       if (timers.complete !== undefined) {
         window.clearTimeout(timers.complete);
       }
+      timers.restore?.();
     });
     this.fadeTimers.clear();
   }

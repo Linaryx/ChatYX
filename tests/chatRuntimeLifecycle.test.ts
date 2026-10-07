@@ -235,6 +235,102 @@ describe("overlay runtime lifecycle", () => {
     expect(published).toEqual([]);
   });
 
+  test("animated /clear uses one effect and preserves messages arriving before its commit", () => {
+    (globalThis as any).window = { clearTimeout: () => {} };
+    const container = {};
+    const rows = [{ dataset: { id: "old-1" } }, { dataset: { id: "old-2" } }];
+    (globalThis as any).document = { getElementById: () => container, querySelectorAll: () => rows };
+    let displayed = [message({ id: "old-1" }), message({ id: "old-2" })];
+    let commit!: () => void;
+    let effects = 0;
+    const runtime = new LiveChatRuntime("channel", {
+      onConfigResolved: () => {}, onServiceReady: () => {}, onLoadingChange: () => {},
+      onCommandStatusChange: () => {}, onConnectionChange: () => {},
+      onMessagesChange: (updater) => { displayed = updater(displayed); },
+      onAnimationDurationChange: () => {}, onChannelResolved: () => {},
+    });
+    (runtime as any).activeConfig = { removalAnimation: "thanos" };
+    (runtime as any).chatService = {
+      removeMessageGroup: (element: unknown, elements: unknown[], mode: string, onRemove: () => void) => {
+        expect(element).toBe(container);
+        expect(elements).toEqual(rows);
+        expect(mode).toBe("thanos");
+        effects += 1;
+        commit = onRemove;
+      },
+    };
+    (runtime as any).clearMessages();
+    expect(effects).toBe(1);
+    expect(displayed).toHaveLength(2);
+    displayed.push(message({ id: "new-message" }));
+    commit();
+    expect(displayed.map((entry) => entry.id)).toEqual(["new-message"]);
+  });
+
+  test("a timeout removes all matching user messages in one animation and one commit", () => {
+    const container = {};
+    const rows = ["muted-1", "other", "muted-2"].map((id) => ({ dataset: { id } }));
+    (globalThis as any).document = { getElementById: () => container, querySelectorAll: () => rows };
+    let displayed = [message({ id: "muted-1", username: "Muted" }), message({ id: "other", username: "other" }), message({ id: "muted-2", username: "muted" })];
+    let commit!: () => void;
+    let effects = 0;
+    let updates = 0;
+    const runtime = new LiveChatRuntime("channel", {
+      onConfigResolved: () => {}, onServiceReady: () => {}, onLoadingChange: () => {},
+      onCommandStatusChange: () => {}, onConnectionChange: () => {},
+      onMessagesChange: (updater) => {
+        const next = updater(displayed);
+        if (next !== displayed) updates += 1;
+        displayed = next;
+      },
+      onAnimationDurationChange: () => {}, onChannelResolved: () => {},
+    });
+    (runtime as any).activeConfig = { removalAnimation: "thanos" };
+    (runtime as any).chatService = {
+      removeMessageGroup: (_container: unknown, elements: unknown[], mode: string, onRemove: () => void) => {
+        expect(elements).toEqual([rows[0], rows[2]]);
+        expect(mode).toBe("thanos");
+        effects += 1;
+        commit = onRemove;
+      },
+    };
+    (runtime as any).clearUserMessages("MUTED");
+    expect(effects).toBe(1);
+    expect(updates).toBe(0);
+    displayed.push(message({ id: "later", username: "other" }));
+    commit();
+    expect(updates).toBe(1);
+    expect(displayed.map((entry) => entry.id)).toEqual(["other", "later"]);
+  });
+
+  test("moderation deletion waits for its effect and leaves unrelated messages intact", () => {
+    const element = { dataset: { id: "deleted" } };
+    (globalThis as any).document = {
+      getElementById: () => null,
+      querySelectorAll: () => [element],
+    };
+    let displayed = [message({ id: "deleted" }), message({ id: "kept" })];
+    let commit!: () => void;
+    const runtime = new LiveChatRuntime("channel", {
+      onConfigResolved: () => {}, onServiceReady: () => {}, onLoadingChange: () => {},
+      onCommandStatusChange: () => {}, onConnectionChange: () => {},
+      onMessagesChange: (updater) => { displayed = updater(displayed); },
+      onAnimationDurationChange: () => {}, onChannelResolved: () => {},
+    });
+    (runtime as any).activeConfig = { removalAnimation: "fade" };
+    (runtime as any).chatService = {
+      removeMessage: (target: unknown, mode: string, onRemove: () => void) => {
+        expect(target).toBe(element);
+        expect(mode).toBe("fade");
+        commit = onRemove;
+      },
+    };
+    (runtime as any).deleteMessage("deleted");
+    expect(displayed).toHaveLength(2);
+    commit();
+    expect(displayed.map((entry) => entry.id)).toEqual(["kept"]);
+  });
+
   test("scrolls restored messages after the DOM render frame", () => {
     const frames: FrameRequestCallback[] = [];
     (globalThis as any).window = {

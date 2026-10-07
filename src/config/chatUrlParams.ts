@@ -11,6 +11,8 @@ import {
   DEFAULT_MESSAGE_SPEED,
   clampMessageSpeed,
   normalizeChatAnimationMode,
+  normalizeMessageRemovalMode,
+  type MessageRemovalMode,
   type ChatAnimationMode,
 } from "./chatAnimation";
 
@@ -32,6 +34,8 @@ export interface ChatConfig extends EventColorConfig {
   gigantifiedEmoteScale: number;
 
   animation: ChatAnimationMode;
+  removalAnimation: MessageRemovalMode;
+  fadeAnimation: boolean;
   messageSpeed: number;
   bots: boolean;
   commands: boolean;
@@ -126,6 +130,8 @@ export const DEFAULT_CHAT_CONFIG: Readonly<ChatConfig> = Object.freeze({
   stroke: false,
   fade: 60,
   animation: "fade",
+  removalAnimation: "none",
+  fadeAnimation: true,
   messageSpeed: DEFAULT_MESSAGE_SPEED,
   showHomies: true,
   show7tvBadges: true,
@@ -347,6 +353,8 @@ const PARAMS: { [K in keyof ChatConfig]?: ParamDef<K> } = {
   stroke: { query: "st", kind: "intOrFalse", aliases: ["stroke"] },
   fade: { query: "fd", kind: "secondsOrFalse", aliases: ["fade"] },
   animation: { query: "an", kind: "string", aliases: ["animation"] },
+  removalAnimation: { query: "removean", kind: "string", aliases: ["removalAnimation"] },
+  fadeAnimation: { query: "fadean", kind: "bool", aliases: ["fadeAnimation"] },
   messageSpeed: {
     query: "ms",
     kind: "int",
@@ -779,6 +787,7 @@ export function isValidChatConfigImport(params: URLSearchParams): boolean {
           if (!numericPattern.test(raw.trim())) return false;
         }
         if (key === "animation" && normalizeChatAnimationMode(raw) !== raw) return false;
+        if (key === "removalAnimation" && normalizeMessageRemovalMode(raw) !== raw) return false;
         if (key === "linkMode" && !["normal", "hide", "highlight"].includes(raw)) return false;
         if (key === "platformMarker" && !["none", "stripe", "icon"].includes(raw)) return false;
         if (key === "overlayBorderColor" && !/^#?[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(raw)) return false;
@@ -1055,6 +1064,7 @@ export function parseChatConfigFromSearchParams(
   cfg.lineHeight = normalizeLineHeight(cfg.lineHeight);
   cfg.nickFontWeight = normalizeFontWeight(cfg.nickFontWeight);
   cfg.animation = normalizeChatAnimationMode(cfg.animation);
+  cfg.removalAnimation = normalizeMessageRemovalMode(cfg.removalAnimation);
   cfg.ttsVolume = Math.min(Math.max(cfg.ttsVolume, 0), 1);
   cfg.ttsMaxLength = Math.max(cfg.ttsMaxLength, 1);
   cfg.gifScale = Math.min(Math.max(cfg.gifScale, 0.25), 3);

@@ -1,5 +1,6 @@
 import { t } from "~/i18n";
 import type { ChatAnimationMode, LinkDisplayMode } from "~/config/chatUrlParams";
+import type { MessageRemovalMode } from "~/config/chatAnimation";
 import { SetupSelect } from "../SetupSelect";
 import type { ControlRow, ToggleRow } from "../SetupLayout";
 
@@ -7,11 +8,15 @@ import type { ControlRow, ToggleRow } from "../SetupLayout";
 export type BehaviorRowsSource = {
   animation: () => ChatAnimationMode;
   setAnimation: (value: ChatAnimationMode) => void;
+  removalAnimation: () => MessageRemovalMode;
+  setRemovalAnimation: (value: MessageRemovalMode) => void;
   linkMode: () => LinkDisplayMode;
   setLinkMode: (value: LinkDisplayMode) => void;
 };
 
 export type BehaviorTogglesSource = {
+  fadeAnimation: () => boolean;
+  setFadeAnimation: (value: boolean) => void;
   twitchEventBold: () => boolean;
   setTwitchEventBold: (value: boolean) => void;
   twitchEventItalic: () => boolean;
@@ -69,6 +74,21 @@ export function createBehaviorRows(source: BehaviorRowsSource): ControlRow[] {
         </SetupSelect>
       ),
     },
+    {
+      label: () => t("setup.messageRemovalAnimation"),
+      hint: () => t("setup.messageRemovalAnimationHint"),
+      control: (labelId) => (
+        <SetupSelect
+          aria-labelledby={labelId}
+          value={source.removalAnimation()}
+          onChange={(event) => source.setRemovalAnimation(event.currentTarget.value as MessageRemovalMode)}
+        >
+          <option value="none">{t("setup.noAnimation")}</option>
+          <option value="fade">{t("setup.fadeOut")}</option>
+          <option value="thanos">{t("setup.thanosSnap")}</option>
+        </SetupSelect>
+      ),
+    },
   ];
 }
 
@@ -94,6 +114,12 @@ export function createBehaviorToggles(source: BehaviorTogglesSource): ToggleRow[
   } = source;
 
   return [
+    {
+      label: () => t("setup.fadeAnimation"),
+      hint: () => t("setup.fadeAnimationHint"),
+      checked: source.fadeAnimation,
+      onChange: source.setFadeAnimation,
+    },
     {
       label: () => t("setup.emphasizeEventText"),
       checked: twitchEventBold,

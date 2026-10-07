@@ -10,6 +10,8 @@ const STORAGE_VERSION = 1;
 
 type VisualSettingKey =
   | "animation"
+  | "removalAnimation"
+  | "fadeAnimation"
   | "emoteScale"
   | "font"
   | "fontCustom"
@@ -80,6 +82,8 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
     id: "standard",
     settings: {
       animation: DEFAULT_CHAT_CONFIG.animation,
+      removalAnimation: DEFAULT_CHAT_CONFIG.removalAnimation,
+      fadeAnimation: DEFAULT_CHAT_CONFIG.fadeAnimation,
       emoteScale: DEFAULT_CHAT_CONFIG.emoteScale,
       font: DEFAULT_CHAT_CONFIG.font,
       fontCustom: DEFAULT_CHAT_CONFIG.fontCustom,
@@ -119,6 +123,8 @@ export const BUILT_IN_SETUP_TEMPLATES: readonly BuiltInSetupTemplate[] = [
     id: "atom",
     settings: {
       animation: "fade",
+      removalAnimation: "none",
+      fadeAnimation: true,
       emoteScale: 1,
       font: 13,
       fontCustom: "",
@@ -184,6 +190,7 @@ function createId(): string {
 export function toVisualSetupPatch<T extends Partial<Record<VisualSettingKey, unknown>>>(patch: T): VisualSetupPatch {
   const keys: readonly VisualSettingKey[] = [
     "animation",
+    "removalAnimation", "fadeAnimation",
     "emoteScale", "font", "fontCustom", "fontWeight", "gifScale", "gigantifiedEmoteScale", "highlightTwitchEvents", "lineHeight", "linkColor", "linkMode", "nickFontWeight",
     "overlayBackgroundColor", "overlayBackgroundOpacity", "overlayBackgroundRadius", "overlayBorderWidth", "overlayBorderColor",
     "overlayPadding", "platformMarker", "shadow", "showChannelPointRewards", "showGifs", "showGigantifiedEmotes", "showHighlightedMessages", "showPredictions", "showPredictionsOnlyWhileActive", "size", "smallCaps", "stroke",

@@ -40,10 +40,12 @@
     "@solid-primitives/i18n": "^2.2.1",
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^1.0.0",
+    "@zumer/snapdom": "^3.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "solid-js": "^1.9.15",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "vanilla-disintegrate": "^1.6.1"
   },
   "engines": {
     "bun": ">=1.3.14"

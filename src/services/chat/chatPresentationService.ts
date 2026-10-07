@@ -13,6 +13,8 @@ import {
   DEFAULT_FADE_OPTIONS,
 } from "./runtime/messageFade";
 import type { FadeOptions } from "./runtime/messageFade";
+import { MessageRemovalManager } from "./runtime/messageRemoval";
+import type { MessageRemovalMode } from "../../config/chatAnimation";
 import {
   LayoutManager,
   DEFAULT_LAYOUT_OPTIONS,
@@ -88,6 +90,7 @@ export class ChatPresentationService {
   private youtubeBotFilterService: BotFilterService;
   private allowedChatters = new Set<string>();
   private fadeManager: MessageFadeManager;
+  private readonly removalManager = new MessageRemovalManager();
   private layoutManager?: LayoutManager;
   private readonly rteBadges = new Map<string, Badge>();
   private readonly rtePaints = new Map<string, Paint>();
@@ -535,6 +538,20 @@ export class ChatPresentationService {
     this.fadeManager.cancelMessage(element);
   }
 
+  removeMessage(element: HTMLElement, mode: MessageRemovalMode, onRemove: () => void): void {
+    this.fadeManager.cancelMessage(element);
+    this.removalManager.remove(element, mode, onRemove);
+  }
+
+  isRemovingMessage(element: HTMLElement): boolean {
+    return this.removalManager.isRemoving(element);
+  }
+
+  removeMessageGroup(container: HTMLElement, elements: readonly HTMLElement[], mode: MessageRemovalMode, onRemove: () => void): void {
+    for (const element of elements) this.fadeManager.cancelMessage(element);
+    this.removalManager.removeGroup(container, elements, mode, onRemove);
+  }
+
   /**
    * Scroll to latest message
    */
@@ -629,6 +646,7 @@ export class ChatPresentationService {
    * Cleanup and disconnect
    */
   async cleanup(): Promise<void> {
+    this.removalManager.destroy();
     log.service(LOG_CATEGORIES.INTEGRATION, "stop", "Cleaning up");
 
     // Disconnect EventAPI
@@ -672,7 +690,7 @@ export function createChatPresentationConfig(
     fade: {
       enabled: params.fade !== false,
       timeout: typeof params.fade === "number" ? params.fade * 1000 : 30000,
-      fadeOutDuration: 1000,
+      fadeOutDuration: params.fadeAnimation ? 1000 : 0,
     },
     layout: {
       horizontal: params.horizontal,

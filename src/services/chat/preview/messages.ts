@@ -220,10 +220,12 @@ export function nextPreviewMessage(
     realUserColor = realUser.color;
     realUserBadges = realUser.badges;
   } else {
+    // A small recurring cast lets automatic demo timeouts remove several rows.
+    const identityIndex = index % 8;
     const baseLen = PREVIEW_USERNAME_BASES.length;
     const base =
-      PREVIEW_USERNAME_BASES[Math.floor(previewRandom(index + 900) * baseLen)];
-    const num = Math.floor(previewRandom(index + 800) * 999999);
+      PREVIEW_USERNAME_BASES[Math.floor(previewRandom(identityIndex + 900) * baseLen)];
+    const num = Math.floor(previewRandom(identityIndex + 800) * 999999);
     username = `${base}${num}`;
     displayName = username;
     isBroadcaster = index > 0 && previewRandom(index + 100) < 0.08;

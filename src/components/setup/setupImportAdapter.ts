@@ -20,6 +20,8 @@ export function applySetupImport(
   if (patch.gifScale !== undefined) setters.gifScale(String(patch.gifScale));
   if (patch.gigantifiedEmoteScale !== undefined) setters.gigantifiedEmoteScale(String(patch.gigantifiedEmoteScale));
   if (patch.animation !== undefined) setters.animation(patch.animation);
+  if (patch.removalAnimation !== undefined) setters.removalAnimation(patch.removalAnimation);
+  if (patch.fadeAnimation !== undefined) setters.fadeAnimation(patch.fadeAnimation);
   if (patch.bots !== undefined) setters.bots(patch.bots);
   if (patch.commands !== undefined) setters.commands(patch.commands);
   if (patch.hideAllBadges !== undefined) setters.hideAllBadges(patch.hideAllBadges);

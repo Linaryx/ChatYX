@@ -23,6 +23,8 @@ import {
 } from "~/config/chatAnimation";
 import type { ChatConfig } from "~/config/chatUrlParams";
 import type { ChatRuntimeHooks } from "./runtimeHooks";
+import type { TwitchMessage } from "~/services/chat/twitch/twitchService";
+import { selectPreviewModeration } from "../model/previewModeration";
 
 const CHANNEL_RESOLUTION_TIMEOUT_MS = 8_000;
 const EMOTE_LOADING_TIMEOUT_MS = 12_000;
@@ -106,6 +108,9 @@ export class PreviewRuntime {
   private renderTimer: number | null = null;
   private ready = false;
   private destroyed = false;
+  private nextModerationAt = 0;
+  private moderationInProgress = false;
+  private readonly mutedUntil = new Map<string, number>();
   /**
    * Set by `initialize()`, which is what claims the shared proxy flag and fills
    * the shared asset stores. Teardown releases them only for a runtime that
@@ -241,6 +246,7 @@ export class PreviewRuntime {
     this.destroyed = true;
     this.ready = false;
     this.clearMessageInterval();
+    this.mutedUntil.clear();
     if (this.renderTimer !== null) {
       window.clearTimeout(this.renderTimer);
       this.renderTimer = null;
@@ -279,6 +285,7 @@ export class PreviewRuntime {
     );
     this.setLoading("Предпросмотр готов", 100);
     this.ready = true;
+    this.nextModerationAt = Date.now() + 9000;
     this.restartMessageInterval();
   }
 
@@ -292,6 +299,14 @@ export class PreviewRuntime {
       this.options.demoKind,
       this.config.showGifs,
     );
+    const now = Date.now();
+    for (const [username, until] of this.mutedUntil) {
+      if (until <= now) this.mutedUntil.delete(username);
+    }
+    if (this.mutedUntil.has(message.username.toLowerCase())) {
+      this.maybeModerate(now);
+      return;
+    }
     mentionStyleService.registerMessageAuthor(message);
     this.hooks.onMessagesChange((current) => {
       const messages = [...current, message];
@@ -300,6 +315,37 @@ export class PreviewRuntime {
     this.service.scrollToLatest(
       getAnimationScrollBehavior(this.config.animation),
     );
+    this.maybeModerate(now);
+  }
+
+  private maybeModerate(now: number) {
+    if (this.destroyed || !this.ready || !this.service || this.moderationInProgress || now < this.nextModerationAt) return;
+    if (messageSpeedToIntervalMs(this.config.messageSpeed) === null) return;
+    const rows = Array.from(document.querySelectorAll<HTMLElement>("#chat_container .chat_line[data-id]"));
+    const visibleIds = new Set(rows.filter((row) => {
+      const rect = row.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth;
+    }).map((row) => row.dataset.id ?? ""));
+    let messages: TwitchMessage[] = [];
+    this.hooks.onMessagesChange((current) => {
+      messages = current;
+      return current;
+    });
+    const selection = selectPreviewModeration(messages, visibleIds);
+    this.nextModerationAt = now + 8000 + Math.random() * 4000;
+    if (!selection) return;
+    if (selection.mutedUsername) this.mutedUntil.set(selection.mutedUsername, now + 30000);
+    const targets = rows.filter((row) => selection.ids.has(row.dataset.id ?? ""));
+    const container = document.getElementById("chat_container");
+    this.moderationInProgress = true;
+    const remove = () => {
+      this.moderationInProgress = false;
+      if (this.destroyed) return;
+      this.hooks.onMessagesChange((current) => current.filter((message) => !selection.ids.has(message.id)));
+    };
+    if (container && targets.length > 1) this.service.removeMessageGroup(container, targets, this.config.removalAnimation, remove);
+    else if (targets.length === 1) this.service.removeMessage(targets[0], this.config.removalAnimation, remove);
+    else remove();
   }
 
   private restartMessageInterval() {

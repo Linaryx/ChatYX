@@ -23,6 +23,7 @@ const nativeConfig: ChatConfig = {
   channel: "streamer", youtubeChannel: "video", kickChannel: "kickstreamer",
   size: 3, font: 0, fontCustom: "Comic Sans MS", fontWeight: 650, nickFontWeight: 450,
   shadow: false, stroke: 4, fade: false, animation: "flow", messageSpeed: 72,
+  removalAnimation: "thanos", fadeAnimation: false,
   showHomies: false, recentMessages: true, bots: true, commands: false,
   show7tvBadges: false, showFfzBadges: false, emoteScale: 1.75, botNames: "nightbot,moobot", kickBotNames: "botrix,kickbot",
   singleChatter: "alice,bob", show7tvUnlisted: false, smallCaps: true,

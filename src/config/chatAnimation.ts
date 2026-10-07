@@ -15,6 +15,15 @@ export const CHAT_ANIMATION_MODES = [
 ] as const;
 export type ChatAnimationMode = (typeof CHAT_ANIMATION_MODES)[number];
 
+export const MESSAGE_REMOVAL_MODES = ["none", "fade", "thanos"] as const;
+export type MessageRemovalMode = (typeof MESSAGE_REMOVAL_MODES)[number];
+
+export function normalizeMessageRemovalMode(value: unknown): MessageRemovalMode {
+  return MESSAGE_REMOVAL_MODES.includes(value as MessageRemovalMode)
+    ? value as MessageRemovalMode
+    : "none";
+}
+
 export interface AnimationOptions {
   enabled: boolean;
   duration: number;

@@ -319,6 +319,7 @@ export function PreviewControls(props: PreviewControlsProps): JSX.Element {
              {demoPaused() ? t("setup.resume") : t("setup.pause")}
           </button>
         </div>
+        <p class="text-xs text-muted-foreground">{t("setup.demoModerationHint")}</p>
       </Show>
     </div>
   );

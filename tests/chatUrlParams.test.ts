@@ -11,6 +11,16 @@ import {
 import { DEFAULT_BOT_NAMES, DEFAULT_KICK_BOT_NAMES, DEFAULT_YOUTUBE_BOT_NAMES } from "../src/config/botNames";
 
 describe("chat URL params", () => {
+  test("normalizes removal effects and keeps expiration animation independent", () => {
+    for (const mode of ["none", "fade", "thanos"] as const) {
+      const config = { ...DEFAULT_CHAT_CONFIG, removalAnimation: mode, fadeAnimation: false };
+      const parsed = parseChatConfigFromSearchParams(chatConfigToSearchParams(config));
+      expect(parsed.removalAnimation).toBe(mode);
+      expect(parsed.fadeAnimation).toBe(false);
+      expect(parsed.fade).toBe(DEFAULT_CHAT_CONFIG.fade);
+    }
+    expect(parseChatConfigFromSearchParams(new URLSearchParams("removean=invalid")).removalAnimation).toBe("none");
+  });
   test("reads the hidden recent-message limit without changing setup config", () => {
     expect(parseRecentMessageLimit(new URLSearchParams("rmlimit=30"))).toBe(30);
     expect(parseRecentMessageLimit(new URLSearchParams("rmlimit=0"))).toBe(1);

@@ -30,6 +30,7 @@ import {
   toPositiveIntOrFalse,
 } from "./formValues";
 import { MAX_MESSAGE_SPEED, MIN_MESSAGE_SPEED } from "./chatAnimation";
+import type { MessageRemovalMode } from "./chatAnimation";
 import { getAppBaseUrl } from "../utils/appBase";
 
 /** Raw setup-form values, before any coercion. */
@@ -46,6 +47,8 @@ export type SetupFormState = {
   stroke: string;
   fade: string;
   animation: ChatAnimationMode;
+  removalAnimation: MessageRemovalMode;
+  fadeAnimation: boolean;
   messageSpeed: string;
   showHomies: boolean;
   show7tvBadges: boolean;
@@ -144,6 +147,8 @@ export function buildSetupConfig(
     stroke: toPositiveIntOrFalse(form.stroke),
     fade: toPositiveIntOrFalse(form.fade),
     animation: form.animation,
+    removalAnimation: form.removalAnimation,
+    fadeAnimation: form.fadeAnimation,
     messageSpeed: toClampedInt(
       form.messageSpeed,
       DEFAULT_CHAT_CONFIG.messageSpeed,
