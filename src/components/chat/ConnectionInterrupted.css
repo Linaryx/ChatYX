@@ -1,0 +1,101 @@
+.chat-connection-status {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  box-sizing: border-box;
+  pointer-events: none;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  overflow-wrap: anywhere;
+}
+
+.chat-connection-caption {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 20px;
+  padding-inline: 12px;
+  animation: chat-disconnect-appear 0.5s ease-out;
+}
+
+.chat-disconnect-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px;
+  height: 240px;
+}
+
+.chat-disconnect-icon path {
+  animation-duration: 2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.chat-disconnect-center { animation-name: chat-disconnect-center; }
+.chat-disconnect-outer-left { animation-name: chat-disconnect-outer-left; }
+.chat-disconnect-outer-right { animation-name: chat-disconnect-outer-right; }
+.chat-disconnect-inner-left { animation-name: chat-disconnect-inner-left; }
+.chat-disconnect-inner-right { animation-name: chat-disconnect-inner-right; }
+.chat-disconnect-slash { animation-name: chat-disconnect-slash; }
+
+@keyframes chat-disconnect-appear {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes chat-disconnect-center {
+  0%, 46.058%, 100% { stroke: #444444; }
+  0.133% { stroke: #444444; animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+  23.21% { stroke: rgba(68, 68, 68, 0); animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+}
+
+@keyframes chat-disconnect-outer-left {
+  0%, 58.175%, 100% { stroke: #444444; }
+  8.845% { stroke: #444444; animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+  39.329% { stroke: rgba(68, 68, 68, 0); animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+}
+
+@keyframes chat-disconnect-outer-right {
+  0%, 58.175%, 100% { stroke: #444444; }
+  8.845% { stroke: #444444; animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+  39.329% { stroke: rgba(68, 68, 68, 0); animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+}
+
+@keyframes chat-disconnect-inner-left {
+  0%, 58.175%, 100% { stroke: #444444; }
+  4.198% { stroke: #444444; animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+  31.704% { stroke: rgba(68, 68, 68, 0); animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+}
+
+@keyframes chat-disconnect-inner-right {
+  0%, 58.175%, 100% { stroke: #444444; }
+  4.198% { stroke: #444444; animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+  31.704% { stroke: rgba(68, 68, 68, 0); animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+}
+
+@keyframes chat-disconnect-slash {
+  0%, 80.05%, 100% { stroke-dasharray: 1 1; stroke-dashoffset: 0; visibility: visible; }
+  40.15% { stroke-dasharray: 1 1; stroke-dashoffset: 0; visibility: visible; animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+  59.988% { stroke-dasharray: 0 1; stroke-dashoffset: 0; visibility: hidden; animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+  60.05% { stroke-dasharray: 0 1; stroke-dashoffset: -1; visibility: hidden; animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-connection-caption,
+  .chat-disconnect-icon path {
+    animation: none;
+  }
+
+  .chat-disconnect-slash {
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 0;
+    visibility: visible;
+  }
+}

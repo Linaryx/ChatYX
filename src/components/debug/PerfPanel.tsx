@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import { Show, type JSX } from "solid-js";
 import type { CollectorSnapshot } from "./perfCollector";
 import { computeHealth, frameBudget } from "./perfMetrics";
 import { PerfActions } from "./PerfActions";
@@ -18,6 +18,10 @@ export interface PerfPanelProps {
   snapshots: readonly CollectorSnapshot[];
   /** Connection state passed by the monitor when the route can report it. */
   isConnected?: boolean;
+  onDisconnect?: () => void;
+  onReconnect?: () => void;
+  connectionControlsReady?: boolean;
+  debugDisconnected?: boolean;
 }
 
 export function PerfPanel(props: PerfPanelProps): JSX.Element {
@@ -151,10 +155,30 @@ export function PerfPanel(props: PerfPanelProps): JSX.Element {
         color={snapshot.domNodes > 3000 ? C_BAD : snapshot.domNodes > 1500 ? C_WARN : C_MUTED}
       />
       <Stat
-        label="WS open"
+        label="Chat"
         value={props.isConnected === true ? "Connected" : "Disconnected"}
         color={props.isConnected === true ? C_OK : C_DIM}
       />
+      <Show when={props.onDisconnect && props.onReconnect}>
+        <div class="perf-actions" role="group" aria-label="Управление подключением чата">
+          <button
+            type="button"
+            class="perf-action-btn"
+            disabled={!props.connectionControlsReady || props.debugDisconnected}
+            onClick={() => props.onDisconnect?.()}
+          >
+            Отключить чат
+          </button>
+          <button
+            type="button"
+            class="perf-action-btn"
+            disabled={!props.connectionControlsReady || !props.debugDisconnected}
+            onClick={() => props.onReconnect?.()}
+          >
+            Подключить чат
+          </button>
+        </div>
+      </Show>
       <Stat label="Uptime" value={fmtUptime(snapshot.uptimeSec)} color={C_DIM} />
 
       {/* Support info */}

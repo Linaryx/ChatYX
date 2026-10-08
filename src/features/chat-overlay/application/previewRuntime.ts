@@ -108,6 +108,8 @@ export class PreviewRuntime {
   private renderTimer: number | null = null;
   private ready = false;
   private destroyed = false;
+  private debugDisconnected = false;
+  private connectionGeneration = 0;
   private nextModerationAt = 0;
   private moderationInProgress = false;
   private readonly mutedUntil = new Map<string, number>();
@@ -147,7 +149,7 @@ export class PreviewRuntime {
         : 0,
     );
     this.hooks.onChannelResolved({ channelId: "0", displayName: channel });
-    this.hooks.onConnectionChange(true);
+    this.hooks.onConnectionChange(!this.debugDisconnected);
 
     const container = document.getElementById("chat_container");
     if (container) this.service.initializeLayout(container);
@@ -242,8 +244,27 @@ export class PreviewRuntime {
     if (speedChanged) this.restartMessageInterval();
   }
 
+  debugDisconnect() {
+    if (this.destroyed || this.debugDisconnected) return;
+    this.debugDisconnected = true;
+    this.connectionGeneration += 1;
+    this.clearMessageInterval();
+    this.service?.cancelMessageRemovals();
+    this.moderationInProgress = false;
+    this.hooks.onConnectionChange(false);
+  }
+
+  debugReconnect() {
+    if (this.destroyed || !this.debugDisconnected) return;
+    this.debugDisconnected = false;
+    this.nextModerationAt = Date.now() + 9000;
+    this.restartMessageInterval();
+    this.hooks.onConnectionChange(true);
+  }
+
   destroy() {
     this.destroyed = true;
+    this.connectionGeneration += 1;
     this.ready = false;
     this.clearMessageInterval();
     this.mutedUntil.clear();
@@ -290,7 +311,7 @@ export class PreviewRuntime {
   }
 
   private appendMessage() {
-    if (!this.service || this.destroyed) return;
+    if (!this.service || this.destroyed || this.debugDisconnected) return;
 
     const message = nextPreviewMessage(
       this.options.channel,
@@ -319,7 +340,7 @@ export class PreviewRuntime {
   }
 
   private maybeModerate(now: number) {
-    if (this.destroyed || !this.ready || !this.service || this.moderationInProgress || now < this.nextModerationAt) return;
+    if (this.destroyed || this.debugDisconnected || !this.ready || !this.service || this.moderationInProgress || now < this.nextModerationAt) return;
     if (messageSpeedToIntervalMs(this.config.messageSpeed) === null) return;
     const rows = Array.from(document.querySelectorAll<HTMLElement>("#chat_container .chat_line[data-id]"));
     const visibleIds = new Set(rows.filter((row) => {
@@ -338,9 +359,10 @@ export class PreviewRuntime {
     const targets = rows.filter((row) => selection.ids.has(row.dataset.id ?? ""));
     const container = document.getElementById("chat_container");
     this.moderationInProgress = true;
+    const generation = this.connectionGeneration;
     const remove = () => {
+      if (this.destroyed || this.debugDisconnected || generation !== this.connectionGeneration) return;
       this.moderationInProgress = false;
-      if (this.destroyed) return;
       this.hooks.onMessagesChange((current) => current.filter((message) => !selection.ids.has(message.id)));
     };
     if (container && targets.length > 1) this.service.removeMessageGroup(container, targets, this.config.removalAnimation, remove);
@@ -350,7 +372,7 @@ export class PreviewRuntime {
 
   private restartMessageInterval() {
     this.clearMessageInterval();
-    if (!this.ready) return;
+    if (!this.ready || this.debugDisconnected || this.destroyed) return;
 
     const interval = messageSpeedToIntervalMs(this.config.messageSpeed);
     if (interval !== null) {

@@ -116,12 +116,12 @@ export class ChatOverlayApplication {
   }
 
   debugDisconnect() {
-    if (this.destroyed || this.options.mode !== "live") return;
+    if (this.destroyed) return;
     this.runtime.debugDisconnect?.();
   }
 
   debugReconnect() {
-    if (this.destroyed || this.options.mode !== "live") return;
+    if (this.destroyed) return;
     this.runtime.debugReconnect?.();
   }
 

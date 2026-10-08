@@ -9,6 +9,7 @@ import { PerfMonitor } from "~/components/debug/PerfMonitor";
 import { Title } from "@solidjs/meta";
 import { LoadingScreen } from "~/components/LoadingScreen";
 import { ChatMessageList } from "~/components/chat/ChatMessageList";
+import { ConnectionInterrupted } from "~/components/chat/ConnectionInterrupted";
 import { PredictionProgressOverlay } from "~/components/predictions/PredictionProgressOverlay";
 import { parseChatConfigFromSearchParams } from "~/config/chatUrlParams";
 import {
@@ -160,7 +161,7 @@ export default function ChatOverlay() {
       return;
     }
     void application.start();
-    if (isDebug && !isPreview) {
+    if (isDebug) {
       debugCommands = {
         disconnect: () => {
           if (!chatService() || isLoading()) {
@@ -226,14 +227,7 @@ export default function ChatOverlay() {
                   data-connected={isConnected() ? "true" : "false"}
                   style={containerStyle}
                 >
-                  <Show
-                    when={!connectionInterrupted()}
-                    fallback={
-                      <div class="chat-connection-status" role="status">
-                        Соединение прервано
-                      </div>
-                    }
-                  >
+                  <Show when={!connectionInterrupted()}>
                     <ChatMessageList
                       messages={messages()}
                       config={config()}
@@ -245,6 +239,9 @@ export default function ChatOverlay() {
                 </div>
               </div>
             </div>
+            <Show when={connectionInterrupted()}>
+              <ConnectionInterrupted />
+            </Show>
           </div>
           <Show when={commandStatus()}>
             {(status) => (
@@ -261,8 +258,8 @@ export default function ChatOverlay() {
       <Show when={isDebug}>
         <PerfMonitor
           isConnected={isConnected()}
-          onDisconnect={!isPreview && application ? () => window.chatyxDebug?.disconnect() : undefined}
-          onReconnect={!isPreview && application ? () => window.chatyxDebug?.reconnect() : undefined}
+          onDisconnect={application ? () => window.chatyxDebug?.disconnect() : undefined}
+          onReconnect={application ? () => window.chatyxDebug?.reconnect() : undefined}
           connectionControlsReady={!isLoading() && Boolean(chatService())}
           debugDisconnected={debugDisconnected()}
         />

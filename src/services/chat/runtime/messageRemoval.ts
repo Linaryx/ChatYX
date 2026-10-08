@@ -35,7 +35,7 @@ export function getInheritedRemovalFilter(element: HTMLElement): string {
 
 /** Presentation-owned removal effects; the caller remains the owner of DOM/state. */
 export class MessageRemovalManager {
-  private readonly pending = new Map<HTMLElement, { cancel?: () => void; restore?: () => void; finished?: Promise<void> }>();
+  private readonly pending = new Map<HTMLElement, { cancel?: () => void; restore?: () => void; finished?: Promise<void>; cancelled?: boolean }>();
   private readonly groups = new Map<HTMLElement, readonly HTMLElement[]>();
   private disintegrator: Disintegrator | null = null;
   private loading: Promise<Disintegrator | null> | null = null;
@@ -55,7 +55,9 @@ export class MessageRemovalManager {
     if (active) {
       // Keep overlapping moderation batches animated instead of committing the
       // second batch immediately while the shared container is being captured.
-      void active.finished?.then(() => this.removeGroup(container, elements, mode, onRemove));
+      void active.finished?.then(() => {
+        if (!active.cancelled) this.removeGroup(container, elements, mode, onRemove);
+      });
       return;
     }
     this.remove(container, mode, onRemove, elements);
@@ -68,13 +70,13 @@ export class MessageRemovalManager {
       return;
     }
 
-    const entry: { cancel?: () => void; restore?: () => void; finished?: Promise<void> } = {};
+    const entry: { cancel?: () => void; restore?: () => void; finished?: Promise<void>; cancelled?: boolean } = {};
     this.pending.set(element, entry);
     if (group) this.groups.set(element, group);
     const targets = group ?? [element];
     let committed = false;
     const commit = () => {
-      if (committed || this.destroyed) return;
+      if (committed || this.destroyed || entry.cancelled) return;
       committed = true;
       onRemove();
     };
@@ -82,7 +84,7 @@ export class MessageRemovalManager {
       try {
         if (mode === "thanos") {
           const effect = await this.getDisintegrator();
-          if (this.destroyed) return;
+          if (this.destroyed || entry.cancelled) return;
           if (effect && element.isConnected) {
             const inheritedFilter = getInheritedRemovalFilter(element);
             // Capture first, then conceal the live content while retaining its space.
@@ -114,7 +116,7 @@ export class MessageRemovalManager {
             return;
           }
         }
-        if (this.destroyed) return;
+        if (this.destroyed || entry.cancelled) return;
         const visible = targets.filter((target) => target.isConnected && typeof target.animate === "function");
         if (visible.length === 0) {
           commit();
@@ -136,8 +138,10 @@ export class MessageRemovalManager {
         commit();
       } finally {
         entry.restore?.();
-        this.pending.delete(element);
-        this.groups.delete(element);
+        if (this.pending.get(element) === entry) {
+          this.pending.delete(element);
+          this.groups.delete(element);
+        }
       }
     };
     entry.finished = animate();
@@ -200,15 +204,21 @@ export class MessageRemovalManager {
     return this.loading;
   }
 
-  destroy(): void {
-    if (this.destroyed) return;
-    this.destroyed = true;
+  cancelAll(): void {
     for (const entry of this.pending.values()) {
+      entry.cancelled = true;
       entry.cancel?.();
       entry.restore?.();
+      entry.restore = undefined;
     }
     this.pending.clear();
     this.groups.clear();
+  }
+
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.cancelAll();
     this.disintegrator?.destroy();
     this.disintegrator = null;
     this.loading = null;

@@ -92,6 +92,36 @@ test("overlapping group removals wait for the active batch instead of deleting i
   manager.destroy();
 });
 
+test("cancelAll discards pending and queued removals but permits new playback", async () => {
+  installAnimationWindow();
+  let rejectFirst!: (reason: Error) => void;
+  const firstFinished = new Promise<void>((_resolve, reject) => { rejectFirst = reject; });
+  let finishNew!: () => void;
+  const newFinished = new Promise<void>((resolve) => { finishNew = resolve; });
+  const container = {} as HTMLElement;
+  const row = {
+    isConnected: true,
+    animate: () => ({ finished: firstFinished, cancel: () => rejectFirst(new Error("cancelled")) }),
+  } as unknown as HTMLElement;
+  const manager = new MessageRemovalManager();
+  const commits: string[] = [];
+  manager.removeGroup(container, [row], "fade", () => commits.push("old"));
+  manager.removeGroup(container, [row], "fade", () => commits.push("queued"));
+  manager.cancelAll();
+  const newRow = {
+    isConnected: true,
+    animate: () => ({ finished: newFinished, cancel: () => {} }),
+  } as unknown as HTMLElement;
+  manager.removeGroup(container, [newRow], "fade", () => commits.push("new"));
+  for (let i = 0; i < 5; i += 1) await Promise.resolve();
+  expect(commits).toEqual([]);
+  expect(manager.isRemoving(container)).toBe(true);
+  finishNew();
+  for (let i = 0; i < 5; i += 1) await Promise.resolve();
+  expect(commits).toEqual(["new"]);
+  manager.destroy();
+});
+
 test("particles replace the live content but retain layout until playback finishes", async () => {
   installAnimationWindow();
   let finish!: () => void;

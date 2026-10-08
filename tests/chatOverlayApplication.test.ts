@@ -95,6 +95,30 @@ afterEach(() => {
 });
 
 describe("chat overlay application lifecycle", () => {
+  test("debug connection controls also delegate to preview runtime", () => {
+    installWindowShim();
+    const calls: string[] = [];
+    const application = new ChatOverlayApplication(
+      { channel: "streamer", initialConfig, mode: "preview", previewDemoKind: "pasta" },
+      createHooks(),
+      {
+        createLiveRuntime: () => { throw new Error("unexpected live runtime"); },
+        createPreviewRuntime: () => ({
+          initialize: async () => {}, updateConfig: () => {}, destroy: () => {},
+          debugDisconnect: () => { calls.push("disconnect"); },
+          debugReconnect: () => { calls.push("reconnect"); },
+        }),
+        createPredictionsRuntime: () => ({ update: () => {}, destroy: () => {} }),
+      },
+    );
+    application.debugDisconnect();
+    application.debugReconnect();
+    expect(calls).toEqual(["disconnect", "reconnect"]);
+    application.destroy();
+    application.debugReconnect();
+    expect(calls).toEqual(["disconnect", "reconnect"]);
+  });
+
   test("debug connection controls cannot restart a destroyed runtime", () => {
     installWindowShim();
     const { application, calls } = createHarness();

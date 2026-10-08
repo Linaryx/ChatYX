@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount, Show, type JSX } from "solid-js";
+import { createSignal, onCleanup, onMount, type JSX } from "solid-js";
 import type { CollectorSnapshot } from "./perfCollector";
 import { start as collectorStart, stop as collectorStop, subscribe } from "./perfCollector";
 import { PerfPanel } from "./PerfPanel";
@@ -47,26 +47,6 @@ export function PerfMonitor(props: PerfMonitorProps): JSX.Element {
       >
         {visible() ? "▼ perf" : "▶ perf"}
       </button>
-      <Show when={visible() && props.onDisconnect && props.onReconnect}>
-        <div class="perf-actions">
-          <button
-            type="button"
-            class="perf-action-btn"
-            disabled={!props.connectionControlsReady || props.debugDisconnected}
-            onClick={() => props.onDisconnect?.()}
-          >
-            Отключить чат
-          </button>
-          <button
-            type="button"
-            class="perf-action-btn"
-            disabled={!props.connectionControlsReady || !props.debugDisconnected}
-            onClick={() => props.onReconnect?.()}
-          >
-            Подключить чат
-          </button>
-        </div>
-      </Show>
       {(() => {
         if (!visible()) return null;
         const s = snapshot();
@@ -76,6 +56,10 @@ export function PerfMonitor(props: PerfMonitorProps): JSX.Element {
             snapshot={s}
             snapshots={snapshots()}
             isConnected={props.isConnected}
+            onDisconnect={props.onDisconnect}
+            onReconnect={props.onReconnect}
+            connectionControlsReady={props.connectionControlsReady}
+            debugDisconnected={props.debugDisconnected}
           />
         );
       })()}

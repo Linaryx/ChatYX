@@ -31,9 +31,10 @@ function createHooks(): PreviewRuntimeHooks {
   };
 }
 
-function createHarness() {
+function createHarness(hooks: Partial<PreviewRuntimeHooks> = {}) {
   const calls: string[] = [];
   const timeouts: Array<() => void> = [];
+  const intervals: Array<{ callback: () => void; delay: number }> = [];
   let nextTimer = 1;
 
   (globalThis as unknown as { window: unknown }).window = {
@@ -42,7 +43,10 @@ function createHarness() {
       return nextTimer++;
     },
     clearTimeout: (id: number) => calls.push(`clear-timeout:${id}`),
-    setInterval: () => 77,
+    setInterval: (callback: () => void, delay: number) => {
+      intervals.push({ callback, delay });
+      return 77;
+    },
     clearInterval: (id: number) => calls.push(`clear-interval:${id}`),
     requestAnimationFrame: () => 1,
   };
@@ -62,6 +66,7 @@ function createHarness() {
     createPresentationService: () => ({
       updateConfig: () => {},
       cleanup: () => calls.push("service.cleanup"),
+      cancelMessageRemovals: () => calls.push("service.cancel-removals"),
       getConfig: () => ({ animation: { duration: 0 } }),
       scrollToLatest: () => {},
       initializeLayout: () => {},
@@ -77,7 +82,7 @@ function createHarness() {
 
   const runtime = new PreviewRuntime(
     { channel: "chatyxpreview", initialConfig, demoKind: "pasta" },
-    createHooks(),
+    { ...createHooks(), ...hooks },
     dependencies,
   );
 
@@ -89,10 +94,41 @@ function createHarness() {
     last();
   };
 
-  return { runtime, calls, finishRendering };
+  return { runtime, calls, finishRendering, intervals };
 }
 
 describe("preview runtime teardown", () => {
+  test("debug disconnect stops playback and config changes cannot restart it until reconnect", async () => {
+    const connections: boolean[] = [];
+    let messageUpdates = 0;
+    const { runtime, calls, finishRendering, intervals } = createHarness({
+      onConnectionChange: (connected) => connections.push(connected),
+      onMessagesChange: () => { messageUpdates += 1; },
+    });
+    await runtime.initialize();
+    finishRendering();
+    expect(intervals).toHaveLength(1);
+    const updatesBeforeDisconnect = messageUpdates;
+    runtime.debugDisconnect();
+    runtime.debugDisconnect();
+    expect(calls).toContain("clear-interval:77");
+    expect(calls).toContain("service.cancel-removals");
+    runtime.updateConfig({ ...initialConfig, messageSpeed: 60 });
+    intervals[0].callback(); // A stale callback must not append during interruption.
+    expect(messageUpdates).toBe(updatesBeforeDisconnect);
+    expect(intervals).toHaveLength(1);
+    runtime.debugReconnect();
+    runtime.debugReconnect();
+    expect(intervals).toHaveLength(2);
+    expect(intervals[1].delay).toBe(500);
+    intervals[1].callback();
+    expect(messageUpdates).toBe(updatesBeforeDisconnect + 1);
+    expect(connections).toEqual([true, false, true]);
+    runtime.destroy();
+    runtime.debugReconnect();
+    expect(intervals).toHaveLength(2);
+  });
+
   test("destroy releases the document state the runtime claimed", async () => {
     const { runtime, calls, finishRendering } = createHarness();
 

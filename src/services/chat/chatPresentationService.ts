@@ -547,6 +547,10 @@ export class ChatPresentationService {
     return this.removalManager.isRemoving(element);
   }
 
+  cancelMessageRemovals(): void {
+    this.removalManager.cancelAll();
+  }
+
   removeMessageGroup(container: HTMLElement, elements: readonly HTMLElement[], mode: MessageRemovalMode, onRemove: () => void): void {
     for (const element of elements) this.fadeManager.cancelMessage(element);
     this.removalManager.removeGroup(container, elements, mode, onRemove);
